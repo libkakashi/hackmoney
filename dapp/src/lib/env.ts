@@ -18,10 +18,12 @@ const envSchema = z.object({
   walletConnectProjectId: z.string(),
   rpcUrl: z.url().optional(),
   chainId: z.number(),
+  sessionSecret: z.string().min(32).optional(),
 });
 
 export const env = envSchema.parse({
   walletConnectProjectId: process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID,
   rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
   chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID),
+  sessionSecret: process.env.SESSION_SECRET,
 });
