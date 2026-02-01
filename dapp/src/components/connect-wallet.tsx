@@ -9,17 +9,17 @@ import {useSiweAuth} from '~/hooks/use-siwe-auth';
 import {env} from '~/lib/env';
 import {chain} from '~/lib/wagmi-config';
 
-interface ConnectWalletButtonProps {
+interface ConnectWalletProps {
   className?: string;
   size?: 'default' | 'sm' | 'lg' | 'icon';
   showBalance?: boolean;
 }
 
-export function ConnectWalletButton({
+export function ConnectWallet({
   className,
   size = 'sm',
   showBalance = true,
-}: ConnectWalletButtonProps) {
+}: ConnectWalletProps) {
   const {openConnectModal} = useConnectModal();
   const {openAccountModal} = useAccountModal();
 

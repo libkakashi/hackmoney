@@ -1,0 +1,55 @@
+query GetTokens($limit: Int!, $offset: Int!) {
+  Launchpad_TokenLaunched(
+    limit: $limit
+    offset: $offset
+    order_by: {createdAt: desc}
+  ) {
+    id
+    token
+    strategy
+    auction
+    creator
+    name
+    symbol
+    description
+    website
+    twitterUrl
+    discordUrl
+    telegramUrl
+    image
+    auctionStartBlock
+    auctionEndBlock
+    auctionClaimBlock
+    poolMigrationBlock
+    salt
+    createdAt
+    createdAtBlock
+    txHash
+  }
+}
+
+query GetTokenByAddress($token: String!) {
+  Launchpad_TokenLaunched(where: {token: {_eq: $token}}) {
+    id
+    token
+    strategy
+    auction
+    creator
+    name
+    symbol
+    description
+    website
+    twitterUrl
+    discordUrl
+    telegramUrl
+    image
+    auctionStartBlock
+    auctionEndBlock
+    auctionClaimBlock
+    poolMigrationBlock
+    salt
+    createdAt
+    createdAtBlock
+    txHash
+  }
+}

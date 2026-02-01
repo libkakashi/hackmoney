@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "gts lint",
     "clean": "gts clean",
-    "fix": "gts fix"
+    "fix": "gts fix",
+    "codegen": "graphql-codegen --config codegen.ts"
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.11",
@@ -21,6 +22,10 @@
     "big.js": "^7.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "graphql": "^16.12.0",
+    "graphql-request": "^7.4.0",
+    "graphql-tag": "^2.12.6",
+    "react-intersection-observer": "^9.16.0",
     "iron-session": "^8.0.4",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
@@ -35,6 +40,10 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@graphql-codegen/cli": "^6.1.1",
+    "@graphql-codegen/typescript": "^5.0.7",
+    "@graphql-codegen/typescript-graphql-request": "^6.4.0",
+    "@graphql-codegen/typescript-operations": "^5.0.7",
     "@tailwindcss/postcss": "^4",
     "@types/big.js": "^6.2.2",
     "@types/node": "^20",

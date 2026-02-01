@@ -19,6 +19,7 @@ const envSchema = z.object({
   rpcUrl: z.url().optional(),
   chainId: z.number(),
   sessionSecret: z.string().min(32).optional(),
+  graphqlUrl: z.string(),
 });
 
 export const env = envSchema.parse({
@@ -26,4 +27,6 @@ export const env = envSchema.parse({
   rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
   chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID),
   sessionSecret: process.env.SESSION_SECRET,
+  graphqlUrl:
+    process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8080/v1/graphql',
 });
