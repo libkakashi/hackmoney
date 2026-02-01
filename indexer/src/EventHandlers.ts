@@ -72,6 +72,9 @@ Launchpad.TokenLaunched.handler(async ({event, context}) => {
     auctionClaimBlock: event.params.auctionClaimBlock,
     poolMigrationBlock: event.params.poolMigrationBlock,
     salt: event.params.salt,
+    createdAt: event.block.timestamp,
+    createdAtBlock: BigInt(event.block.number),
+    txHash: event.transaction.hash,
   };
 
   context.Launchpad_TokenLaunched.set(entity);

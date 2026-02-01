@@ -2,13 +2,14 @@
 
 import {useState, useEffect, useMemo} from 'react';
 import {useInView} from 'react-intersection-observer';
+import {useBlockNumber} from 'wagmi';
 import Link from 'next/link';
 import {Loader2} from 'lucide-react';
 import {Container} from '~/components/layout/container';
 import {
   DiscoverTokenCard,
   DiscoverTokenCardSkeleton,
-} from './DiscoverTokenCard';
+} from './discover-token-card';
 import {Button} from '~/components/ui/button';
 import {Input} from '~/components/ui/input';
 import {useInfiniteTokens} from '~/hooks/use-tokens';
@@ -50,13 +51,13 @@ function getTokenPhase(
 
 export default function DiscoverPage() {
   const {ref, inView} = useInView();
-  const [currentBlock, setCurrentBlock] = useState<bigint>(0n);
+  const {data: currentBlock = 0n} = useBlockNumber({watch: true});
+
   const [filters, setFilters] = useState<TokenFilters>({
     search: '',
     sortBy: 'newest',
     phase: 'all',
   });
-
   const {
     data,
     isLoading,
@@ -69,7 +70,7 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     if (inView && hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
+      void fetchNextPage();
     }
   }, [inView, hasNextPage, isFetchingNextPage, fetchNextPage]);
 

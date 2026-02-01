@@ -1,8 +1,11 @@
 # yaml-language-server: $schema=./node_modules/envio/evm.schema.json
 name: envio-indexer
+field_selection:
+  transaction_fields:
+    - hash
 networks:
   - id: 1337
-    start_block: 0
+    start_block: 24364156
     rpc_config:
       url: http://localhost:8545
     contracts:

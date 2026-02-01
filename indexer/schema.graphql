@@ -17,4 +17,7 @@ type Launchpad_TokenLaunched {
   auctionClaimBlock: BigInt!
   poolMigrationBlock: BigInt!
   salt: String!
+  createdAt: Int!
+  createdAtBlock: BigInt!
+  txHash: String!
 }

@@ -1,4 +1,4 @@
-// import type {Address} from 'viem';
+import type {Address} from 'viem';
 import {z} from 'zod';
 
 // const ZHex = z
@@ -6,19 +6,20 @@ import {z} from 'zod';
 //   .regex(/^0x[0-9a-fA-F]+$/, 'Must be a valid hex string')
 //   .transform(val => val as Hex);
 
-// const ZAddress = z
-//   .string()
-//   .regex(
-//     /^0x[a-fA-F0-9]{40}$/,
-//     'Must be a valid Ethereum address starting with 0x',
-//   )
-//   .transform(val => val as Address);
+const ZAddress = z
+  .string()
+  .regex(
+    /^0x[a-fA-F0-9]{40}$/,
+    'Must be a valid Ethereum address starting with 0x',
+  )
+  .transform(val => val as Address);
 
 const envSchema = z.object({
   walletConnectProjectId: z.string(),
   rpcUrl: z.url().optional(),
   chainId: z.number(),
   sessionSecret: z.string().min(32).optional(),
+  launchpadAddr: ZAddress,
   graphqlUrl: z.string(),
 });
 
@@ -27,6 +28,7 @@ export const env = envSchema.parse({
   rpcUrl: process.env.NEXT_PUBLIC_RPC_URL,
   chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID),
   sessionSecret: process.env.SESSION_SECRET,
+  launchpadAddr: process.env.NEXT_PUBLIC_LAUNCHPAD_ADDR,
   graphqlUrl:
     process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8080/v1/graphql',
 });
