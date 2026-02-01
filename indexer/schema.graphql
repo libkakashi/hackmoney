@@ -1,0 +1,10 @@
+type Launchpad_TokenLaunched {
+  id: ID!
+  token: String!
+  strategy: String!
+  auction: String!
+  creator: String!
+  name: String!
+  symbol: String!
+}
+

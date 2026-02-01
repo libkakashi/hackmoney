@@ -1,0 +1,14 @@
+# yaml-language-server: $schema=./node_modules/envio/evm.schema.json
+name: envio-indexer
+networks:
+- id: 1
+  start_block: 0
+  contracts:
+  - name: Launchpad
+    address:
+    - 0xb9fB29673e5C8d88c3a88c2a662E640533f25EF4
+    handler: src/EventHandlers.ts
+    events:
+    - event: TokenLaunched(address indexed token, address indexed strategy, address indexed auction, address creator, string name, string symbol)
+unordered_multichain_mode: true
+preload_handlers: true
