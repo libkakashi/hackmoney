@@ -1,14 +1,16 @@
 # yaml-language-server: $schema=./node_modules/envio/evm.schema.json
 name: envio-indexer
 networks:
-- id: 1
-  start_block: 0
-  contracts:
-  - name: Launchpad
-    address:
-    - 0xb9fB29673e5C8d88c3a88c2a662E640533f25EF4
-    handler: src/EventHandlers.ts
-    events:
-    - event: TokenLaunched(address indexed token, address indexed strategy, address indexed auction, address creator, string name, string symbol)
+  - id: 1337
+    start_block: 0
+    rpc_config:
+      url: http://localhost:8545
+    contracts:
+      - name: Launchpad
+        address:
+          - 0xb68a202cE0FB25ea7648eA29Ff632fCd66c2262f
+        handler: src/EventHandlers.ts
+        events:
+          - event: TokenLaunched(address indexed token, address indexed strategy, address indexed auction, address creator, string name, string symbol, string description, string website, string image, uint64 auctionStartBlock, uint64 auctionEndBlock, uint64 auctionClaimBlock, uint64 poolMigrationBlock, bytes32 salt)
 unordered_multichain_mode: true
 preload_handlers: true

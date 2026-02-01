@@ -6,5 +6,15 @@ type Launchpad_TokenLaunched {
   creator: String!
   name: String!
   symbol: String!
+  description: String!
+  website: String
+  twitterUrl: String
+  discordUrl: String
+  telegramUrl: String
+  image: String!
+  auctionStartBlock: BigInt!
+  auctionEndBlock: BigInt!
+  auctionClaimBlock: BigInt!
+  poolMigrationBlock: BigInt!
+  salt: String!
 }
-

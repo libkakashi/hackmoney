@@ -36,13 +36,29 @@ contract Launchpad is ReentrancyGuardTransient {
     /// @param creator The address that initiated the launch
     /// @param name The token name
     /// @param symbol The token symbol
+    /// @param description The token description
+    /// @param website The token website
+    /// @param image The token image URL
+    /// @param auctionStartBlock The block when the auction starts
+    /// @param auctionEndBlock The block when the auction ends
+    /// @param auctionClaimBlock The block when claims become available
+    /// @param poolMigrationBlock The block when migration to V4 pool can occur
+    /// @param salt The salt used for deterministic deployment
     event TokenLaunched(
         address indexed token,
         address indexed strategy,
         address indexed auction,
         address creator,
         string name,
-        string symbol
+        string symbol,
+        string description,
+        string website,
+        string image,
+        uint64 auctionStartBlock,
+        uint64 auctionEndBlock,
+        uint64 auctionClaimBlock,
+        uint64 poolMigrationBlock,
+        bytes32 salt
     );
 
     /*//////////////////////////////////////////////////////////////
@@ -244,7 +260,15 @@ contract Launchpad is ReentrancyGuardTransient {
             auction,
             msg.sender,
             tokenParams.name,
-            tokenParams.symbol
+            tokenParams.symbol,
+            tokenParams.metadata.description,
+            tokenParams.metadata.website,
+            tokenParams.metadata.image,
+            startBlock,
+            endBlock,
+            claimBlock,
+            migrationBlock,
+            salt
         );
     }
 
