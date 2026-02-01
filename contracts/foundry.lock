@@ -1,0 +1,38 @@
+{
+  "lib/v4-periphery": {
+    "rev": "3779387e5d296f39df543d23524b050f89a62917"
+  },
+  "lib/openzeppelin-contracts": {
+    "tag": {
+      "name": "v5.5.0",
+      "rev": "fcbae5394ae8ad52d8e580a3477db99814b9d565"
+    }
+  },
+  "lib/v4-core": {
+    "tag": {
+      "name": "v4.0.0",
+      "rev": "e50237c43811bd9b526eff40f26772152a42daba"
+    }
+  },
+  "lib/forge-std": {
+    "tag": {
+      "name": "v1.14.0",
+      "rev": "1801b0541f4fda118a10798fd3486bb7051c5dd6"
+    }
+  },
+  "lib/liquidity-launcher": {
+    "rev": "610603eed7c35ff504e23ec87cd18ec3f701e746"
+  },
+  "lib/continuous-clearing-auction": {
+    "tag": {
+      "name": "v1.1.0",
+      "rev": "a0aabaa45d8677a4944fc04d5dea2c4b499b3d3a"
+    }
+  },
+  "lib/uerc20-factory": {
+    "tag": {
+      "name": "v1.0.0",
+      "rev": "09ae130f7a10f7c1b96e0dc7d9724d567080c4ef"
+    }
+  }
+}
