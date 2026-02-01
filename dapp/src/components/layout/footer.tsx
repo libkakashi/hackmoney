@@ -36,7 +36,7 @@ export function Footer() {
                 href="/docs"
                 className="block text-dim hover:text-foreground"
               >
-                docs
+                faq
               </Link>
             </div>
           </div>
@@ -49,19 +49,13 @@ export function Footer() {
                 href="/docs/guide"
                 className="block text-dim hover:text-foreground"
               >
-                guide
+                uniswap v4
               </Link>
               <Link
                 href="/docs/faq"
                 className="block text-dim hover:text-foreground"
               >
-                faq
-              </Link>
-              <Link
-                href="/docs/api"
-                className="block text-dim hover:text-foreground"
-              >
-                api
+                uniswap cca
               </Link>
             </div>
           </div>
