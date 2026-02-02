@@ -6,6 +6,7 @@ import type {Address} from 'viem';
 import {Card, CardContent} from '~/components/ui/card';
 import {PreAuctionPanel} from './pre-auction-panel';
 import {ActiveAuctionPanel} from './active-auction-panel';
+import {PostAuctionPanel} from './post-auction-panel';
 import {LoadingPanel} from './loading-panel';
 
 import {useBlockTime} from '~/hooks/use-block-time';
@@ -93,6 +94,14 @@ export const AuctionPanel = ({auctionAddr}: {auctionAddr: Address}) => {
         />
       );
 
+    case 'ended':
+    case 'claimable':
+      return (
+        <PostAuctionPanel
+          auctionAddr={auctionAddr}
+          auctionState={auctionState}
+        />
+      );
     default:
       return null;
   }

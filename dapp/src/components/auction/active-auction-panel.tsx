@@ -156,7 +156,7 @@ export const ActiveAuctionPanel = ({
           </div>
 
           {/* // tokens allocated at time-weighted average price. bid early to guarantee best price */}
-          <p className="text-xs text-cyan-600 -mr-2">
+          <p className="text-xs text-cyan-400 -mr-2">
             // tokens are allocated by time-weighted average of bids
             <br />
             // being early gurantees better price
