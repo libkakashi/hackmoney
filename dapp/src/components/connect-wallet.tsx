@@ -42,13 +42,13 @@ export function ConnectWallet({
   if (!isConnected) {
     return (
       <Button
-        variant="default"
+        variant="outline"
         size={size}
         onClick={openConnectModal}
         className={cn('gap-1.5', className)}
       >
         <Wallet className="h-3.5 w-3.5" />
-        Connect
+        connect
       </Button>
     );
   }
@@ -62,7 +62,7 @@ export function ConnectWallet({
         className={cn('gap-1.5', className)}
       >
         <Wallet className="h-3.5 w-3.5" />
-        Switching...
+        switching...
       </Button>
     );
   }
@@ -73,7 +73,10 @@ export function ConnectWallet({
         variant="default"
         size={size}
         onClick={() => switchChain({chainId: env.chainId})}
-        className={cn('gap-1.5', className)}
+        className={cn(
+          'gap-1.5 bg-terminal-yellow text-background hover:bg-terminal-yellow/90',
+          className,
+        )}
       >
         <Wallet className="h-3.5 w-3.5" />
         <span className="flex items-center gap-1.5">
@@ -83,7 +86,7 @@ export function ConnectWallet({
               <span className="opacity-50">|</span>
             </>
           )}
-          Switch to {chain.name}
+          switch to {chain.name}
         </span>
       </Button>
     );
@@ -98,30 +101,32 @@ export function ConnectWallet({
         className={cn('gap-1.5', className)}
       >
         <Wallet className="h-3.5 w-3.5" />
-        Signing...
+        signing...
       </Button>
     );
   }
 
   if (needsSignIn) {
     return (
-      <Button
-        variant="default"
-        size={size}
-        onClick={signIn}
-        className={cn('gap-1.5', className)}
-      >
-        <Wallet className="h-3.5 w-3.5" />
-        <span className="flex items-center gap-1.5">
-          {truncatedAddress && (
-            <>
-              <span className="opacity-75">{truncatedAddress}</span>
-              <span className="opacity-50">|</span>
-            </>
-          )}
-          Sign In
-        </span>
-      </Button>
+      <div className={cn('flex items-center gap-1', className)}>
+        <Button
+          variant="outline"
+          size={size}
+          onClick={openAccountModal}
+          className="gap-1.5 rounded-r-none border-r-0"
+        >
+          <Wallet className="h-3.5 w-3.5" />
+          {truncatedAddress}
+        </Button>
+        <Button
+          variant="default"
+          size={size}
+          onClick={signIn}
+          className="rounded-l-none"
+        >
+          sign in
+        </Button>
+      </div>
     );
   }
 
@@ -132,12 +137,12 @@ export function ConnectWallet({
       onClick={openAccountModal}
       className={cn('gap-1.5', className)}
     >
-      <Wallet className="h-3.5 w-3.5" />
+      <Wallet className="h-3.5 w-3.5 text-terminal-green" />
       <span className="flex items-center gap-1.5">
         {showBalance && formattedBalance && (
           <>
-            <span className="text-muted-foreground">{formattedBalance}</span>
-            <span className="text-muted-foreground/50">|</span>
+            <span className="text-terminal-dim">{formattedBalance}</span>
+            <span className="text-terminal-dim/50">|</span>
           </>
         )}
         <span>{truncatedAddress}</span>
