@@ -10,6 +10,7 @@ import {Sheet, SheetContent, SheetTrigger} from '~/components/ui/sheet';
 const NAV_LINKS = [
   {href: '/discover', label: 'discover'},
   {href: '/launch', label: 'launch'},
+  {href: '/faq', label: 'faq'},
 ];
 
 export function Navbar() {
