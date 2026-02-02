@@ -4,11 +4,12 @@ import type {Address} from 'viem';
 import {useParams} from 'next/navigation';
 import Link from 'next/link';
 
+import {AuctionPanel} from '~/components/auction/auction-panel';
 import {Container} from '~/components/layout/container';
 import {Button} from '~/components/ui/button';
 
 import {useTokenByAddress} from '~/hooks/use-tokens';
-import {TokenMetadataCard} from './TokenMetadataCard';
+import {TokenMetadataCard} from './token-metadata-card';
 
 export default function TokenPage() {
   const params = useParams();
@@ -81,6 +82,21 @@ export default function TokenPage() {
           <div className="lg:col-span-3 space-y-4">
             {/* Token Header */}
             <TokenMetadataCard address={address} />
+          </div>
+
+          {/* Sidebar */}
+          <div className="lg:col-span-2 space-y-4">
+            {token ? (
+              <AuctionPanel auctionAddr={token.auction} />
+            ) : (
+              <div className="border border-border bg-card p-4">
+                <div className="h-[100px] flex flex-col items-center justify-center text-center">
+                  <p className="text-sm text-dim">
+                    // no auction data available
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </Container>

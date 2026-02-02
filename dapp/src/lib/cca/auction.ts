@@ -39,6 +39,8 @@ const getTokenDecimals = async (
   return token.read.decimals();
 };
 
+export type AuctionState = Awaited<ReturnType<typeof getAuctionState>>;
+
 export const getAuctionState = async (
   auctionAddr: Address,
   publicClient: PublicClient,
