@@ -10,6 +10,7 @@ import {useTokenData} from '~/hooks/tokens/use-token-data';
 import {useBlockTime} from '~/hooks/use-block-time';
 import type {AuctionState} from '~/lib/cca/auction';
 import {Q96, type Bid} from '~/lib/cca';
+import {cn} from '~/lib/utils';
 
 const formatTimestamp = (blocksAgo: bigint, blockTimeMs: number): string => {
   const secondsAgo = Number(blocksAgo) * (blockTimeMs / 1000);
@@ -108,8 +109,15 @@ export const BidsSection = ({auctionAddr}: {auctionAddr: Address}) => {
           }`}
         >
           your_bids
-          {userBids && userBids.length > 0 && (
-            <span className="ml-1 text-[10px] px-1.5 py-0.5 border border-green text-green">
+          {userBids && (
+            <span
+              className={cn([
+                'ml-1 text-[10px] px-1.5 py-0.5 border ',
+                activeSubTab === 'your'
+                  ? 'border-green text-green'
+                  : 'border-purple text-purple',
+              ])}
+            >
               {userBids.length}
             </span>
           )}
@@ -125,8 +133,15 @@ export const BidsSection = ({auctionAddr}: {auctionAddr: Address}) => {
           }`}
         >
           all_bids
-          {allBids && allBids.length > 0 && (
-            <span className="ml-1 text-[10px] px-1.5 py-0.5 border border-purple text-purple">
+          {allBids && (
+            <span
+              className={cn([
+                'ml-1 text-[10px] px-1.5 py-0.5 border ',
+                activeSubTab === 'all'
+                  ? 'border-green text-green'
+                  : 'border-purple text-purple',
+              ])}
+            >
               {allBids.length}
             </span>
           )}

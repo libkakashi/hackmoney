@@ -64,29 +64,29 @@
 
   /* Deep purple-tinted dark background */
   --background: #0c0a10;
-  --foreground: #c8c4d0;
+  --foreground: #e0dce8;
 
   --card: #0f0d14;
-  --card-foreground: #c8c4d0;
+  --card-foreground: #e0dce8;
 
   --popover: #13101a;
-  --popover-foreground: #c8c4d0;
+  --popover-foreground: #e0dce8;
 
   /* Bright mint green */
   --primary: #5fffb0;
   --primary-foreground: #0c0a10;
 
   --secondary: #1a1720;
-  --secondary-foreground: #c8c4d0;
+  --secondary-foreground: #e0dce8;
 
   --muted: #1a1720;
-  --muted-foreground: #6a6578;
+  --muted-foreground: #8a849a;
 
   /* Bright lavender */
-  --accent: #c9b0e8;
+  --accent: #d4c0f0;
   --accent-foreground: #0c0a10;
 
-  --destructive: #ff5f5f;
+  --destructive: #ff6b6b;
 
   --border: #2a2630;
   --input: #1a1720;
@@ -94,11 +94,11 @@
 
   /* Terminal palette - brighter for contrast */
   --terminal-green: #5fffb0;
-  --terminal-purple: #c9b0e8;
-  --terminal-yellow: #ffd866;
-  --terminal-red: #ff5f5f;
-  --terminal-red-dark: #8b3a3a;
-  --terminal-dim: #6a6578;
+  --terminal-purple: #d4c0f0;
+  --terminal-yellow: #ffe080;
+  --terminal-red: #ff6b6b;
+  --terminal-red-dark: #a04848;
+  --terminal-dim: #8a849a;
 }
 
 .dark {

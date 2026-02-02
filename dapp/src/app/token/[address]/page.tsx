@@ -1,22 +1,28 @@
 'use client';
 
-import type {Address} from 'viem';
+import {formatUnits, type Address} from 'viem';
 import {useParams} from 'next/navigation';
 import Link from 'next/link';
+import {useConnection} from 'wagmi';
 
 import {AuctionPanel} from '~/components/auction/auction-panel';
 import {Container} from '~/components/layout/container';
 import {Button} from '~/components/ui/button';
 
 import {useTokenByAddress} from '~/hooks/use-tokens';
+import {useTokenBalance} from '~/hooks/tokens/use-token-balance';
 import {TokenMetadataCard} from './token-metadata-card';
 import {BidsSection} from '~/components/auction/bids-section';
+import {useAuctionState} from '~/hooks/cca/use-auction-state';
 
 export default function TokenPage() {
   const params = useParams();
   const address = params.address as Address;
 
   const {data: token, isLoading, error} = useTokenByAddress(address);
+  const {data: auctionState} = useAuctionState(token?.auction);
+  const {address: userAddress} = useConnection();
+  const {data: userBalance} = useTokenBalance(address, userAddress);
 
   if (isLoading) {
     return (
@@ -94,6 +100,21 @@ export default function TokenPage() {
 
           {/* Sidebar */}
           <div className="lg:col-span-2 space-y-4">
+            {/* User Balance */}
+            {userAddress &&
+              auctionState &&
+              auctionState.status === 'claimable' && (
+                <div className="border py-2 px-4 flex justify-between">
+                  <div className="text-sm text-dim">your_balance</div>
+                  <div className="tabular-nums text-sm">
+                    {userBalance && token
+                      ? Number(formatUnits(userBalance, 18)).toFixed(2)
+                      : '0.00'}{' '}
+                    <span className="text-dim">{token?.symbol}</span>
+                  </div>
+                </div>
+              )}
+
             {token ? (
               <AuctionPanel auctionAddr={token.auction} />
             ) : (
