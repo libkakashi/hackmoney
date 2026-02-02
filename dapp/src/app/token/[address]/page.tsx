@@ -10,6 +10,7 @@ import {Button} from '~/components/ui/button';
 
 import {useTokenByAddress} from '~/hooks/use-tokens';
 import {TokenMetadataCard} from './token-metadata-card';
+import {BidsSection} from '~/components/auction/bids-section';
 
 export default function TokenPage() {
   const params = useParams();
@@ -27,10 +28,10 @@ export default function TokenPage() {
           <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
             <div className="lg:col-span-3 space-y-4">
               <div className="border border-border p-4 h-32 animate-pulse bg-card" />
-              <div className="border border-border p-4 h-[300px] animate-pulse bg-card" />
+              <div className="border border-border p-4 h-75 animate-pulse bg-card" />
             </div>
             <div className="lg:col-span-2">
-              <div className="border border-border p-4 h-[400px] animate-pulse bg-card" />
+              <div className="border border-border p-4 h-100 animate-pulse bg-card" />
             </div>
           </div>
         </Container>
@@ -82,6 +83,13 @@ export default function TokenPage() {
           <div className="lg:col-span-3 space-y-4">
             {/* Token Header */}
             <TokenMetadataCard address={address} />
+
+            {/* Bids Section */}
+            {token && (
+              <div className="border border-border bg-card p-4">
+                <BidsSection auctionAddr={token?.auction} />
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
@@ -90,7 +98,7 @@ export default function TokenPage() {
               <AuctionPanel auctionAddr={token.auction} />
             ) : (
               <div className="border border-border bg-card p-4">
-                <div className="h-[100px] flex flex-col items-center justify-center text-center">
+                <div className="h-25 flex flex-col items-center justify-center text-center">
                   <p className="text-sm text-dim">
                     // no auction data available
                   </p>

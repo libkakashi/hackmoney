@@ -106,7 +106,7 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
         {/* Main content with large image */}
         <div className="flex">
           {/* Large square image */}
-          <div className="w-32 h-32 flex-shrink-0 border-r border-border flex items-center justify-center bg-background terminal-image-hover">
+          <div className="w-32 h-32 shrink-0 border-r border-border flex items-center justify-center bg-background terminal-image-hover">
             {token.image ? (
               <img
                 src={token.image}
@@ -173,7 +173,7 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
             <>
               <div className="terminal-progress mb-2 -mx-1">
                 <div
-                  className={`terminal-progress-bar ${isUpcoming ? '!bg-purple' : ''}`}
+                  className={`terminal-progress-bar ${isUpcoming ? 'bg-purple!' : ''}`}
                   style={{width: `${progress}%`}}
                 />
               </div>
@@ -224,7 +224,7 @@ export const DiscoverTokenCardSkeleton = () => {
 
       {/* Main content with large image */}
       <div className="flex">
-        <div className="w-36 h-36 flex-shrink-0 border-r border-border bg-border animate-pulse" />
+        <div className="w-36 h-36 shrink-0 border-r border-border bg-border animate-pulse" />
         <div className="flex-1 p-4 flex flex-col">
           <div className="h-5 w-28 bg-border animate-pulse mb-2" />
           <div className="h-3 w-full bg-border animate-pulse mb-2" />
