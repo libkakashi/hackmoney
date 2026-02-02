@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {Address, formatEther} from 'viem';
-import {useBlock} from 'wagmi';
 import {useAuctionState} from '~/hooks/cca/use-auction-state';
 import {useTokenByAddress} from '~/hooks/use-tokens';
 
@@ -34,31 +33,30 @@ function getRandomMedals(seed: string, count: number = 3): string[] {
   return medals;
 }
 
-function formatTimeAgo(timestamp: number) {
-  const now = Math.floor(Date.now() / 1000);
-  const diff = now - timestamp;
-
-  if (diff < 60) return 'just now';
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
-  return new Date(timestamp * 1000).toLocaleDateString();
+function getRandomPriceData(seed: string): {price: number; change: number} {
+  // Use address as seed for consistent price per token
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  // Generate price between 0.0001 and 0.1
+  const price = (Math.abs(hash % 10000) + 1) / 100000;
+  // Generate change between -50% and +100%
+  const change = ((Math.abs((hash * 13) % 150) - 50) * 100) / 100;
+  return {price, change};
 }
 
 export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
   const {data: token} = useTokenByAddress(tokenAddr);
   const {data: auctionData} = useAuctionState(token?.auction);
-  const {data: currentBlock} = useBlock({watch: true});
 
   const status = auctionData?.status;
   const isLive = status === 'active';
   const isUpcoming = status === 'not_started';
-  const isGraduating = isLive || isUpcoming;
 
-  const isTrading =
-    token && currentBlock
-      ? token.poolMigrationBlock <= currentBlock.number
-      : undefined;
+  const isGraduating = isLive || isUpcoming;
+  const isTrading = !isLive && !isUpcoming;
 
   const progress = auctionData?.progress ?? 0;
 
@@ -108,7 +106,7 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
         {/* Main content with large image */}
         <div className="flex">
           {/* Large square image */}
-          <div className="w-36 h-36 flex-shrink-0 border-r border-border flex items-center justify-center bg-background terminal-image-hover">
+          <div className="w-32 h-32 flex-shrink-0 border-r border-border flex items-center justify-center bg-background terminal-image-hover">
             {token.image ? (
               <img
                 src={token.image}
@@ -123,20 +121,13 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-4 min-w-0 flex flex-col">
-            {/* Name */}
+          <div className="flex-1 p-3 min-w-0 flex flex-col">
+            {/* Name & Medals */}
             <div className="mb-1">
               <div className="font-bold truncate group-hover:text-green transition-colors">
                 {token.name}
               </div>
             </div>
-
-            {/* Description */}
-            {token.description && (
-              <div className="text-xs text-dim truncate mb-2">
-                {token.description}
-              </div>
-            )}
 
             {/* Medals */}
             <div className="flex items-center gap-1 mb-2">
@@ -147,23 +138,40 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
               ))}
             </div>
 
-            {/* Creator & Time */}
-            <div className="flex items-center gap-2 text-xs text-dim mt-auto">
-              <span className="truncate">
-                by {token.creator.slice(0, 6)}...{token.creator.slice(-4)}
-              </span>
-              <span>-</span>
-              <span>{formatTimeAgo(token.createdAt)}</span>
+            {/* Description */}
+            {token.description && (
+              <div className="text-xs text-dim truncate mb-2">
+                {token.description}
+              </div>
+            )}
+
+            {/* Price - bottom aligned */}
+            <div className="flex items-center gap-2 text-sm mt-auto">
+              {(() => {
+                const {price, change} = getRandomPriceData(token.address);
+                const isPositive = change >= 0;
+                return (
+                  <>
+                    <span className="tabular-nums">${price}</span>
+                    <span
+                      className={`tabular-nums ${isPositive ? 'text-green' : 'text-red'}`}
+                    >
+                      {isPositive ? '+' : ''}
+                      {change.toFixed(1)}%
+                    </span>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
 
         {/* Bottom stats section */}
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 border-t border-border">
           {/* Auction progress for graduating tokens */}
           {isGraduating && (
             <>
-              <div className="terminal-progress mb-1">
+              <div className="terminal-progress mb-2 -mx-1">
                 <div
                   className={`terminal-progress-bar ${isUpcoming ? '!bg-purple' : ''}`}
                   style={{width: `${progress}%`}}
@@ -171,7 +179,7 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-dim">
-                  {isUpcoming ? 'upcoming' : 'live'}
+                  {isUpcoming ? 'upcoming' : '123 bidders'}
                 </span>
                 <span>
                   <span className="text-green tabular-nums">
@@ -185,7 +193,7 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
 
           {/* Placeholder stats for trading tokens */}
           {isTrading && (
-            <div className="flex items-center justify-between text-xs pt-2 border-t border-border">
+            <div className="flex items-center justify-between text-xs pt-2">
               <div>
                 <span className="text-dim">mcap </span>
                 <span className="tabular-nums">--</span>
