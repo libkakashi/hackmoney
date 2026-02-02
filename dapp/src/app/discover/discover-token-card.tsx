@@ -1,60 +1,37 @@
 'use client';
 
 import Link from 'next/link';
-import type {GetTokensQuery} from '~/graphql/generated';
+import {Address, formatEther} from 'viem';
+import {useBlock} from 'wagmi';
+import {useAuctionState} from '~/hooks/cca/use-auction-state';
+import {useTokenByAddress} from '~/hooks/use-tokens';
 
-type Token = GetTokensQuery['Launchpad_TokenLaunched'][number];
+const MEDAL_EMOJIS = [
+  '🏆',
+  '⭐',
+  '🔥',
+  '💎',
+  '🚀',
+  '👑',
+  '🌟',
+  '💫',
+  '🎯',
+  '⚡',
+];
 
-// Placeholder types for graduation - to be implemented
-type AuctionPhase = 'upcoming' | 'live' | 'ended' | 'claimable' | 'trading';
-
-interface AuctionState {
-  phase: AuctionPhase;
-  progress: number;
-  bidderCount: number;
-  totalRaised: string;
-}
-
-function getAuctionState(token: Token, currentBlock: bigint): AuctionState {
-  const startBlock = BigInt(token.auctionStartBlock);
-  const endBlock = BigInt(token.auctionEndBlock);
-  const claimBlock = BigInt(token.auctionClaimBlock);
-  const migrationBlock = BigInt(token.poolMigrationBlock);
-
-  // Determine phase
-  let phase: AuctionPhase;
-  if (currentBlock < startBlock) {
-    phase = 'upcoming';
-  } else if (currentBlock >= startBlock && currentBlock < endBlock) {
-    phase = 'live';
-  } else if (currentBlock >= endBlock && currentBlock < claimBlock) {
-    phase = 'ended';
-  } else if (currentBlock >= claimBlock && currentBlock < migrationBlock) {
-    phase = 'claimable';
-  } else {
-    phase = 'trading';
+function getRandomMedals(seed: string, count: number = 3): string[] {
+  // Use address as seed for consistent medals per token
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
   }
-
-  // Calculate progress (placeholder - would need actual auction data)
-  let progress = 0;
-  if (phase === 'live') {
-    const totalBlocks = endBlock - startBlock;
-    const elapsedBlocks = currentBlock - startBlock;
-    progress = Number((elapsedBlocks * 100n) / totalBlocks);
-  } else if (
-    phase === 'ended' ||
-    phase === 'claimable' ||
-    phase === 'trading'
-  ) {
-    progress = 100;
+  const medals: string[] = [];
+  for (let i = 0; i < count; i++) {
+    const index = Math.abs((hash + i * 7) % MEDAL_EMOJIS.length);
+    medals.push(MEDAL_EMOJIS[index]);
   }
-
-  return {
-    phase,
-    progress,
-    bidderCount: 0, // Placeholder - needs indexer data
-    totalRaised: '0', // Placeholder - needs indexer data
-  };
+  return medals;
 }
 
 function formatTimeAgo(timestamp: number) {
@@ -68,23 +45,31 @@ function formatTimeAgo(timestamp: number) {
   return new Date(timestamp * 1000).toLocaleDateString();
 }
 
-interface DiscoverTokenCardProps {
-  token: Token;
-  currentBlock?: bigint;
-}
+export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
+  const {data: token} = useTokenByAddress(tokenAddr);
+  const {data: auctionData} = useAuctionState(token?.auction);
+  const {data: currentBlock} = useBlock({watch: true});
 
-export const DiscoverTokenCard = ({
-  token,
-  currentBlock = 0n,
-}: DiscoverTokenCardProps) => {
-  const auctionState = getAuctionState(token, currentBlock);
-  const isLive = auctionState.phase === 'live';
-  const isUpcoming = auctionState.phase === 'upcoming';
+  const status = auctionData?.status;
+  const isLive = status === 'active';
+  const isUpcoming = status === 'not_started';
   const isGraduating = isLive || isUpcoming;
-  const isTrading = auctionState.phase === 'trading';
+
+  const isTrading =
+    token && currentBlock
+      ? token.poolMigrationBlock <= currentBlock.number
+      : undefined;
+
+  const progress = auctionData?.progress ?? 0;
+
+  const totalRaised = auctionData?.totalBidAmount
+    ? formatEther(auctionData.totalBidAmount)
+    : '0';
+
+  if (!token) return <DiscoverTokenCardSkeleton />;
 
   return (
-    <Link href={`/token/${token.token}`}>
+    <Link href={`/token/${token.address}`}>
       <div className="border border-border bg-card cursor-pointer group terminal-card-hover">
         {/* Terminal header bar */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background/50 terminal-header-hover">
@@ -105,10 +90,10 @@ export const DiscoverTokenCard = ({
               upcoming
             </div>
           )}
-          {auctionState.phase === 'ended' && (
+          {status === 'ended' && !isTrading && (
             <div className="terminal-badge terminal-badge-upcoming">ended</div>
           )}
-          {auctionState.phase === 'claimable' && (
+          {status === 'claimable' && !isTrading && (
             <div className="terminal-badge terminal-badge-upcoming">
               claimable
             </div>
@@ -123,7 +108,7 @@ export const DiscoverTokenCard = ({
         {/* Main content with large image */}
         <div className="flex">
           {/* Large square image */}
-          <div className="w-32 h-32 flex-shrink-0 border-r border-border flex items-center justify-center bg-background terminal-image-hover">
+          <div className="w-36 h-36 flex-shrink-0 border-r border-border flex items-center justify-center bg-background terminal-image-hover">
             {token.image ? (
               <img
                 src={token.image}
@@ -138,7 +123,7 @@ export const DiscoverTokenCard = ({
           </div>
 
           {/* Content */}
-          <div className="flex-1 p-3 min-w-0 flex flex-col">
+          <div className="flex-1 p-4 min-w-0 flex flex-col">
             {/* Name */}
             <div className="mb-1">
               <div className="font-bold truncate group-hover:text-green transition-colors">
@@ -152,6 +137,15 @@ export const DiscoverTokenCard = ({
                 {token.description}
               </div>
             )}
+
+            {/* Medals */}
+            <div className="flex items-center gap-1 mb-2">
+              {getRandomMedals(token.address).map((medal, i) => (
+                <span key={i} className="text-sm" title="Medal">
+                  {medal}
+                </span>
+              ))}
+            </div>
 
             {/* Creator & Time */}
             <div className="flex items-center gap-2 text-xs text-dim mt-auto">
@@ -172,16 +166,16 @@ export const DiscoverTokenCard = ({
               <div className="terminal-progress mb-1">
                 <div
                   className={`terminal-progress-bar ${isUpcoming ? '!bg-purple' : ''}`}
-                  style={{width: `${auctionState.progress}%`}}
+                  style={{width: `${progress}%`}}
                 />
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-dim">
-                  {auctionState.bidderCount} bidders
+                  {isUpcoming ? 'upcoming' : 'live'}
                 </span>
                 <span>
                   <span className="text-green tabular-nums">
-                    {auctionState.totalRaised}
+                    {parseFloat(totalRaised).toFixed(4)}
                   </span>
                   <span className="text-dim"> ETH</span>
                 </span>
@@ -222,8 +216,8 @@ export const DiscoverTokenCardSkeleton = () => {
 
       {/* Main content with large image */}
       <div className="flex">
-        <div className="w-32 h-32 flex-shrink-0 border-r border-border bg-border animate-pulse" />
-        <div className="flex-1 p-3 flex flex-col">
+        <div className="w-36 h-36 flex-shrink-0 border-r border-border bg-border animate-pulse" />
+        <div className="flex-1 p-4 flex flex-col">
           <div className="h-5 w-28 bg-border animate-pulse mb-2" />
           <div className="h-3 w-full bg-border animate-pulse mb-2" />
           <div className="h-4 w-24 bg-border animate-pulse mt-auto" />

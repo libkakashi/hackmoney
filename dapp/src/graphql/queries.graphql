@@ -5,7 +5,7 @@ query GetTokens($limit: Int!, $offset: Int!) {
     order_by: {createdAt: desc}
   ) {
     id
-    token
+    address
     strategy
     auction
     creator
@@ -29,9 +29,9 @@ query GetTokens($limit: Int!, $offset: Int!) {
 }
 
 query GetTokenByAddress($token: String!) {
-  Launchpad_TokenLaunched(where: {token: {_eq: $token}}) {
+  Launchpad_TokenLaunched(where: {address: {_eq: $token}}) {
     id
-    token
+    address
     strategy
     auction
     creator

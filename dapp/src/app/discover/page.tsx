@@ -1,15 +1,16 @@
 'use client';
 
+import type {Address} from 'viem';
 import {useState, useEffect, useMemo} from 'react';
 import {useInView} from 'react-intersection-observer';
 import {useBlockNumber} from 'wagmi';
 import Link from 'next/link';
 import {Loader2} from 'lucide-react';
-import {Container} from '~/components/layout/container';
 import {
   DiscoverTokenCard,
   DiscoverTokenCardSkeleton,
 } from './discover-token-card';
+import {Container} from '~/components/layout/container';
 import {Button} from '~/components/ui/button';
 import {Input} from '~/components/ui/input';
 import {useInfiniteTokens} from '~/hooks/use-tokens';
@@ -234,7 +235,7 @@ export default function DiscoverPage() {
 
           {/* Loading state */}
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
               {[...Array(6)].map((_, i) => (
                 <DiscoverTokenCardSkeleton key={i} />
               ))}
@@ -242,12 +243,11 @@ export default function DiscoverPage() {
           ) : (
             <>
               {/* Token grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                 {filteredTokens.map(token => (
                   <DiscoverTokenCard
                     key={token.id}
-                    token={token}
-                    currentBlock={currentBlock}
+                    tokenAddr={token.address as Address}
                   />
                 ))}
               </div>

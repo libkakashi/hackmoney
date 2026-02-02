@@ -55,7 +55,7 @@ Launchpad.TokenLaunched.handler(async ({event, context}) => {
 
   const entity: Launchpad_TokenLaunched = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
-    token: event.params.token,
+    address: event.params.token,
     strategy: event.params.strategy,
     auction: event.params.auction,
     creator: event.params.creator,

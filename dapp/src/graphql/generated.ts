@@ -57,6 +57,7 @@ export type IntComparisonExp = {
 /** columns and relationships of "Launchpad_TokenLaunched" */
 export type LaunchpadTokenLaunched = {
   __typename: 'Launchpad_TokenLaunched';
+  address: Scalars['String']['output'];
   auction: Scalars['String']['output'];
   auctionClaimBlock: Scalars['numeric']['output'];
   auctionEndBlock: Scalars['numeric']['output'];
@@ -74,7 +75,6 @@ export type LaunchpadTokenLaunched = {
   strategy: Scalars['String']['output'];
   symbol: Scalars['String']['output'];
   telegramUrl?: Maybe<Scalars['String']['output']>;
-  token: Scalars['String']['output'];
   twitterUrl?: Maybe<Scalars['String']['output']>;
   txHash: Scalars['String']['output'];
   website?: Maybe<Scalars['String']['output']>;
@@ -85,6 +85,7 @@ export type LaunchpadTokenLaunchedBoolExp = {
   _and?: InputMaybe<Array<LaunchpadTokenLaunchedBoolExp>>;
   _not?: InputMaybe<LaunchpadTokenLaunchedBoolExp>;
   _or?: InputMaybe<Array<LaunchpadTokenLaunchedBoolExp>>;
+  address?: InputMaybe<StringComparisonExp>;
   auction?: InputMaybe<StringComparisonExp>;
   auctionClaimBlock?: InputMaybe<NumericComparisonExp>;
   auctionEndBlock?: InputMaybe<NumericComparisonExp>;
@@ -102,7 +103,6 @@ export type LaunchpadTokenLaunchedBoolExp = {
   strategy?: InputMaybe<StringComparisonExp>;
   symbol?: InputMaybe<StringComparisonExp>;
   telegramUrl?: InputMaybe<StringComparisonExp>;
-  token?: InputMaybe<StringComparisonExp>;
   twitterUrl?: InputMaybe<StringComparisonExp>;
   txHash?: InputMaybe<StringComparisonExp>;
   website?: InputMaybe<StringComparisonExp>;
@@ -110,6 +110,7 @@ export type LaunchpadTokenLaunchedBoolExp = {
 
 /** Ordering options when selecting data from "Launchpad_TokenLaunched". */
 export type LaunchpadTokenLaunchedOrderBy = {
+  address?: InputMaybe<OrderBy>;
   auction?: InputMaybe<OrderBy>;
   auctionClaimBlock?: InputMaybe<OrderBy>;
   auctionEndBlock?: InputMaybe<OrderBy>;
@@ -127,7 +128,6 @@ export type LaunchpadTokenLaunchedOrderBy = {
   strategy?: InputMaybe<OrderBy>;
   symbol?: InputMaybe<OrderBy>;
   telegramUrl?: InputMaybe<OrderBy>;
-  token?: InputMaybe<OrderBy>;
   twitterUrl?: InputMaybe<OrderBy>;
   txHash?: InputMaybe<OrderBy>;
   website?: InputMaybe<OrderBy>;
@@ -135,6 +135,8 @@ export type LaunchpadTokenLaunchedOrderBy = {
 
 /** select columns of table "Launchpad_TokenLaunched" */
 export type LaunchpadTokenLaunchedSelectColumn =
+  /** column name */
+  | 'address'
   /** column name */
   | 'auction'
   /** column name */
@@ -170,8 +172,6 @@ export type LaunchpadTokenLaunchedSelectColumn =
   /** column name */
   | 'telegramUrl'
   /** column name */
-  | 'token'
-  /** column name */
   | 'twitterUrl'
   /** column name */
   | 'txHash'
@@ -188,6 +188,7 @@ export type LaunchpadTokenLaunchedStreamCursorInput = {
 
 /** Initial value of the column from where the streaming should start */
 export type LaunchpadTokenLaunchedStreamCursorValueInput = {
+  address?: InputMaybe<Scalars['String']['input']>;
   auction?: InputMaybe<Scalars['String']['input']>;
   auctionClaimBlock?: InputMaybe<Scalars['numeric']['input']>;
   auctionEndBlock?: InputMaybe<Scalars['numeric']['input']>;
@@ -205,7 +206,6 @@ export type LaunchpadTokenLaunchedStreamCursorValueInput = {
   strategy?: InputMaybe<Scalars['String']['input']>;
   symbol?: InputMaybe<Scalars['String']['input']>;
   telegramUrl?: InputMaybe<Scalars['String']['input']>;
-  token?: InputMaybe<Scalars['String']['input']>;
   twitterUrl?: InputMaybe<Scalars['String']['input']>;
   txHash?: InputMaybe<Scalars['String']['input']>;
   website?: InputMaybe<Scalars['String']['input']>;
@@ -790,7 +790,7 @@ export type GetTokensQuery = {
   Launchpad_TokenLaunched: Array<{
     __typename: 'Launchpad_TokenLaunched';
     id: string;
-    token: string;
+    address: string;
     strategy: string;
     auction: string;
     creator: string;
@@ -822,7 +822,7 @@ export type GetTokenByAddressQuery = {
   Launchpad_TokenLaunched: Array<{
     __typename: 'Launchpad_TokenLaunched';
     id: string;
-    token: string;
+    address: string;
     strategy: string;
     auction: string;
     creator: string;
@@ -853,7 +853,7 @@ export const GetTokensDocument = gql`
       order_by: {createdAt: desc}
     ) {
       id
-      token
+      address
       strategy
       auction
       creator
@@ -878,9 +878,9 @@ export const GetTokensDocument = gql`
 `;
 export const GetTokenByAddressDocument = gql`
   query GetTokenByAddress($token: String!) {
-    Launchpad_TokenLaunched(where: {token: {_eq: $token}}) {
+    Launchpad_TokenLaunched(where: {address: {_eq: $token}}) {
       id
-      token
+      address
       strategy
       auction
       creator

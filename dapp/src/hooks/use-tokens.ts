@@ -24,6 +24,7 @@ export const useInfiniteTokens = (pageSize = TOKENS_PAGE_SIZE) => {
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       const tokens = lastPage.Launchpad_TokenLaunched;
+
       if (tokens.length < pageSize) {
         return undefined;
       }
@@ -45,7 +46,7 @@ export const useTokenByAddress = (token?: string) => {
       data
         ? {
             ...data.Launchpad_TokenLaunched[0],
-            address: data.Launchpad_TokenLaunched[0].id,
+            address: data.Launchpad_TokenLaunched[0].address as Address,
             auction: data.Launchpad_TokenLaunched[0].auction as Address,
           }
         : undefined,

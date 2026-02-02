@@ -1,6 +1,6 @@
 type Launchpad_TokenLaunched {
   id: ID!
-  token: String!
+  address: String!
   strategy: String!
   auction: String!
   creator: String!
