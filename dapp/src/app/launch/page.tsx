@@ -3,15 +3,8 @@
 import {useState, useEffect} from 'react';
 import {useRouter} from 'next/navigation';
 import {useConnection} from 'wagmi';
-import {
-  Loader2,
-  Globe,
-  MessageCircle,
-  Send,
-  Zap,
-  Calendar,
-  Clock,
-} from 'lucide-react';
+import {Globe, MessageCircle, Send, Zap, Calendar, Clock} from 'lucide-react';
+import {Loader} from '~/components/ui/loader';
 import {Container} from '~/components/layout/container';
 import {Button} from '~/components/ui/button';
 import {Input} from '~/components/ui/input';
@@ -370,7 +363,7 @@ export default function LaunchPage() {
             {/* Deploy progress */}
             {isDeploying && miningProgress && (
               <div className="text-green text-sm flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader />
                 {miningProgress}
               </div>
             )}
@@ -395,7 +388,7 @@ export default function LaunchPage() {
               >
                 {isDeploying ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                    <Loader type="dots" />
                     deploying...
                   </>
                 ) : (
