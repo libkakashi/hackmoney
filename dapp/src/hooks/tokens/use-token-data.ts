@@ -1,7 +1,8 @@
 import {formatUnits, type Address} from 'viem';
-import {erc20Abi} from 'viem';
 import {usePublicClient} from 'wagmi';
 import {useQuery} from '@tanstack/react-query';
+import {launchpadLensAbi} from '~/abi/launchpad-lens';
+import {env} from '~/lib/env';
 
 interface TokenInfo {
   name: string;
@@ -19,34 +20,19 @@ export const useTokenData = (tokenAddr?: Address) => {
       if (!tokenAddr || !publicClient) {
         throw new Error('Token address is required');
       }
-      const [name, symbol, decimals, totalSupply] = await Promise.all([
-        publicClient.readContract({
-          address: tokenAddr,
-          abi: erc20Abi,
-          functionName: 'name',
-        }),
-        publicClient.readContract({
-          address: tokenAddr,
-          abi: erc20Abi,
-          functionName: 'symbol',
-        }),
-        publicClient.readContract({
-          address: tokenAddr,
-          abi: erc20Abi,
-          functionName: 'decimals',
-        }),
-        publicClient.readContract({
-          address: tokenAddr,
-          abi: erc20Abi,
-          functionName: 'totalSupply',
-        }),
-      ]);
+
+      const data = await publicClient.readContract({
+        address: env.launchpadLensAddr,
+        abi: launchpadLensAbi,
+        functionName: 'getTokenData',
+        args: [tokenAddr],
+      });
 
       return {
-        name: name as string,
-        symbol: symbol as string,
-        decimals: decimals as number,
-        totalSupply: formatUnits(totalSupply as bigint, decimals as number),
+        name: data.name,
+        symbol: data.symbol,
+        decimals: data.decimals,
+        totalSupply: formatUnits(data.totalSupply, data.decimals),
       };
     },
     enabled: !!tokenAddr && !!publicClient,

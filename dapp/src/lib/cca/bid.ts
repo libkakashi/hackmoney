@@ -1,5 +1,6 @@
 import {type Address, type PublicClient, getContract} from 'viem';
-import {ccaAbi} from '~/abi/cca';
+import {launchpadLensAbi} from '~/abi/launchpad-lens';
+import {env} from '~/lib/env';
 
 const bidSubmittedEvent = {
   type: 'event',
@@ -63,32 +64,6 @@ export const getUserBids = async (
   return getBids(auctionAddr, bidIds, publicClient);
 };
 
-export const getBid = async (
-  auctionAddr: Address,
-  bidId: bigint,
-  publicClient: PublicClient,
-): Promise<Bid> => {
-  const auction = getContract({
-    address: auctionAddr,
-    abi: ccaAbi,
-    client: publicClient,
-  });
-
-  const bid = await auction.read.bids([bidId]);
-
-  return {
-    id: bidId,
-    maxPrice: bid.maxPrice,
-    amountQ96: bid.amountQ96,
-    owner: bid.owner,
-    startBlock: bid.startBlock,
-    startCumulativeMps: bid.startCumulativeMps,
-    exitedBlock: bid.exitedBlock,
-    tokensFilled: bid.tokensFilled,
-    exited: bid.exitedBlock > 0n,
-  };
-};
-
 export const getBids = async (
   auctionAddr: Address,
   bidIds: bigint[],
@@ -96,8 +71,32 @@ export const getBids = async (
 ): Promise<Bid[]> => {
   if (bidIds.length === 0) return [];
 
-  const bids = await Promise.all(
-    bidIds.map(bidId => getBid(auctionAddr, bidId, publicClient)),
-  );
-  return bids;
+  const lens = getContract({
+    address: env.launchpadLensAddr,
+    abi: launchpadLensAbi,
+    client: publicClient,
+  });
+
+  const bidsData = await lens.read.getBids([auctionAddr, bidIds]);
+
+  return bidsData.map(bid => ({
+    id: bid.id,
+    maxPrice: bid.maxPrice,
+    amountQ96: bid.amountQ96,
+    owner: bid.owner,
+    startBlock: BigInt(bid.startBlock),
+    startCumulativeMps: bid.startCumulativeMps,
+    exitedBlock: BigInt(bid.exitedBlock),
+    tokensFilled: bid.tokensFilled,
+    exited: bid.exitedBlock > 0n,
+  }));
+};
+
+export const getBid = async (
+  auctionAddr: Address,
+  bidId: bigint,
+  publicClient: PublicClient,
+): Promise<Bid> => {
+  const bids = await getBids(auctionAddr, [bidId], publicClient);
+  return bids[0];
 };

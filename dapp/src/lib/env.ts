@@ -20,6 +20,7 @@ const envSchema = z.object({
   chainId: z.number(),
   sessionSecret: z.string().min(32).optional(),
   launchpadAddr: ZAddress,
+  launchpadLensAddr: ZAddress,
   graphqlUrl: z.string(),
 });
 
@@ -29,6 +30,7 @@ export const env = envSchema.parse({
   chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID),
   sessionSecret: process.env.SESSION_SECRET,
   launchpadAddr: process.env.NEXT_PUBLIC_LAUNCHPAD_ADDR,
+  launchpadLensAddr: process.env.NEXT_PUBLIC_LAUNCHPAD_LENS_ADDR,
   graphqlUrl:
     process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8080/v1/graphql',
 });
