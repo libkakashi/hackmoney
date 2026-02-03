@@ -4,14 +4,14 @@ field_selection:
   transaction_fields:
     - hash
 networks:
-  - id: 1337
-    start_block: 24364156
+  - id: 69
+    start_block: 24372706
     rpc_config:
-      url: http://localhost:8545
+      url: https://virtual.mainnet.eu.rpc.tenderly.co/7b79df7a-034a-4eeb-95a6-83366b9e398f
     contracts:
       - name: Launchpad
         address:
-          - 0xb68a202cE0FB25ea7648eA29Ff632fCd66c2262f
+          - 0x63e39e1b03a72B721D6398D67A646705B33979eD
         handler: src/EventHandlers.ts
         events:
           - event: TokenLaunched(address indexed token, address indexed strategy, address indexed auction, address creator, string name, string symbol, string description, string website, string image, uint64 auctionStartBlock, uint64 auctionEndBlock, uint64 auctionClaimBlock, uint64 poolMigrationBlock, bytes32 salt)

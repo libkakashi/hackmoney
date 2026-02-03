@@ -6,11 +6,19 @@ import {env} from './env';
 
 export const getChain = (chainId: number): Chain => {
   const chain = Object.values(chains).find(chain => chain.id === chainId);
+  if (chain) return chain;
 
-  if (!chain) {
+  if (chainId !== 69) {
     throw new Error(`Invalid chain ID: ${chainId}`);
   }
-  return chain;
+  return {
+    id: chainId,
+    name: 'Nyx Mainnet Fork',
+    nativeCurrency: {name: 'Ether', symbol: 'ETH', decimals: 18},
+    rpcUrls: {
+      default: {http: [env.rpcUrl ?? '']},
+    },
+  };
 };
 export const chain = getChain(env.chainId);
 
