@@ -5,6 +5,7 @@ import {usePathname} from 'next/navigation';
 import {Menu, X} from 'lucide-react';
 import {useState} from 'react';
 import {ConnectWallet} from '~/components/connect-wallet';
+import {FaucetModal} from '~/components/faucet-modal';
 import {Sheet, SheetContent, SheetTrigger} from '~/components/ui/sheet';
 
 const NAV_LINKS = [
@@ -52,6 +53,9 @@ export function Navbar() {
         {/* Right side */}
         <div className="flex items-center gap-4">
           <div className="hidden md:block">
+            <FaucetModal />
+          </div>
+          <div className="hidden md:block">
             <ConnectWallet />
           </div>
 
@@ -95,7 +99,8 @@ export function Navbar() {
                   ))}
                 </nav>
 
-                <div className="p-4 border-t border-border">
+                <div className="p-4 border-t border-border space-y-2">
+                  <FaucetModal />
                   <ConnectWallet className="w-full" />
                 </div>
               </div>
