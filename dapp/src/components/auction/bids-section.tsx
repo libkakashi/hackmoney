@@ -12,6 +12,7 @@ import type {AuctionState} from '~/lib/cca/auction';
 import type {Bid} from '~/lib/cca/bid';
 import {Q96} from '~/lib/cca/utils';
 import {cn} from '~/lib/utils';
+import {PriceChart} from './price-chart';
 
 const formatTimestamp = (blocksAgo: bigint, blockTimeMs: number): string => {
   const secondsAgo = Number(blocksAgo) * (blockTimeMs / 1000);
@@ -93,12 +94,26 @@ export const BidsSection = ({auctionAddr}: {auctionAddr: Address}) => {
     refetch,
   } = useAllAuctionBids(auctionAddr, auctionState?.startBlock);
 
-  const [activeSubTab, setActiveSubTab] = useState<'your' | 'all'>('your');
+  const [activeSubTab, setActiveSubTab] = useState<'chart' | 'your' | 'all'>(
+    'chart',
+  );
 
   return (
     <div className="space-y-4">
       {/* Sub-tabs */}
       <div className="flex items-center gap-2 border-b border-border pb-2">
+        <Button
+          variant="ghost"
+          size="xs"
+          onClick={() => setActiveSubTab('chart')}
+          className={`${
+            activeSubTab === 'chart'
+              ? 'text-green'
+              : 'text-dim hover:text-foreground'
+          }`}
+        >
+          price_chart
+        </Button>
         <Button
           variant="ghost"
           size="xs"
@@ -163,6 +178,8 @@ export const BidsSection = ({auctionAddr}: {auctionAddr: Address}) => {
         <div className="h-50 flex items-center justify-center text-dim text-sm">
           loading bids...
         </div>
+      ) : activeSubTab === 'chart' ? (
+        <PriceChart />
       ) : activeSubTab === 'your' ? (
         // Your bids tab
         !isConnected ? (

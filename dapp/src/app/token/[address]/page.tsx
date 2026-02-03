@@ -70,11 +70,11 @@ export default function TokenPage() {
 
   return (
     <div className="py-6 md:py-8">
-      <Container>
+      <Container size="xl">
         {/* Command header */}
         <div className="text-dim text-sm mb-4">
           ~/token/{token.symbol.toLowerCase()}{' '}
-          <span className="text-green">$</span> cat info.txt
+          <span className="text-green">$</span> cat info.md
         </div>
 
         {/* Back link */}
@@ -85,9 +85,9 @@ export default function TokenPage() {
           <span className="text-green">&lt;</span> back to discover
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="lg:col-span-4 space-y-4">
             {/* Token Header */}
             <TokenMetadataCard address={address} />
 
@@ -129,6 +129,16 @@ export default function TokenPage() {
             )}
 
             <SwapPanel tokenAddr={token.address} />
+          </div>
+        </div>
+
+        {/* Terminal footer */}
+        <div className="mt-8 text-xs text-dim">
+          <div className="flex items-center gap-2">
+            <span className="text-green">●</span>
+            <span>process complete</span>
+            <span className="text-dim">|</span>
+            <span>exit code: 0</span>
           </div>
         </div>
       </Container>

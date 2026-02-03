@@ -148,16 +148,6 @@ export function HelpSection() {
           </div>
         </div>
       </div>
-
-      {/* Terminal footer */}
-      <div className="mt-8 text-xs text-dim">
-        <div className="flex items-center gap-2">
-          <span className="text-green">●</span>
-          <span>process complete</span>
-          <span className="text-dim">|</span>
-          <span>exit code: 0</span>
-        </div>
-      </div>
     </div>
   );
 }
