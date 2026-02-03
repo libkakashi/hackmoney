@@ -9,7 +9,8 @@ import {useAuctionState} from '~/hooks/cca/use-auction-state';
 import {useTokenData} from '~/hooks/tokens/use-token-data';
 import {useBlockTime} from '~/hooks/use-block-time';
 import type {AuctionState} from '~/lib/cca/auction';
-import {Q96, type Bid} from '~/lib/cca';
+import type {Bid} from '~/lib/cca/bid';
+import {Q96} from '~/lib/cca/utils';
 import {cn} from '~/lib/utils';
 
 const formatTimestamp = (blocksAgo: bigint, blockTimeMs: number): string => {
