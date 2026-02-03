@@ -5,9 +5,9 @@ field_selection:
     - hash
 networks:
   - id: 69
-    start_block: 24372706
+    start_block: 24375513
     rpc_config:
-      url: https://virtual.mainnet.eu.rpc.tenderly.co/7b79df7a-034a-4eeb-95a6-83366b9e398f
+      url: https://minanet-fork-production.up.railway.app
     contracts:
       - name: Launchpad
         address:
