@@ -1,6 +1,18 @@
 export const permit2Abi = [
   {
     type: 'function',
+    name: 'approve',
+    inputs: [
+      {name: 'token', type: 'address'},
+      {name: 'spender', type: 'address'},
+      {name: 'amount', type: 'uint160'},
+      {name: 'expiration', type: 'uint48'},
+    ],
+    outputs: [],
+    stateMutability: 'nonpayable',
+  },
+  {
+    type: 'function',
     name: 'permit',
     inputs: [
       {name: 'owner', type: 'address'},

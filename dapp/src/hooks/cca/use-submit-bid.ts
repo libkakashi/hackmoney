@@ -7,7 +7,14 @@ import {
   useConnection,
   useWriteContract,
 } from 'wagmi';
-import {type Address, type Hex, erc20Abi, zeroAddress} from 'viem';
+import {
+  type Address,
+  type Hex,
+  erc20Abi,
+  zeroAddress,
+  maxUint160,
+  maxUint48,
+} from 'viem';
 import {useAuctionState} from './use-auction-state';
 import {usePermit2, PERMIT2_ADDRESS} from '../use-permit2';
 import {roundPriceToTick} from '~/lib/cca/utils';
@@ -23,8 +30,7 @@ export const useSubmitBid = (auctionAddr: Address) => {
 
   const {data: auctionState} = useAuctionState(auctionAddr);
 
-  const {needsErc20Approval, needsPermit2Signature, signPermitSingle} =
-    usePermit2();
+  const {needsErc20Approval, needsPermit2Signature} = usePermit2();
 
   return useMutation({
     mutationFn: async (amount: bigint): Promise<Hex> => {
@@ -53,28 +59,23 @@ export const useSubmitBid = (auctionAddr: Address) => {
         }
 
         console.log('[bid] Checking Permit2 allowance for auction...');
+        // Check if we have any valid allowance (not expired, amount > 0)
         const needsPermit = await needsPermit2Signature(
           currency,
           auctionAddr,
-          amount,
+          1n, // Just check for any valid allowance since we set max
         );
 
         if (needsPermit) {
-          console.log('[bid] Signing and submitting Permit2 allowance...');
-          const {permitSingle, signature} = await signPermitSingle(
-            currency,
-            auctionAddr,
-            amount,
-          );
-
-          const permitHash = await writeContractAsync({
+          console.log('[bid] Setting Permit2 allowance for auction...');
+          const approveHash = await writeContractAsync({
             address: PERMIT2_ADDRESS,
             abi: permit2Abi,
-            functionName: 'permit',
-            args: [userAddress, permitSingle, signature],
+            functionName: 'approve',
+            args: [currency, auctionAddr, maxUint160, Number(maxUint48)],
           });
-          console.log('[bid] Permit2 allowance tx:', permitHash);
-          await publicClient.waitForTransactionReceipt({hash: permitHash});
+          console.log('[bid] Permit2 approve tx:', approveHash);
+          await publicClient.waitForTransactionReceipt({hash: approveHash});
           console.log('[bid] Permit2 allowance confirmed');
         }
       }

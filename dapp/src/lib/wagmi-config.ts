@@ -32,6 +32,13 @@ export const wagmiConfig = createConfig({
       showQrModal: true,
     }),
   ],
-  transports: {[chain.id]: http(env.rpcUrl)},
+  transports: {
+    [chain.id]: http(env.rpcUrl, {
+      batch: {
+        batchSize: 1024,
+        wait: 100, // ms to wait before sending batch
+      },
+    }),
+  },
   ssr: true,
 });

@@ -20,10 +20,9 @@ export const useBlockTime = (startBlock?: bigint) => {
     error: currentError,
   } = useBlock({watch: true});
 
-  const referenceBlockNumber = useMemo(() => {
-    if (!currentBlockData) return undefined;
-    return startBlock ?? currentBlockData.number - DEFAULT_BLOCK_RANGE;
-  }, [currentBlockData, startBlock]);
+  const referenceBlockNumber = !currentBlockData
+    ? undefined
+    : (startBlock ?? currentBlockData.number - DEFAULT_BLOCK_RANGE);
 
   const {
     data: referenceBlockData,
