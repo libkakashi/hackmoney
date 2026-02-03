@@ -48,6 +48,7 @@ export const useTokenByAddress = (token?: string) => {
             ...data.Launchpad_TokenLaunched[0],
             address: data.Launchpad_TokenLaunched[0].address as Address,
             auction: data.Launchpad_TokenLaunched[0].auction as Address,
+            strategy: data.Launchpad_TokenLaunched[0].strategy as Address,
           }
         : undefined,
   });

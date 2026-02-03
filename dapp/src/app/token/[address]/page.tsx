@@ -8,11 +8,12 @@ import {useConnection} from 'wagmi';
 import {AuctionPanel} from '~/components/auction/auction-panel';
 import {Container} from '~/components/layout/container';
 import {Button} from '~/components/ui/button';
+import {SwapPanel} from '~/components/swap/swap-panel';
+import {BidsSection} from '~/components/auction/bids-section';
+import {TokenMetadataCard} from './token-metadata-card';
 
 import {useTokenByAddress} from '~/hooks/use-tokens';
 import {useTokenBalance} from '~/hooks/tokens/use-token-balance';
-import {TokenMetadataCard} from './token-metadata-card';
-import {BidsSection} from '~/components/auction/bids-section';
 import {useAuctionState} from '~/hooks/cca/use-auction-state';
 
 export default function TokenPage() {
@@ -126,6 +127,8 @@ export default function TokenPage() {
                 </div>
               </div>
             )}
+
+            <SwapPanel tokenAddr={token.address} />
           </div>
         </div>
       </Container>

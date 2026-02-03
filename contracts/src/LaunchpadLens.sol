@@ -4,8 +4,19 @@ pragma solidity ^0.8.20;
 import {IERC20Metadata} from "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import {IContinuousClearingAuction} from "continuous-clearing-auction/src/interfaces/IContinuousClearingAuction.sol";
 import {Bid} from "continuous-clearing-auction/src/libraries/BidLib.sol";
+import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
+import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
+import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
+import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
+import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
+import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {ILBPStrategyBase} from "liquidity-launcher/src/interfaces/ILBPStrategyBase.sol";
+import {IImmutableState} from "@uniswap/v4-periphery/src/interfaces/IImmutableState.sol";
 
 contract LaunchpadLens {
+    using PoolIdLibrary for PoolKey;
+    using StateLibrary for IPoolManager;
+
     struct AuctionState {
         uint256 clearingPriceQ96;
         uint256 currencyRaised;
@@ -30,6 +41,31 @@ contract LaunchpadLens {
         string symbol;
         uint8 decimals;
         uint256 totalSupply;
+    }
+
+    struct PoolKeyWithStatus {
+        address currency0;
+        address currency1;
+        uint24 fee;
+        int24 tickSpacing;
+        address hooks;
+        bool isMigrated;
+    }
+
+    struct StrategyState {
+        // Pool key fields
+        address currency0;
+        address currency1;
+        uint24 fee;
+        int24 tickSpacing;
+        address hooks;
+        bool isMigrated;
+        // Strategy fields
+        address token;
+        address currency;
+        uint64 migrationBlock;
+        address initializer;
+        address poolManager;
     }
 
     function getAuctionState(
@@ -127,5 +163,78 @@ contract LaunchpadLens {
                 tokensFilled: bidData.tokensFilled
             });
         }
+    }
+
+    function getPoolKeyAndMigrationStatus(
+        address strategy
+    ) external view returns (PoolKeyWithStatus memory result) {
+        ILBPStrategyBase strat = ILBPStrategyBase(strategy);
+        IPoolManager poolManager = IImmutableState(strategy).poolManager();
+
+        address tokenAddr = strat.token();
+        address currencyAddr = strat.currency();
+        uint24 fee = strat.poolLPFee();
+        int24 tickSpacing = strat.poolTickSpacing();
+
+        // Sort addresses for currency0/currency1 (V4 requires currency0 < currency1)
+        (address currency0, address currency1) = tokenAddr < currencyAddr
+            ? (tokenAddr, currencyAddr)
+            : (currencyAddr, tokenAddr);
+
+        result.currency0 = currency0;
+        result.currency1 = currency1;
+        result.fee = fee;
+        result.tickSpacing = tickSpacing;
+        result.hooks = strategy;
+
+        // Build PoolKey to compute pool ID
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(currency0),
+            currency1: Currency.wrap(currency1),
+            fee: fee,
+            tickSpacing: tickSpacing,
+            hooks: IHooks(strategy)
+        });
+
+        // Check if pool is initialized by reading sqrtPriceX96 from slot0
+        PoolId poolId = key.toId();
+        (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolId);
+        result.isMigrated = sqrtPriceX96 != 0;
+    }
+
+    function getStrategyState(
+        address strategy
+    ) external view returns (StrategyState memory result) {
+        ILBPStrategyBase strat = ILBPStrategyBase(strategy);
+        IPoolManager poolManager = IImmutableState(strategy).poolManager();
+
+        result.token = strat.token();
+        result.currency = strat.currency();
+        result.fee = strat.poolLPFee();
+        result.tickSpacing = strat.poolTickSpacing();
+        result.migrationBlock = strat.migrationBlock();
+        result.initializer = address(strat.initializer());
+        result.poolManager = address(poolManager);
+
+        // Sort addresses for currency0/currency1 (V4 requires currency0 < currency1)
+        (result.currency0, result.currency1) = result.token < result.currency
+            ? (result.token, result.currency)
+            : (result.currency, result.token);
+
+        result.hooks = strategy;
+
+        // Build PoolKey to compute pool ID
+        PoolKey memory key = PoolKey({
+            currency0: Currency.wrap(result.currency0),
+            currency1: Currency.wrap(result.currency1),
+            fee: result.fee,
+            tickSpacing: result.tickSpacing,
+            hooks: IHooks(strategy)
+        });
+
+        // Check if pool is initialized by reading sqrtPriceX96 from slot0
+        PoolId poolId = key.toId();
+        (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolId);
+        result.isMigrated = sqrtPriceX96 != 0;
     }
 }

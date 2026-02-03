@@ -1,0 +1,157 @@
+export const lBPStrategyBaseAbi = [
+  // Events
+  {
+    type: 'event',
+    name: 'Migrated',
+    inputs: [
+      {
+        name: 'key',
+        type: 'tuple',
+        indexed: true,
+        components: [
+          {name: 'currency0', type: 'address'},
+          {name: 'currency1', type: 'address'},
+          {name: 'fee', type: 'uint24'},
+          {name: 'tickSpacing', type: 'int24'},
+          {name: 'hooks', type: 'address'},
+        ],
+      },
+      {name: 'initialSqrtPriceX96', type: 'uint160', indexed: false},
+    ],
+  },
+  {
+    type: 'event',
+    name: 'InitializerCreated',
+    inputs: [{name: 'initializer', type: 'address', indexed: true}],
+  },
+  {
+    type: 'event',
+    name: 'TokensSwept',
+    inputs: [
+      {name: 'operator', type: 'address', indexed: true},
+      {name: 'amount', type: 'uint256', indexed: false},
+    ],
+  },
+  {
+    type: 'event',
+    name: 'CurrencySwept',
+    inputs: [
+      {name: 'operator', type: 'address', indexed: true},
+      {name: 'amount', type: 'uint256', indexed: false},
+    ],
+  },
+  // Functions
+  {
+    type: 'function',
+    name: 'onTokensReceived',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'migrate',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'sweepToken',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+  {
+    type: 'function',
+    name: 'sweepCurrency',
+    stateMutability: 'nonpayable',
+    inputs: [],
+    outputs: [],
+  },
+  // View functions
+  {
+    type: 'function',
+    name: 'token',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'address'}],
+  },
+  {
+    type: 'function',
+    name: 'currency',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'address'}],
+  },
+  {
+    type: 'function',
+    name: 'totalSupply',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'uint128'}],
+  },
+  {
+    type: 'function',
+    name: 'reserveTokenAmount',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'uint128'}],
+  },
+  {
+    type: 'function',
+    name: 'positionRecipient',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'address'}],
+  },
+  {
+    type: 'function',
+    name: 'migrationBlock',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'uint64'}],
+  },
+  {
+    type: 'function',
+    name: 'sweepBlock',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'uint64'}],
+  },
+  {
+    type: 'function',
+    name: 'operator',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'address'}],
+  },
+  {
+    type: 'function',
+    name: 'initializer',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'address'}],
+  },
+  {
+    type: 'function',
+    name: 'poolLPFee',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'uint24'}],
+  },
+  {
+    type: 'function',
+    name: 'poolTickSpacing',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'int24'}],
+  },
+  {
+    type: 'function',
+    name: 'maxCurrencyAmountForLP',
+    stateMutability: 'view',
+    inputs: [],
+    outputs: [{name: '', type: 'uint128'}],
+  },
+] as const;
