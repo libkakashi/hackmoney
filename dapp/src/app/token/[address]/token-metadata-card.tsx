@@ -8,11 +8,21 @@ import {Button} from '~/components/ui/button';
 import {Skeleton} from '~/components/ui/skeleton';
 import {useTokenByAddress} from '~/hooks/use-tokens';
 import {usePoolPrice} from '~/hooks/use-pool-price';
+import {useTokenData} from '~/hooks/tokens/use-token-data';
 
 export const TokenMetadataCard = ({address}: {address?: Address}) => {
   const {data: token} = useTokenByAddress(address);
   const {data: poolPrice} = usePoolPrice(address);
+  const {data: tokenData} = useTokenData(address);
   const createdAt = token ? new Date(token.createdAt * 1000) : undefined;
+
+  // Calculate market cap: totalSupply * price
+  // priceE18 is price scaled by 1e18, totalSupply is already formatted as a string
+  const marketCap =
+    poolPrice?.priceE18 && tokenData?.totalSupply
+      ? Number(formatUnits(poolPrice.priceE18, 6)) *
+        Number(tokenData.totalSupply)
+      : undefined;
 
   const [copied, setCopied] = useState(false);
   const [copiedCreator, setCopiedCreator] = useState(false);
@@ -43,16 +53,20 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
           </div>
         </div>
         <div className="mt-4 pt-4 border-t border-border">
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <div className="text-xs text-dim">price</div>
               <Skeleton className="h-5 w-20 mt-1" />
             </div>
             <div>
+              <div className="text-xs text-dim">market_cap</div>
+              <Skeleton className="h-5 w-24 mt-1" />
+            </div>
+            <div>
               <div className="text-xs text-dim">created_at</div>
               <Skeleton className="h-5 w-32 mt-1" />
             </div>
-            <div className="col-span-2 md:col-span-1">
+            <div>
               <div className="text-xs text-dim">creator</div>
               <Skeleton className="h-5 w-28 mt-1" />
             </div>
@@ -173,12 +187,20 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
 
       {/* Token Stats - Below the whole top section */}
       <div className="mt-4 pt-4 border-t border-border">
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="flex justify-between gap-4">
           <div>
             <div className="text-xs text-dim">price</div>
             <div className="tabular-nums">
               {poolPrice?.priceE18
                 ? `$${formatUnits(poolPrice.priceE18, 6)}`
+                : '-'}
+            </div>
+          </div>
+          <div>
+            <div className="text-xs text-dim">market_cap</div>
+            <div className="tabular-nums">
+              {marketCap !== undefined
+                ? `$${marketCap.toLocaleString(undefined, {maximumFractionDigits: 2})}`
                 : '-'}
             </div>
           </div>
@@ -196,7 +218,7 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
                 : '-'}
             </div>
           </div>
-          <div className="col-span-2 md:col-span-1">
+          <div>
             <div className="text-xs text-dim">creator</div>
             <Button
               variant="ghost"
