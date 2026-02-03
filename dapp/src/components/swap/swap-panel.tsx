@@ -75,10 +75,14 @@ export const SwapPanel = ({tokenAddr}: {tokenAddr?: Address}) => {
         <div className="text-center space-y-2">
           <p className="text-sm text-yellow">// pool not initialized</p>
           <p className="text-xs text-dim">
-            migrate liquidity to uniswap v4 to enable trading
+            wow you're the first one here, let's get the party started!
           </p>
         </div>
-        <Button onClick={handleInitializePool} disabled={isMigrating}>
+        <Button
+          onClick={handleInitializePool}
+          disabled={isMigrating}
+          className="mt-2"
+        >
           {isMigrating ? (
             <>
               <Loader type="dots" className="mr-2" />
