@@ -122,4 +122,40 @@ export const launchpadLensAbi = [
     ],
     stateMutability: 'view',
   },
+  {
+    type: 'function',
+    name: 'getPoolPrice',
+    inputs: [
+      {
+        name: 'poolManager',
+        type: 'address',
+        internalType: 'contract IPoolManager',
+      },
+      {
+        name: 'poolKey',
+        type: 'tuple',
+        internalType: 'struct PoolKey',
+        components: [
+          {name: 'currency0', type: 'address', internalType: 'Currency'},
+          {name: 'currency1', type: 'address', internalType: 'Currency'},
+          {name: 'fee', type: 'uint24', internalType: 'uint24'},
+          {name: 'tickSpacing', type: 'int24', internalType: 'int24'},
+          {name: 'hooks', type: 'address', internalType: 'contract IHooks'},
+        ],
+      },
+    ],
+    outputs: [
+      {
+        name: 'result',
+        type: 'tuple',
+        internalType: 'struct LaunchpadLens.PoolPrice',
+        components: [
+          {name: 'tick', type: 'int24', internalType: 'int24'},
+          {name: 'sqrtPriceX96', type: 'uint160', internalType: 'uint160'},
+          {name: 'priceE18', type: 'uint256', internalType: 'uint256'},
+        ],
+      },
+    ],
+    stateMutability: 'view',
+  },
 ] as const;

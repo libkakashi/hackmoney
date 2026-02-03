@@ -75,7 +75,7 @@ export const SwapPanel = ({tokenAddr}: {tokenAddr?: Address}) => {
         <div className="text-center space-y-2">
           <p className="text-sm text-yellow">// pool not initialized</p>
           <p className="text-xs text-dim">
-            wow you're the first one here, let's get the party started!
+            wow you're the first one here, let's get the party started:
           </p>
         </div>
         <Button

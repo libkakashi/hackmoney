@@ -10,6 +10,7 @@ import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {Currency} from "@uniswap/v4-core/src/types/Currency.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
+import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {ILBPStrategyBase} from "liquidity-launcher/src/interfaces/ILBPStrategyBase.sol";
 import {IImmutableState} from "@uniswap/v4-periphery/src/interfaces/IImmutableState.sol";
 
@@ -236,5 +237,38 @@ contract LaunchpadLens {
         PoolId poolId = key.toId();
         (uint160 sqrtPriceX96, , , ) = poolManager.getSlot0(poolId);
         result.isMigrated = sqrtPriceX96 != 0;
+    }
+
+    struct PoolPrice {
+        int24 tick;
+        uint160 sqrtPriceX96;
+        uint256 priceE18;
+    }
+
+    function getPoolPrice(
+        IPoolManager poolManager,
+        PoolKey calldata poolKey
+    ) external view returns (PoolPrice memory result) {
+        PoolId poolId = poolKey.toId();
+        (uint160 sqrtPriceX96, int24 tick, , ) = poolManager.getSlot0(poolId);
+
+        result.tick = tick;
+        result.sqrtPriceX96 = sqrtPriceX96;
+
+        // Convert sqrtPriceX96 to price scaled by 1e18
+        // sqrtPriceX96 = sqrt(price) * 2^96
+        // price = (sqrtPriceX96 / 2^96)^2
+        // priceE18 = price * 1e18 = (sqrtPriceX96^2 * 1e18) / 2^192
+        if (sqrtPriceX96 <= type(uint128).max) {
+            uint256 priceX192 = uint256(sqrtPriceX96) * sqrtPriceX96;
+            result.priceE18 = FullMath.mulDiv(priceX192, 1e18, 1 << 192);
+        } else {
+            uint256 priceX128 = FullMath.mulDiv(
+                sqrtPriceX96,
+                sqrtPriceX96,
+                1 << 64
+            );
+            result.priceE18 = FullMath.mulDiv(priceX128, 1e18, 1 << 128);
+        }
     }
 }

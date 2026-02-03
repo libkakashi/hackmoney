@@ -1,14 +1,17 @@
 import type {Address} from 'viem';
 import {useState} from 'react';
+import {formatUnits} from 'viem';
 import {Globe} from 'lucide-react';
 
 import {TwitterIcon, DiscordIcon, TelegramIcon} from '~/components/icons';
 import {Button} from '~/components/ui/button';
 import {Skeleton} from '~/components/ui/skeleton';
 import {useTokenByAddress} from '~/hooks/use-tokens';
+import {usePoolPrice} from '~/hooks/use-pool-price';
 
 export const TokenMetadataCard = ({address}: {address?: Address}) => {
   const {data: token} = useTokenByAddress(address);
+  const {data: poolPrice} = usePoolPrice(address);
   const createdAt = token ? new Date(token.createdAt * 1000) : undefined;
 
   const [copied, setCopied] = useState(false);
@@ -173,7 +176,11 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
           <div>
             <div className="text-xs text-dim">price</div>
-            <div className="tabular-nums">{'-'}</div>
+            <div className="tabular-nums">
+              {poolPrice?.priceE18
+                ? `$${formatUnits(poolPrice.priceE18, 6)}`
+                : '-'}
+            </div>
           </div>
           <div>
             <div className="text-xs text-dim">created_at</div>
