@@ -3,7 +3,7 @@
 import type {Address, Hex} from 'viem';
 import {useMutation, useQueryClient} from '@tanstack/react-query';
 import {usePublicClient, useWalletClient, useConnection} from 'wagmi';
-import {exitAndClaimBatch} from '~/lib/cca';
+import {exitAndClaimBatch} from '~/lib/cca/claim';
 import {useUserBids} from './use-user-bids';
 
 export const useClaimTokens = (auctionAddress: Address) => {
