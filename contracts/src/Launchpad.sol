@@ -95,13 +95,13 @@ contract Launchpad is ReentrancyGuardTransient {
     uint64 public constant AUCTION_DURATION = 180;
 
     /// @notice Blocks after auction end before claims are allowed
-    uint64 public constant CLAIM_DELAY = 10;
+    uint64 public constant CLAIM_DELAY = 2;
 
     /// @notice Blocks after auction end before migration can occur
-    uint64 public constant MIGRATION_DELAY = 20;
+    uint64 public constant MIGRATION_DELAY = 2;
 
-    /// @notice Blocks after migration before sweep is allowed (~1 day)
-    uint64 public constant SWEEP_DELAY = 7200;
+    /// @notice Blocks after migration before sweep is allowed
+    uint64 public constant SWEEP_DELAY = 2;
 
     /// @notice Total MPS (milli-bips) that must be distributed = 100%
     uint24 public constant TOTAL_MPS = 10_000_000;

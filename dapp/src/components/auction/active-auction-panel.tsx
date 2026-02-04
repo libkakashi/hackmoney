@@ -4,9 +4,10 @@ import {useState, useEffect} from 'react';
 import {formatUnits, parseUnits, type Address} from 'viem';
 import {useConnection} from 'wagmi';
 
-import {CountdownCompact} from '../countdown';
+import {CountdownCompact} from '~/components/countdown';
 import {Button} from '~/components/ui/button';
 import {Card, CardHeader, CardTitle, CardContent} from '~/components/ui/card';
+import {Loader} from '~/components/ui/loader';
 
 import {useTokenBalance} from '~/hooks/tokens/use-token-balance';
 import {useTokenData} from '~/hooks/tokens/use-token-data';
@@ -15,7 +16,6 @@ import {useSubmitBid} from '~/hooks/cca/use-submit-bid';
 import type {AuctionState} from '~/lib/cca/auction';
 import {formatCompactNumber} from './utils';
 import {cn} from '~/lib/utils';
-import {Loader} from '../ui/loader';
 
 interface ActiveAuctionPanelProps {
   auctionAddr: Address;
