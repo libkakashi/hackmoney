@@ -1,4 +1,14 @@
-import * as React from 'react';
+import {
+  type ReactNode,
+  type MouseEvent,
+  type ComponentProps,
+  isValidElement,
+  useRef,
+  useState,
+  Children,
+  useCallback,
+  useEffect,
+} from 'react';
 import {Slot} from '@radix-ui/react-slot';
 import {cva, type VariantProps} from 'class-variance-authority';
 
@@ -38,16 +48,16 @@ const buttonVariants = cva(
 
 const SCRAMBLE_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`0123456789';
 
-function useTextScramble(text: string) {
-  const [displayText, setDisplayText] = React.useState(text);
-  const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
-  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+const useTextScramble = (text: string) => {
+  const [displayText, setDisplayText] = useState(text);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     setDisplayText(text);
   }, [text]);
 
-  const scramble = React.useCallback(() => {
+  const scramble = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
@@ -79,13 +89,13 @@ function useTextScramble(text: string) {
     }, intervalTime);
   }, [text]);
 
-  const reset = React.useCallback(() => {
+  const reset = useCallback(() => {
     if (intervalRef.current) clearInterval(intervalRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     setDisplayText(text);
   }, [text]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -93,21 +103,24 @@ function useTextScramble(text: string) {
   }, []);
 
   return {displayText, scramble, reset};
-}
+};
 
-function extractTextFromChildren(children: React.ReactNode): string {
+const extractTextFromChildren = (children: ReactNode): string => {
   if (typeof children === 'string') return children;
   if (typeof children === 'number') return String(children);
   if (Array.isArray(children)) {
     return children.map(extractTextFromChildren).join('');
   }
-  if (React.isValidElement(children) && children.props.children) {
-    return extractTextFromChildren(children.props.children);
+  if (isValidElement(children)) {
+    const props = children.props as {children?: ReactNode};
+    if (props.children) {
+      return extractTextFromChildren(props.children);
+    }
   }
   return '';
-}
+};
 
-function Button({
+const Button = ({
   className,
   variant = 'default',
   size = 'default',
@@ -117,11 +130,11 @@ function Button({
   onMouseEnter,
   onMouseLeave,
   ...props
-}: React.ComponentProps<'button'> &
+}: ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
     asChild?: boolean;
     showPrefix?: boolean;
-  }) {
+  }) => {
   // Don't add prefix for icon-only buttons
   const isIconOnly = size?.toString().startsWith('icon');
   const shouldShowPrefix = showPrefix && !isIconOnly;
@@ -130,16 +143,16 @@ function Button({
   const hasTextContent = text.length > 0 && !isIconOnly;
   const {displayText, scramble, reset} = useTextScramble(text);
 
-  const handleMouseEnter = React.useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleMouseEnter = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
       if (hasTextContent) scramble();
       onMouseEnter?.(e);
     },
     [hasTextContent, scramble, onMouseEnter],
   );
 
-  const handleMouseLeave = React.useCallback(
-    (e: React.MouseEvent<HTMLButtonElement>) => {
+  const handleMouseLeave = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
       if (hasTextContent) reset();
       onMouseLeave?.(e);
     },
@@ -170,7 +183,7 @@ function Button({
       return displayText;
     }
     // For complex children (with icons etc), try to replace text portions
-    return React.Children.map(children, child => {
+    return Children.map(children, child => {
       if (typeof child === 'string') {
         // Find the position of this text in the overall text and get corresponding scrambled portion
         const startIndex = text.indexOf(child);
@@ -197,6 +210,6 @@ function Button({
       {renderContent()}
     </button>
   );
-}
+};
 
 export {Button, buttonVariants};
