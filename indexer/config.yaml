@@ -5,7 +5,7 @@ field_selection:
     - hash
 networks:
   - id: 69
-    start_block: 24383455
+    start_block: 24383701
     rpc_config:
       url: https://minanet-fork-production.up.railway.app
     contracts:
