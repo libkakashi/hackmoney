@@ -44,7 +44,7 @@ export function useAgentTools() {
   const {swapExactInSingle} = useSwap();
 
   const placeBid = useCallback(
-    async (auctionAddress: string, amountEth: string) => {
+    async (auctionAddress: string, amountStr: string) => {
       if (!publicClient || !walletClient || !userAddress) {
         return {
           error: 'Wallet not connected. Please connect your wallet first.',
@@ -52,10 +52,9 @@ export function useAgentTools() {
       }
 
       const auctionAddr = auctionAddress as Address;
-      const amount = parseUnits(amountEth, 18);
 
       try {
-        // Read auction state
+        // Read auction state to get currency info and decimals
         const auctionState = await getAuctionState(auctionAddr, publicClient);
         if (auctionState.status !== 'active') {
           return {
@@ -65,8 +64,10 @@ export function useAgentTools() {
 
         const currency = auctionState.currency;
         const isNative = currency === zeroAddress;
+        const amount = parseUnits(amountStr, auctionState.currencyDecimals);
+        const hookData: Hex = '0x';
 
-        // Handle ERC20 approvals if needed
+        // Handle ERC20 approvals if needed (mirrors use-submit-bid.ts exactly)
         if (!isNative) {
           const needsApproval = await needsErc20Approval(currency, amount);
           if (needsApproval) {
@@ -79,6 +80,7 @@ export function useAgentTools() {
             await publicClient.waitForTransactionReceipt({hash: approvalHash});
           }
 
+          // Check Permit2 allowance for auction (use 1n to check for any valid allowance)
           const needsPermit = await needsPermit2Signature(
             currency,
             auctionAddr,
@@ -107,8 +109,6 @@ export function useAgentTools() {
           auctionState.floorPriceQ96,
         );
 
-        const hookData: Hex = '0x';
-
         // Simulate first
         await publicClient.simulateContract({
           address: auctionAddr,
@@ -130,7 +130,7 @@ export function useAgentTools() {
         await publicClient.waitForTransactionReceipt({hash});
 
         await queryClient.invalidateQueries();
-        return {success: true, txHash: hash, amount: amountEth};
+        return {success: true, txHash: hash, amount: amountStr};
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Transaction failed';
         return {error: msg};
@@ -196,7 +196,269 @@ export function useAgentTools() {
     [publicClient, walletClient, userAddress, queryClient],
   );
 
-  const swapTokens = useCallback(
+  const getBalances = useCallback(
+    async (tokenAddress: string) => {
+      if (!publicClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+
+      const tokenAddr = tokenAddress as Address;
+
+      try {
+        const {graphqlClient} = await import('~/graphql/client');
+        const tokenQueryData = await graphqlClient.GetTokenByAddress({
+          token: tokenAddr.toLowerCase(),
+        });
+        const token = tokenQueryData.Launchpad_TokenLaunched[0];
+        if (!token) return {error: 'Token not found'};
+
+        const strategyAddr = token.strategy as Address;
+        const strategyState = await publicClient.readContract({
+          address: env.launchpadLensAddr,
+          abi: launchpadLensAbi,
+          functionName: 'getStrategyState',
+          args: [strategyAddr],
+        });
+
+        const tokenIsToken0 =
+          strategyState.currency0.toLowerCase() === tokenAddr.toLowerCase();
+        const quoteAddr = tokenIsToken0
+          ? strategyState.currency1
+          : strategyState.currency0;
+
+        const [tokenData, quoteData, tokenBalance, quoteBalance] =
+          await Promise.all([
+            publicClient.readContract({
+              address: env.launchpadLensAddr,
+              abi: launchpadLensAbi,
+              functionName: 'getTokenData',
+              args: [tokenAddr],
+            }),
+            publicClient.readContract({
+              address: env.launchpadLensAddr,
+              abi: launchpadLensAbi,
+              functionName: 'getTokenData',
+              args: [quoteAddr],
+            }),
+            publicClient.readContract({
+              address: tokenAddr,
+              abi: erc20Abi,
+              functionName: 'balanceOf',
+              args: [userAddress],
+            }),
+            publicClient.readContract({
+              address: quoteAddr,
+              abi: erc20Abi,
+              functionName: 'balanceOf',
+              args: [userAddress],
+            }),
+          ]);
+
+        return {
+          success: true,
+          balances: {
+            [tokenData.symbol]: formatUnits(tokenBalance, tokenData.decimals),
+            [quoteData.symbol]: formatUnits(quoteBalance, quoteData.decimals),
+          },
+          wallet: userAddress,
+        };
+      } catch (err: unknown) {
+        const msg =
+          err instanceof Error ? err.message : 'Failed to fetch balances';
+        return {error: msg};
+      }
+    },
+    [publicClient, userAddress],
+  );
+
+  // Helper to resolve swap context (pool key, direction, token data)
+  const resolveSwapContext = useCallback(
+    async (
+      tokenAddress: string,
+      sellAmount: string,
+      buyToken: 'token' | 'quote',
+    ) => {
+      if (!publicClient || !userAddress) {
+        throw new Error('Wallet not connected');
+      }
+
+      const tokenAddr = tokenAddress as Address;
+      const {graphqlClient} = await import('~/graphql/client');
+      const tokenData = await graphqlClient.GetTokenByAddress({
+        token: tokenAddr.toLowerCase(),
+      });
+      const token = tokenData.Launchpad_TokenLaunched[0];
+      if (!token) throw new Error('Token not found');
+
+      const strategyAddr = token.strategy as Address;
+      const strategyState = await publicClient.readContract({
+        address: env.launchpadLensAddr,
+        abi: launchpadLensAbi,
+        functionName: 'getStrategyState',
+        args: [strategyAddr],
+      });
+
+      if (!strategyState.isMigrated) {
+        throw new Error(
+          'Pool not yet migrated to Uniswap V4. Swaps are not available yet.',
+        );
+      }
+
+      const poolKey = {
+        currency0: strategyState.currency0,
+        currency1: strategyState.currency1,
+        fee: strategyState.fee,
+        tickSpacing: strategyState.tickSpacing,
+        hooks: strategyState.hooks,
+      };
+
+      const tokenIsToken0 =
+        strategyState.currency0.toLowerCase() === tokenAddr.toLowerCase();
+      const zeroForOne = buyToken === 'token' ? !tokenIsToken0 : tokenIsToken0;
+
+      const tokenIn = zeroForOne ? poolKey.currency0 : poolKey.currency1;
+      const tokenOut = zeroForOne ? poolKey.currency1 : poolKey.currency0;
+
+      const [tokenInData, tokenOutData] = await Promise.all([
+        publicClient.readContract({
+          address: env.launchpadLensAddr,
+          abi: launchpadLensAbi,
+          functionName: 'getTokenData',
+          args: [tokenIn],
+        }),
+        publicClient.readContract({
+          address: env.launchpadLensAddr,
+          abi: launchpadLensAbi,
+          functionName: 'getTokenData',
+          args: [tokenOut],
+        }),
+      ]);
+
+      const amountIn = parseUnits(sellAmount, tokenInData.decimals);
+
+      return {
+        poolKey,
+        zeroForOne,
+        tokenIn,
+        tokenOut,
+        tokenInData,
+        tokenOutData,
+        amountIn,
+      };
+    },
+    [publicClient, userAddress],
+  );
+
+  const previewSwap = useCallback(
+    async (
+      tokenAddress: string,
+      sellAmount: string,
+      buyToken: 'token' | 'quote',
+    ) => {
+      if (!publicClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+
+      try {
+        const ctx = await resolveSwapContext(
+          tokenAddress,
+          sellAmount,
+          buyToken,
+        );
+
+        // Get user balances
+        const [balanceIn, balanceOut] = await Promise.all([
+          publicClient.readContract({
+            address: ctx.tokenIn,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+          publicClient.readContract({
+            address: ctx.tokenOut,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+        ]);
+
+        // Get quote
+        const quoteResult = await publicClient.simulateContract({
+          address: QUOTER_ADDRESS,
+          abi: quoterAbi,
+          functionName: 'quoteExactInputSingle',
+          args: [
+            {
+              poolKey: ctx.poolKey,
+              zeroForOne: ctx.zeroForOne,
+              exactAmount: ctx.amountIn,
+              hookData: '0x' as Hex,
+            },
+          ],
+        });
+        const quotedAmountOut = quoteResult.result[0];
+
+        // Check if approval is needed (ERC20 -> Permit2)
+        const approvalNeeded = await needsErc20Approval(
+          ctx.tokenIn,
+          ctx.amountIn,
+        );
+
+        // Calculate price impact (rough: compare against simple ratio)
+        const amountOutMin =
+          quotedAmountOut - (quotedAmountOut * DEFAULT_SLIPPAGE_BPS) / 10000n;
+
+        const balanceInFormatted = formatUnits(
+          balanceIn,
+          ctx.tokenInData.decimals,
+        );
+        const balanceOutFormatted = formatUnits(
+          balanceOut,
+          ctx.tokenOutData.decimals,
+        );
+        const quotedOutFormatted = formatUnits(
+          quotedAmountOut,
+          ctx.tokenOutData.decimals,
+        );
+        const minOutFormatted = formatUnits(
+          amountOutMin,
+          ctx.tokenOutData.decimals,
+        );
+
+        return {
+          success: true,
+          selling: `${sellAmount} ${ctx.tokenInData.symbol}`,
+          receiving: `~${Number(quotedOutFormatted).toFixed(6)} ${ctx.tokenOutData.symbol}`,
+          minimumReceived: `${Number(minOutFormatted).toFixed(6)} ${ctx.tokenOutData.symbol}`,
+          slippage: '1%',
+          balanceBefore: {
+            [ctx.tokenInData.symbol]:
+              `${Number(balanceInFormatted).toFixed(6)}`,
+            [ctx.tokenOutData.symbol]:
+              `${Number(balanceOutFormatted).toFixed(6)}`,
+          },
+          balanceAfter: {
+            [ctx.tokenInData.symbol]:
+              `${Number(Number(balanceInFormatted) - Number(sellAmount)).toFixed(6)}`,
+            [ctx.tokenOutData.symbol]:
+              `${Number(Number(balanceOutFormatted) + Number(quotedOutFormatted)).toFixed(6)}`,
+          },
+          needsApproval: approvalNeeded,
+          approvalToken: approvalNeeded ? ctx.tokenInData.symbol : null,
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Preview failed';
+        return {error: msg};
+      }
+    },
+    [publicClient, userAddress, resolveSwapContext, needsErc20Approval],
+  );
+
+  const approveIfNeeded = useCallback(
     async (
       tokenAddress: string,
       sellAmount: string,
@@ -208,98 +470,117 @@ export function useAgentTools() {
         };
       }
 
-      const tokenAddr = tokenAddress as Address;
-
       try {
-        // 1. Look up the token's strategy address, then get on-chain strategy state
-        const {graphqlClient} = await import('~/graphql/client');
-        const tokenData = await graphqlClient.GetTokenByAddress({
-          token: tokenAddr.toLowerCase(),
-        });
-        const token = tokenData.Launchpad_TokenLaunched[0];
-        if (!token) return {error: 'Token not found'};
+        const ctx = await resolveSwapContext(
+          tokenAddress,
+          sellAmount,
+          buyToken,
+        );
+        const needsApproval = await needsErc20Approval(
+          ctx.tokenIn,
+          ctx.amountIn,
+        );
 
-        const strategyAddr = token.strategy as Address;
-
-        // Get strategy state (contains pool key)
-        const strategyState = await publicClient.readContract({
-          address: env.launchpadLensAddr,
-          abi: launchpadLensAbi,
-          functionName: 'getStrategyState',
-          args: [strategyAddr],
-        });
-
-        if (!strategyState.isMigrated) {
+        if (!needsApproval) {
           return {
-            error:
-              'Pool not yet migrated to Uniswap V4. Swaps are not available yet.',
+            success: true,
+            message: `${ctx.tokenInData.symbol} already approved, no action needed`,
+            alreadyApproved: true,
           };
         }
 
-        const poolKey = {
-          currency0: strategyState.currency0,
-          currency1: strategyState.currency1,
-          fee: strategyState.fee,
-          tickSpacing: strategyState.tickSpacing,
-          hooks: strategyState.hooks,
-        };
-
-        // 2. Determine swap direction
-        // buyToken === 'token' means user wants to buy the launched token (sell quote)
-        // buyToken === 'quote' means user wants to sell the launched token (buy quote)
-        const tokenIsToken0 =
-          strategyState.currency0.toLowerCase() === tokenAddr.toLowerCase();
-
-        // zeroForOne = selling token0 for token1
-        // If buying the token and token is token0: selling token1 (quote) for token0 → zeroForOne = false
-        // If buying the token and token is token1: selling token0 (quote) for token1 → zeroForOne = true
-        // If buying quote and token is token0: selling token0 for token1 (quote) → zeroForOne = true
-        // If buying quote and token is token1: selling token1 for token0 (quote) → zeroForOne = false
-        const zeroForOne =
-          buyToken === 'token' ? !tokenIsToken0 : tokenIsToken0;
-
-        // 3. Get decimals for the sell token
-        const tokenIn = zeroForOne ? poolKey.currency0 : poolKey.currency1;
-        const tokenInData = await publicClient.readContract({
-          address: env.launchpadLensAddr,
-          abi: launchpadLensAbi,
-          functionName: 'getTokenData',
-          args: [tokenIn],
+        // Send ERC20 approval to Permit2
+        const approvalHash = await writeContractAsync({
+          address: ctx.tokenIn,
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [PERMIT2_ADDRESS, 2n ** 256n - 1n],
         });
+        await publicClient.waitForTransactionReceipt({hash: approvalHash});
 
-        const amountIn = parseUnits(sellAmount, tokenInData.decimals);
+        return {
+          success: true,
+          message: `${ctx.tokenInData.symbol} approved for trading`,
+          txHash: approvalHash,
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Approval failed';
+        return {error: msg};
+      }
+    },
+    [
+      publicClient,
+      walletClient,
+      userAddress,
+      writeContractAsync,
+      resolveSwapContext,
+      needsErc20Approval,
+    ],
+  );
 
-        // 4. Get a quote
+  const executeSwap = useCallback(
+    async (
+      tokenAddress: string,
+      sellAmount: string,
+      buyToken: 'token' | 'quote',
+    ) => {
+      if (!publicClient || !walletClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+
+      try {
+        const ctx = await resolveSwapContext(
+          tokenAddress,
+          sellAmount,
+          buyToken,
+        );
+
+        // Get balances before swap
+        const [balanceInBefore, balanceOutBefore] = await Promise.all([
+          publicClient.readContract({
+            address: ctx.tokenIn,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+          publicClient.readContract({
+            address: ctx.tokenOut,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+        ]);
+
+        // Get quote for min amount
         const quoteResult = await publicClient.simulateContract({
           address: QUOTER_ADDRESS,
           abi: quoterAbi,
           functionName: 'quoteExactInputSingle',
           args: [
             {
-              poolKey,
-              zeroForOne,
-              exactAmount: amountIn,
+              poolKey: ctx.poolKey,
+              zeroForOne: ctx.zeroForOne,
+              exactAmount: ctx.amountIn,
               hookData: '0x' as Hex,
             },
           ],
         });
-
         const quotedAmountOut = quoteResult.result[0];
-
-        // Apply 1% slippage
         const amountOutMin =
           quotedAmountOut - (quotedAmountOut * DEFAULT_SLIPPAGE_BPS) / 10000n;
 
-        // 5. Execute swap
+        // Execute swap
         const deadline = BigInt(
           Math.floor(Date.now() / 1000) + DEFAULT_DEADLINE_MINUTES * 60,
         );
 
         const receipt = await swapExactInSingle(
-          poolKey,
-          amountIn,
+          ctx.poolKey,
+          ctx.amountIn,
           amountOutMin,
-          zeroForOne,
+          ctx.zeroForOne,
           deadline,
         );
 
@@ -307,30 +588,71 @@ export function useAgentTools() {
           return {error: 'Swap transaction reverted'};
         }
 
-        // Get output token info for display
-        const tokenOut = zeroForOne ? poolKey.currency1 : poolKey.currency0;
-        const tokenOutData = await publicClient.readContract({
-          address: env.launchpadLensAddr,
-          abi: launchpadLensAbi,
-          functionName: 'getTokenData',
-          args: [tokenOut],
-        });
+        // Get balances after swap
+        const [balanceInAfter, balanceOutAfter] = await Promise.all([
+          publicClient.readContract({
+            address: ctx.tokenIn,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+          publicClient.readContract({
+            address: ctx.tokenOut,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+        ]);
 
         await queryClient.invalidateQueries();
 
         return {
           success: true,
           txHash: receipt.transactionHash,
-          sold: `${sellAmount} ${tokenInData.symbol}`,
-          received: `~${Number(formatUnits(quotedAmountOut, tokenOutData.decimals)).toFixed(4)} ${tokenOutData.symbol}`,
+          sold: `${formatUnits(balanceInBefore - balanceInAfter, ctx.tokenInData.decimals)} ${ctx.tokenInData.symbol}`,
+          received: `${formatUnits(balanceOutAfter - balanceOutBefore, ctx.tokenOutData.decimals)} ${ctx.tokenOutData.symbol}`,
+          balanceBefore: {
+            [ctx.tokenInData.symbol]: formatUnits(
+              balanceInBefore,
+              ctx.tokenInData.decimals,
+            ),
+            [ctx.tokenOutData.symbol]: formatUnits(
+              balanceOutBefore,
+              ctx.tokenOutData.decimals,
+            ),
+          },
+          balanceAfter: {
+            [ctx.tokenInData.symbol]: formatUnits(
+              balanceInAfter,
+              ctx.tokenInData.decimals,
+            ),
+            [ctx.tokenOutData.symbol]: formatUnits(
+              balanceOutAfter,
+              ctx.tokenOutData.decimals,
+            ),
+          },
         };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Swap failed';
         return {error: msg};
       }
     },
-    [publicClient, walletClient, userAddress, swapExactInSingle, queryClient],
+    [
+      publicClient,
+      walletClient,
+      userAddress,
+      swapExactInSingle,
+      queryClient,
+      resolveSwapContext,
+    ],
   );
 
-  return {placeBid, claimTokens, swapTokens};
+  return {
+    placeBid,
+    claimTokens,
+    getBalances,
+    previewSwap,
+    approveIfNeeded,
+    executeSwap,
+  };
 }

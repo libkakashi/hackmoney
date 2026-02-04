@@ -3,7 +3,7 @@ import {Geist_Mono, JetBrains_Mono} from 'next/font/google';
 import {Providers} from '~/components/providers';
 import {Navbar} from '~/components/layout/navbar';
 import {AgentProvider} from '~/components/agent/agent-context';
-import {AgentLayout} from '~/components/agent/agent-layout';
+import {FloatingAgent} from '~/components/agent/floating-agent';
 import './globals.css';
 
 const jetbrainsMono = JetBrains_Mono({
@@ -34,7 +34,8 @@ export default function RootLayout({
           <AgentProvider>
             <div className="flex h-screen flex-col overflow-hidden">
               <Navbar />
-              <AgentLayout>{children}</AgentLayout>
+              <main className="flex-1 overflow-y-auto">{children}</main>
+              <FloatingAgent />
             </div>
           </AgentProvider>
         </Providers>

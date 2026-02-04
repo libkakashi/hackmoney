@@ -1,6 +1,13 @@
 'use client';
 
-import {useRef, useEffect, useState, useMemo, type FormEvent} from 'react';
+import {
+  useRef,
+  useEffect,
+  useState,
+  useMemo,
+  useCallback,
+  type FormEvent,
+} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   type UIMessage,
@@ -8,9 +15,10 @@ import {
   isToolUIPart,
   getToolName,
   DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import Link from 'next/link';
-import {Send, Loader2} from 'lucide-react';
+import {Send, Loader2, Power} from 'lucide-react';
 import Draggable from 'react-draggable';
 import {Button} from '~/components/ui/button';
 import {Input} from '~/components/ui/input';
@@ -193,12 +201,12 @@ function ToolResultCard({result}: {result: unknown}) {
             className="block border border-border p-1.5 hover:border-green transition-colors"
           >
             <div className="flex items-center gap-1.5">
-              <span className="text-green ">$</span>
-              <span className="text-xs font-bold">{token.symbol}</span>
-              <span className="text-dim  truncate">{token.name}</span>
+              <span className="text-green">$</span>
+              <span className="font-bold">{token.symbol}</span>
+              <span className="text-dim truncate">{token.name}</span>
             </div>
             {token.description && (
-              <div className="text-dim  mt-0.5 line-clamp-1">
+              <div className="text-dim mt-0.5 line-clamp-1">
                 {token.description}
               </div>
             )}
@@ -209,103 +217,65 @@ function ToolResultCard({result}: {result: unknown}) {
   );
 }
 
-/* ── Comic bubble ───────────────────────────────────────────────────────── */
-function ComicBubble({
-  message,
-  isLast,
-  onMascotClick,
-}: {
-  message: UIMessage;
-  isLast: boolean;
-  onMascotClick?: () => void;
-}) {
+/* ── Message row inside the CRT screen ──────────────────────────────────── */
+function CRTMessage({message}: {message: UIMessage}) {
   const isUser = message.role === 'user';
 
   return (
-    <div className="flex items-end gap-2">
-      {/* Bubble */}
+    <div className={`px-3 py-1.5 ${isUser ? '' : 'crt-glow'}`}>
+      {/* Role label */}
       <div
-        className={`relative border-2 px-3 py-2 w-[300px] ${
-          isUser
-            ? 'border-terminal-purple bg-card'
-            : 'border-terminal-green bg-card'
+        className={`text-[10px] uppercase tracking-wider mb-0.5 ${
+          isUser ? 'text-purple' : 'text-green'
         }`}
       >
-        {/* Comic tail — triangle pointing right toward mascot */}
-        <div
-          className={`absolute -right-[9px] bottom-2 w-0 h-0
-            border-t-[6px] border-t-transparent
-            border-b-[6px] border-b-transparent
-            ${isUser ? 'border-l-[9px] border-l-terminal-purple' : 'border-l-[9px] border-l-terminal-green'}`}
-        />
-        {/* Inner tail to match bg */}
-        <div
-          className="absolute -right-[6px] bottom-2 w-0 h-0
-            border-t-[6px] border-t-transparent
-            border-b-[6px] border-b-transparent
-            border-l-[7px] border-l-card"
-        />
-
-        {/* Label */}
-        <div
-          className={`uppercase tracking-wider mb-1 ${
-            isUser ? 'text-purple' : 'text-green'
-          }`}
-        >
-          {isUser ? '> you' : '> agent'}
-        </div>
-
-        {/* Content */}
-        <div
-          className={`text-xs leading-relaxed ${isUser ? 'text-foreground' : 'text-purple'}`}
-        >
-          {(message.parts as AnyPart[]).map((part, i) => {
-            if (part.type === 'text') {
-              return (
-                <div key={i}>
-                  <MarkdownRenderer content={part.text} />
-                </div>
-              );
-            }
-            if (isToolUIPart(part)) {
-              const toolName = getToolName(part as any);
-              const p = part as any;
-              if (p.state === 'output-available') {
-                return (
-                  <div key={i} className="my-1.5">
-                    <div className="text-dim mb-0.5">&gt; {toolName}()</div>
-                    <ToolResultCard result={p.output} />
-                  </div>
-                );
-              }
-              if (p.state === 'output-error') {
-                return (
-                  <div key={i} className="my-1 text-red ">
-                    err: {toolName}() failed
-                  </div>
-                );
-              }
-              return (
-                <div key={i} className="flex items-center gap-1 my-1 text-dim ">
-                  <Loader2 className="size-2.5 animate-spin" />
-                  {toolName}...
-                </div>
-              );
-            }
-            return null;
-          })}
-        </div>
+        {isUser ? '> you' : '> agent'}
       </div>
 
-      {/* Mascot on the right of the last message — click to close */}
-      {isLast ? (
-        <div className="flex-shrink-0 self-end" onClick={onMascotClick}>
-          <Mascot className="w-10 h-10" />
-        </div>
-      ) : (
-        /* Spacer to keep bubbles aligned when no mascot */
-        <div className="w-10 flex-shrink-0" />
-      )}
+      {/* Content */}
+      <div
+        className={`text-xs leading-relaxed ${isUser ? 'text-foreground' : 'text-purple'}`}
+      >
+        {(message.parts as AnyPart[]).map((part, i) => {
+          if (part.type === 'text') {
+            return (
+              <div key={i}>
+                <MarkdownRenderer content={part.text} />
+              </div>
+            );
+          }
+          if (isToolUIPart(part)) {
+            const toolName = getToolName(part);
+            const p = part;
+
+            if (p.state === 'output-available') {
+              return (
+                <div key={i} className="my-1.5">
+                  <div className="text-dim mb-0.5">&gt; {toolName}()</div>
+                  <ToolResultCard result={p.output} />
+                </div>
+              );
+            }
+            if (p.state === 'output-error') {
+              return (
+                <div key={i} className="my-1 text-red text-xs">
+                  err: {toolName}() failed
+                </div>
+              );
+            }
+            return (
+              <div
+                key={i}
+                className="flex items-center gap-1 my-1 text-dim text-xs"
+              >
+                <Loader2 className="size-2.5 animate-spin" />
+                {toolName}...
+              </div>
+            );
+          }
+          return null;
+        })}
+      </div>
     </div>
   );
 }
@@ -313,43 +283,86 @@ function ComicBubble({
 /* ── Main Floating Agent ────────────────────────────────────────────────── */
 export function FloatingAgent() {
   const {open, toggle} = useAgent();
-  const {placeBid, claimTokens, swapTokens} = useAgentTools();
+  const {
+    placeBid,
+    claimTokens,
+    getBalances,
+    previewSwap,
+    approveIfNeeded,
+    executeSwap,
+  } = useAgentTools();
   const pageContext = usePageContext();
   const [chatOpen, setChatOpen] = useState(false);
+  const [powering, setPowering] = useState<'on' | 'off' | null>(null);
   const nodeRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
+  const pageContextRef = useRef(pageContext);
+  const prevPageRef = useRef<string | undefined>(undefined);
+
+  // Keep ref in sync
+  useEffect(() => {
+    pageContextRef.current = pageContext;
+  }, [pageContext]);
+
   const transport = useMemo(
-    () => new DefaultChatTransport({body: () => ({pageContext})}),
-    [pageContext],
+    () =>
+      new DefaultChatTransport({
+        body: () => ({pageContext: pageContextRef.current}),
+      }),
+    // Stable transport — body function reads from ref so it always gets latest context
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   );
 
   const {messages, sendMessage, addToolOutput, status} = useChat({
     transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: async ({toolCall}) => {
       const {toolName, toolCallId} = toolCall;
-      const input = (toolCall as any).input as
-        | Record<string, string>
-        | undefined;
+      const input = toolCall.input as Record<string, string> | undefined;
       if (!input) return;
 
+      if (toolName === 'getBalances') {
+        const result = await getBalances(input.tokenAddress);
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
       if (toolName === 'placeBid') {
         const result = await placeBid(input.auctionAddress, input.amount);
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
       if (toolName === 'claimTokens') {
         const result = await claimTokens(input.auctionAddress);
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
-      if (toolName === 'swapTokens') {
-        const result = await swapTokens(
+      if (toolName === 'previewSwap') {
+        const result = await previewSwap(
           input.tokenAddress,
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
         );
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'approveIfNeeded') {
+        const result = await approveIfNeeded(
+          input.tokenAddress,
+          input.sellAmount,
+          input.buyToken as 'token' | 'quote',
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'executeSwap') {
+        const result = await executeSwap(
+          input.tokenAddress,
+          input.sellAmount,
+          input.buyToken as 'token' | 'quote',
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
     },
@@ -358,6 +371,40 @@ export function FloatingAgent() {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreaming = status === 'streaming' || status === 'submitted';
+
+  // Detect page navigation mid-conversation and notify the model
+  const pageKey =
+    pageContext.page === 'token'
+      ? `token:${pageContext.tokenAddress}`
+      : pageContext.page;
+  useEffect(() => {
+    if (prevPageRef.current === undefined) {
+      prevPageRef.current = pageKey;
+      return;
+    }
+    if (
+      prevPageRef.current !== pageKey &&
+      messages.length > 0 &&
+      !isStreaming
+    ) {
+      prevPageRef.current = pageKey;
+      let navText: string;
+      if (pageContext.page === 'token' && pageContext.tokenAddress) {
+        const label = pageContext.tokenSymbol
+          ? `${pageContext.tokenSymbol} (${pageContext.tokenAddress})`
+          : pageContext.tokenAddress;
+        navText = `[I just navigated to the token page for ${label}]`;
+      } else if (pageContext.page === 'discover') {
+        navText = `[I just navigated to the discover page]`;
+      } else {
+        navText = `[I just navigated to a different page]`;
+      }
+      void sendMessage({text: navText});
+    } else {
+      prevPageRef.current = pageKey;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageKey]);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -369,13 +416,16 @@ export function FloatingAgent() {
   // Focus input when chat opens
   useEffect(() => {
     if (chatOpen) {
-      setTimeout(() => inputRef.current?.focus(), 100);
+      setTimeout(() => inputRef.current?.focus(), 600);
     }
   }, [chatOpen]);
 
   // Sync with agent context
   useEffect(() => {
-    if (open && !chatOpen) setChatOpen(true);
+    if (open && !chatOpen) {
+      setPowering('on');
+      setChatOpen(true);
+    }
   }, [open, chatOpen]);
 
   const handleSubmit = (e: FormEvent) => {
@@ -384,19 +434,34 @@ export function FloatingAgent() {
     if (!input || !input.value.trim() || isStreaming) return;
     const text = input.value.trim();
     input.value = '';
-    sendMessage({text});
+    void sendMessage({text});
   };
+
+  const handlePowerToggle = useCallback(() => {
+    if (isDragging.current) return;
+    if (chatOpen) {
+      // Power off
+      setPowering('off');
+      setTimeout(() => {
+        setChatOpen(false);
+        setPowering(null);
+        if (open) toggle();
+      }, 400);
+    } else {
+      // Power on
+      if (!open) toggle();
+      setPowering('on');
+      setChatOpen(true);
+      setTimeout(() => setPowering(null), 550);
+    }
+  }, [chatOpen, open, toggle]);
 
   const handleMascotClick = () => {
     if (isDragging.current) return;
-    if (!open) toggle();
-    setChatOpen(prev => !prev);
+    handlePowerToggle();
   };
 
   if (!open && !chatOpen) return null;
-
-  // Find last message index (regardless of role) for mascot placement
-  const lastIdx = messages.length - 1;
 
   return (
     <Draggable
@@ -412,43 +477,54 @@ export function FloatingAgent() {
     >
       <div
         ref={nodeRef}
-        className="text-xs fixed bottom-6 right-6 z-50 flex flex-col items-end cursor-grab active:cursor-grabbing"
+        className="text-sm fixed bottom-6 right-6 z-50 flex items-end gap-3 cursor-grab active:cursor-grabbing"
       >
-        {/* Chat area */}
+        {/* ── CRT Monitor ─────────────────────────────────────────── */}
         {chatOpen && (
-          <div className="flex flex-col w-[348px] max-h-[60vh] mb-2">
-            {/* Scrollable messages */}
-            <div
-              ref={scrollRef}
-              className="flex-1 overflow-y-auto min-h-0 mb-2"
-              style={{direction: 'rtl'}}
-            >
-              <div className="flex flex-col gap-3" style={{direction: 'ltr'}}>
-                {/* Empty state — mascot greeting */}
-                {messages.length === 0 && (
-                  <div className="flex items-end gap-2">
-                    <div className="relative border-2 border-terminal-green bg-card px-3 py-3 w-[300px]">
-                      {/* Comic tail pointing right */}
-                      <div
-                        className="absolute -right-[9px] bottom-2 w-0 h-0
-                        border-t-[6px] border-t-transparent
-                        border-b-[6px] border-b-transparent
-                        border-l-[9px] border-l-terminal-green"
-                      />
-                      <div
-                        className="absolute -right-[6px] bottom-2 w-0 h-0
-                        border-t-[6px] border-t-transparent
-                        border-b-[6px] border-b-transparent
-                        border-l-[7px] border-l-card"
-                      />
-                      <div className="text-green uppercase tracking-wider mb-1.5">
+          <div className="flex flex-col items-center">
+            {/* Monitor body */}
+            <div className="crt-bezel relative">
+              {/* Top bezel bar with title + power button */}
+              <div className="flex items-center justify-between px-3 py-1.5 bg-[#1a1720] border-b border-border">
+                <div className="flex items-center gap-2">
+                  <div className="crt-led" />
+                  <span className="text-[10px] text-dim uppercase tracking-widest">
+                    timelock agent v1.0
+                  </span>
+                </div>
+                <button
+                  onClick={handlePowerToggle}
+                  className="text-dim hover:text-green transition-colors"
+                >
+                  <Power className="size-3" />
+                </button>
+              </div>
+
+              {/* Screen area */}
+              <div
+                className={`
+                  relative crt-screen crt-scanlines crt-vignette crt-glitch-line crt-flicker
+                  w-[360px] h-[400px]
+                  ${powering === 'on' ? 'crt-power-on' : ''}
+                  ${powering === 'off' ? 'crt-power-off' : ''}
+                `}
+              >
+                {/* Scrollable messages */}
+                <div
+                  ref={scrollRef}
+                  className="absolute inset-0 overflow-y-auto z-[5] flex flex-col"
+                >
+                  {/* Empty state */}
+                  {messages.length === 0 && (
+                    <div className="px-3 py-3 crt-glow">
+                      <div className="text-green text-[10px] uppercase tracking-wider mb-1.5">
                         &gt; agent
                       </div>
-                      <div className="text-xs text-purple leading-relaxed">
+                      <div className="text-purple text-xs leading-relaxed">
                         hey. ask me about tokens, auctions, or anything on the
                         platform.
                       </div>
-                      <div className="flex flex-wrap gap-1.5 mt-2">
+                      <div className="flex flex-wrap gap-1.5 mt-3">
                         {[
                           'show live tokens',
                           'what is timelock?',
@@ -458,7 +534,7 @@ export function FloatingAgent() {
                             key={s}
                             variant="outline"
                             size="xs"
-                            className="text-dim hover:text-green hover:border-green"
+                            className="text-dim hover:text-green hover:border-green text-[10px]"
                             onClick={() => {
                               if (inputRef.current) {
                                 inputRef.current.value = s;
@@ -471,90 +547,79 @@ export function FloatingAgent() {
                         ))}
                       </div>
                     </div>
-                    <div
-                      className="flex-shrink-0 self-end"
-                      onClick={handleMascotClick}
-                    >
-                      <Mascot className="w-10 h-10" />
-                    </div>
-                  </div>
-                )}
+                  )}
 
-                {/* Message bubbles */}
-                {messages.map((msg, i) => (
-                  <ComicBubble
-                    key={msg.id}
-                    message={msg}
-                    isLast={i === lastIdx}
-                    onMascotClick={handleMascotClick}
-                  />
-                ))}
+                  {/* Messages */}
+                  {messages.map(msg => (
+                    <CRTMessage key={msg.id} message={msg} />
+                  ))}
 
-                {/* Thinking indicator */}
-                {isStreaming &&
-                  messages[messages.length - 1]?.role === 'user' && (
-                    <div className="flex items-end gap-2">
-                      <div className="relative border-2 border-terminal-green bg-card px-3 py-2 w-[300px]">
-                        {/* Comic tail */}
-                        <div
-                          className="absolute -right-[9px] bottom-2 w-0 h-0
-                          border-t-[6px] border-t-transparent
-                          border-b-[6px] border-b-transparent
-                          border-l-[9px] border-l-terminal-green"
-                        />
-                        <div
-                          className="absolute -right-[6px] bottom-2 w-0 h-0
-                          border-t-[6px] border-t-transparent
-                          border-b-[6px] border-b-transparent
-                          border-l-[7px] border-l-card"
-                        />
-                        <div className="flex items-center gap-1.5 text-dim ">
+                  {/* Thinking indicator */}
+                  {isStreaming &&
+                    messages[messages.length - 1]?.role === 'user' && (
+                      <div className="px-3 py-1.5 crt-glow">
+                        <div className="flex items-center gap-1.5 text-dim text-xs">
                           <Loader2 className="size-2.5 animate-spin" />
                           thinking<span className="blink">_</span>
                         </div>
                       </div>
-                      <div
-                        className="flex-shrink-0 self-end"
-                        onClick={handleMascotClick}
-                      >
-                        <Mascot className="w-10 h-10" />
-                      </div>
-                    </div>
-                  )}
+                    )}
+
+                  {/* Bottom spacer for scroll */}
+                  <div className="h-2 shrink-0" />
+                </div>
+              </div>
+
+              {/* Bottom bezel with input */}
+              <div className="bg-[#1a1720] border-t border-border px-2 py-2">
+                <form onSubmit={handleSubmit} className="flex gap-2">
+                  <div className="flex items-center gap-1 flex-1">
+                    <span className="text-green text-xs crt-glow select-none">
+                      $
+                    </span>
+                    <Input
+                      ref={inputRef}
+                      type="text"
+                      placeholder="ask agent..."
+                      disabled={isStreaming}
+                      className="flex-1 border-0 bg-transparent text-xs h-7 px-1 focus:ring-0 focus-visible:ring-0"
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    disabled={isStreaming}
+                    variant="default"
+                    size="icon"
+                    className="h-7 w-7"
+                  >
+                    {isStreaming ? (
+                      <Loader2 className="size-3 animate-spin" />
+                    ) : (
+                      <Send className="size-3" />
+                    )}
+                  </Button>
+                </form>
               </div>
             </div>
 
-            {/* Input — same width as message bubbles */}
-            <form onSubmit={handleSubmit} className="flex gap-2 w-[300px]">
-              <Input
-                ref={inputRef}
-                type="text"
-                placeholder="ask agent..."
-                disabled={isStreaming}
-                className="flex-1 text-xs"
-              />
-              <Button
-                type="submit"
-                disabled={isStreaming}
-                variant="default"
-                size="icon"
-              >
-                {isStreaming ? (
-                  <Loader2 className="size-3.5 animate-spin" />
-                ) : (
-                  <Send className="size-3.5" />
-                )}
-              </Button>
-            </form>
+            {/* Monitor stand */}
+            <div className="w-16 h-3 bg-[#1a1720] border-x border-b border-border" />
+            <div className="w-24 h-2 bg-[#1a1720] border-x border-b border-border" />
           </div>
         )}
 
-        {/* Mascot — always visible when no chat, drag handle, click to toggle */}
-        {!chatOpen && (
+        {/* ── Mascot ──────────────────────────────────────────────── */}
+        <div
+          className="group relative flex-shrink-0 self-end"
+          onClick={handleMascotClick}
+        >
           <div
-            className="group relative w-14 h-14 border-2 border-terminal-green bg-card hover:bg-terminal-green/10 transition-all duration-200 flex items-center justify-center select-none"
-            title="Drag me or click to chat"
-            onClick={handleMascotClick}
+            className={`
+              w-14 h-14 border-2 border-terminal-green bg-card
+              hover:bg-terminal-green/10 transition-all duration-200
+              flex items-center justify-center select-none cursor-pointer
+            `}
+            title="Click to chat"
           >
             <Mascot className="w-10 h-10 pointer-events-none" />
             <div
@@ -562,7 +627,7 @@ export function FloatingAgent() {
               style={{boxShadow: '0 0 12px var(--terminal-green)'}}
             />
           </div>
-        )}
+        </div>
       </div>
     </Draggable>
   );

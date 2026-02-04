@@ -1,5 +1,5 @@
-import type {Chain} from 'viem';
-import {createConfig, http} from 'wagmi';
+import {type Chain, createPublicClient} from 'viem';
+import {http, createConfig} from 'wagmi';
 import {injected, walletConnect} from '@wagmi/connectors';
 import * as chains from 'viem/chains';
 import {env} from './env';
@@ -22,6 +22,11 @@ export const getChain = (chainId: number): Chain => {
 };
 export const chain = getChain(env.chainId);
 
+export const publicClient = createPublicClient({
+  chain,
+  transport: http(env.rpcUrl),
+});
+
 export const wagmiConfig = createConfig({
   chains: [chain],
   connectors: [
@@ -36,7 +41,7 @@ export const wagmiConfig = createConfig({
     [chain.id]: http(env.rpcUrl, {
       batch: {
         batchSize: 1024,
-        wait: 100, // ms to wait before sending batch
+        wait: 64, // ms to wait before sending batch
       },
     }),
   },

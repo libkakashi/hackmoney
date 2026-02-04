@@ -590,3 +590,219 @@ button {
 [data-slot='textarea']:focus {
   border-color: var(--terminal-green) !important;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CRT MONITOR EFFECTS — Floating Agent
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Power-on animation: screen brightens from center */
+@keyframes crt-power-on {
+  0% {
+    clip-path: inset(50% 50% 50% 50%);
+    opacity: 0;
+    filter: brightness(3) saturate(0);
+  }
+  30% {
+    clip-path: inset(48% 0% 48% 0%);
+    opacity: 1;
+    filter: brightness(2) saturate(0);
+  }
+  60% {
+    clip-path: inset(0% 0% 0% 0%);
+    filter: brightness(1.5) saturate(0.5);
+  }
+  100% {
+    clip-path: inset(0% 0% 0% 0%);
+    opacity: 1;
+    filter: brightness(1) saturate(1);
+  }
+}
+
+/* Power-off: collapses to a horizontal line then dot */
+@keyframes crt-power-off {
+  0% {
+    clip-path: inset(0% 0% 0% 0%);
+    opacity: 1;
+    filter: brightness(1);
+  }
+  40% {
+    clip-path: inset(45% 0% 45% 0%);
+    opacity: 1;
+    filter: brightness(2) saturate(0);
+  }
+  80% {
+    clip-path: inset(49% 20% 49% 20%);
+    opacity: 0.8;
+    filter: brightness(3) saturate(0);
+  }
+  100% {
+    clip-path: inset(50% 50% 50% 50%);
+    opacity: 0;
+    filter: brightness(4) saturate(0);
+  }
+}
+
+.crt-power-on {
+  animation: crt-power-on 0.5s ease-out forwards;
+}
+
+.crt-power-off {
+  animation: crt-power-off 0.35s ease-in forwards;
+}
+
+/* Scanline overlay */
+.crt-scanlines::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.15) 2px,
+    rgba(0, 0, 0, 0.15) 4px
+  );
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Subtle screen flicker */
+@keyframes crt-flicker {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  4% {
+    opacity: 0.97;
+  }
+  8% {
+    opacity: 1;
+  }
+  12% {
+    opacity: 0.98;
+  }
+  70% {
+    opacity: 1;
+  }
+  72% {
+    opacity: 0.96;
+  }
+  74% {
+    opacity: 1;
+  }
+}
+
+.crt-flicker {
+  animation: crt-flicker 4s infinite;
+}
+
+/* Phosphor glow on text inside the CRT */
+.crt-glow {
+  text-shadow:
+    0 0 4px rgba(95, 255, 176, 0.4),
+    0 0 8px rgba(95, 255, 176, 0.15);
+}
+
+/* Vignette: darkened edges for barrel-distortion feel */
+.crt-vignette::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 50%,
+    rgba(0, 0, 0, 0.45) 100%
+  );
+  pointer-events: none;
+  z-index: 11;
+}
+
+/* Screen bezel */
+.crt-bezel {
+  border: 3px solid #2a2630;
+  box-shadow:
+    inset 0 0 20px rgba(0, 0, 0, 0.5),
+    0 0 15px rgba(95, 255, 176, 0.06),
+    0 4px 20px rgba(0, 0, 0, 0.6);
+}
+
+/* The screen area — inner glow */
+.crt-screen {
+  background:
+    radial-gradient(
+      ellipse at center,
+      rgba(95, 255, 176, 0.03) 0%,
+      transparent 70%
+    ),
+    var(--background);
+}
+
+/* RGB fringe / chromatic aberration on hover */
+@keyframes crt-rgb-shift {
+  0%,
+  100% {
+    text-shadow:
+      0 0 4px rgba(95, 255, 176, 0.4),
+      0 0 8px rgba(95, 255, 176, 0.15);
+  }
+  25% {
+    text-shadow:
+      -1px 0 rgba(255, 107, 107, 0.3),
+      1px 0 rgba(95, 255, 176, 0.3),
+      0 0 4px rgba(95, 255, 176, 0.4);
+  }
+  50% {
+    text-shadow:
+      0 0 4px rgba(95, 255, 176, 0.4),
+      0 0 8px rgba(95, 255, 176, 0.15);
+  }
+  75% {
+    text-shadow:
+      1px 0 rgba(212, 192, 240, 0.3),
+      -1px 0 rgba(95, 255, 176, 0.3),
+      0 0 4px rgba(95, 255, 176, 0.4);
+  }
+}
+
+/* Glitch line that sweeps down the screen */
+@keyframes crt-glitch-line {
+  0% {
+    top: -2px;
+  }
+  100% {
+    top: calc(100% + 2px);
+  }
+}
+
+.crt-glitch-line::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(95, 255, 176, 0.08);
+  z-index: 12;
+  animation: crt-glitch-line 6s linear infinite;
+}
+
+/* LED power indicator */
+@keyframes led-pulse {
+  0%,
+  100% {
+    box-shadow:
+      0 0 3px rgba(95, 255, 176, 0.8),
+      0 0 6px rgba(95, 255, 176, 0.4);
+  }
+  50% {
+    box-shadow:
+      0 0 5px rgba(95, 255, 176, 1),
+      0 0 10px rgba(95, 255, 176, 0.6);
+  }
+}
+
+.crt-led {
+  width: 5px;
+  height: 5px;
+  background: var(--terminal-green);
+  animation: led-pulse 2s ease-in-out infinite;
+}

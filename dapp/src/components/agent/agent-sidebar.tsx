@@ -15,6 +15,7 @@ import {
   isToolUIPart,
   getToolName,
   DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import Link from 'next/link';
 import {Send, Loader2, Bot} from 'lucide-react';
@@ -151,16 +152,36 @@ const DEFAULT_WIDTH = 360;
 
 export function AgentSidebar() {
   const {open} = useAgent();
-  const {placeBid, claimTokens, swapTokens} = useAgentTools();
+  const {
+    placeBid,
+    claimTokens,
+    getBalances,
+    previewSwap,
+    approveIfNeeded,
+    executeSwap,
+  } = useAgentTools();
   const pageContext = usePageContext();
   const [width, setWidth] = useState(DEFAULT_WIDTH);
   const isDragging = useRef(false);
   const startX = useRef(0);
   const startWidth = useRef(DEFAULT_WIDTH);
 
+  const pageContextRef = useRef(pageContext);
+  const prevPageRef = useRef<string | undefined>(undefined);
+
+  // Keep ref in sync
+  useEffect(() => {
+    pageContextRef.current = pageContext;
+  }, [pageContext]);
+
   const transport = useMemo(
-    () => new DefaultChatTransport({body: () => ({pageContext})}),
-    [pageContext],
+    () =>
+      new DefaultChatTransport({
+        body: () => ({pageContext: pageContextRef.current}),
+      }),
+    // Stable transport — body function reads from ref so it always gets latest context
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
   );
 
   const handleMouseDown = useCallback(
@@ -202,6 +223,7 @@ export function AgentSidebar() {
 
   const {messages, sendMessage, addToolOutput, status, setMessages} = useChat({
     transport,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: async ({toolCall}) => {
       const {toolName, toolCallId} = toolCall;
       const input = (toolCall as any).input as
@@ -209,6 +231,11 @@ export function AgentSidebar() {
         | undefined;
       if (!input) return;
 
+      if (toolName === 'getBalances') {
+        const result = await getBalances(input.tokenAddress);
+        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        return;
+      }
       if (toolName === 'placeBid') {
         const result = await placeBid(input.auctionAddress, input.amount);
         addToolOutput({tool: toolName as any, toolCallId, output: result});
@@ -219,8 +246,26 @@ export function AgentSidebar() {
         addToolOutput({tool: toolName as any, toolCallId, output: result});
         return;
       }
-      if (toolName === 'swapTokens') {
-        const result = await swapTokens(
+      if (toolName === 'previewSwap') {
+        const result = await previewSwap(
+          input.tokenAddress,
+          input.sellAmount,
+          input.buyToken as 'token' | 'quote',
+        );
+        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'approveIfNeeded') {
+        const result = await approveIfNeeded(
+          input.tokenAddress,
+          input.sellAmount,
+          input.buyToken as 'token' | 'quote',
+        );
+        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'executeSwap') {
+        const result = await executeSwap(
           input.tokenAddress,
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
@@ -234,6 +279,41 @@ export function AgentSidebar() {
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreaming = status === 'streaming' || status === 'submitted';
+
+  // Detect page navigation mid-conversation and notify the model
+  const pageKey =
+    pageContext.page === 'token'
+      ? `token:${pageContext.tokenAddress}`
+      : pageContext.page;
+  useEffect(() => {
+    if (prevPageRef.current === undefined) {
+      // First render — just record, don't send a message
+      prevPageRef.current = pageKey;
+      return;
+    }
+    if (
+      prevPageRef.current !== pageKey &&
+      messages.length > 0 &&
+      !isStreaming
+    ) {
+      prevPageRef.current = pageKey;
+      let navText: string;
+      if (pageContext.page === 'token' && pageContext.tokenAddress) {
+        const label = pageContext.tokenSymbol
+          ? `${pageContext.tokenSymbol} (${pageContext.tokenAddress})`
+          : pageContext.tokenAddress;
+        navText = `[I just navigated to the token page for ${label}]`;
+      } else if (pageContext.page === 'discover') {
+        navText = `[I just navigated to the discover page]`;
+      } else {
+        navText = `[I just navigated to a different page]`;
+      }
+      sendMessage({text: navText});
+    } else {
+      prevPageRef.current = pageKey;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pageKey]);
 
   useEffect(() => {
     if (scrollRef.current) {

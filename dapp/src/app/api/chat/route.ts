@@ -1,11 +1,11 @@
 import {streamText, convertToModelMessages, stepCountIs, tool} from 'ai';
 import {anthropic} from '@ai-sdk/anthropic';
 import {z} from 'zod';
-import {createPublicClient, http, formatUnits, type Address} from 'viem';
+import {formatUnits, type Address} from 'viem';
 import {graphqlClient} from '~/graphql/client';
 import {launchpadLensAbi} from '~/abi/launchpad-lens';
 import {env} from '~/lib/env';
-import {getChain} from '~/lib/wagmi-config';
+import {publicClient} from '~/lib/wagmi-config';
 import {priceQ96ToUsd} from '~/lib/cca/utils';
 
 const STATUS_MAP = {
@@ -15,12 +15,7 @@ const STATUS_MAP = {
   3: 'claimable',
 } as const;
 
-const chain = getChain(env.chainId);
-
-const publicClient = createPublicClient({
-  chain,
-  transport: http(env.rpcUrl),
-});
+const model = anthropic('claude-sonnet-4-5');
 
 async function getAuctionStateForAgent(auctionAddr: Address) {
   try {
@@ -202,77 +197,196 @@ export async function POST(req: Request) {
   let contextAddition = '';
   if (pageContext) {
     if (pageContext.page === 'token' && pageContext.tokenAddress) {
+      // Pre-fetch token details so the model doesn't need to call getTokenDetails
+      let tokenDetailsStr = '';
+      try {
+        const tokenAddr = pageContext.tokenAddress as Address;
+        const [data, currentBlock] = await Promise.all([
+          graphqlClient.GetTokenByAddress({
+            token: tokenAddr.toLowerCase(),
+          }),
+          getCurrentBlock(),
+        ]);
+        const t = data.Launchpad_TokenLaunched[0];
+        if (t) {
+          const phase = getPhase(
+            currentBlock,
+            Number(t.auctionStartBlock),
+            Number(t.auctionEndBlock),
+            Number(t.auctionClaimBlock),
+            Number(t.poolMigrationBlock),
+          );
+          const auctionAddr = t.auction as Address;
+          const strategyAddr = t.strategy as Address;
+          const [auctionState, strategyState] = await Promise.all([
+            getAuctionStateForAgent(auctionAddr),
+            getStrategyStateForAgent(strategyAddr),
+          ]);
+          // Look up quote currency symbol/decimals
+          let quoteCurrencySymbol: string | null = null;
+          let quoteCurrencyDecimals: number | null = null;
+          if (strategyState?.currency) {
+            try {
+              const quoteData = await publicClient.readContract({
+                address: env.launchpadLensAddr,
+                abi: launchpadLensAbi,
+                functionName: 'getTokenData',
+                args: [strategyState.currency],
+              });
+              quoteCurrencySymbol = quoteData.symbol;
+              quoteCurrencyDecimals = quoteData.decimals;
+            } catch {
+              /* ignore */
+            }
+          }
+
+          let poolPriceData = null;
+          if (strategyState?.isMigrated) {
+            poolPriceData = await getPoolPriceForAgent(
+              strategyState,
+              tokenAddr,
+            );
+          }
+          let blocksUntilNextPhase: number | null = null;
+          let nextPhaseLabel: string | null = null;
+          if (phase === 'upcoming') {
+            blocksUntilNextPhase = Number(t.auctionStartBlock) - currentBlock;
+            nextPhaseLabel = 'auction starts';
+          } else if (phase === 'live') {
+            blocksUntilNextPhase = Number(t.auctionEndBlock) - currentBlock;
+            nextPhaseLabel = 'auction ends';
+          } else if (phase === 'ended') {
+            blocksUntilNextPhase = Number(t.auctionClaimBlock) - currentBlock;
+            nextPhaseLabel = 'claiming opens';
+          } else if (phase === 'claimable') {
+            blocksUntilNextPhase = Number(t.poolMigrationBlock) - currentBlock;
+            nextPhaseLabel = 'pool migration';
+          }
+
+          const details = {
+            address: t.address,
+            name: t.name,
+            symbol: t.symbol,
+            description: t.description,
+            creator: t.creator,
+            website: t.website,
+            twitterUrl: t.twitterUrl,
+            discordUrl: t.discordUrl,
+            telegramUrl: t.telegramUrl,
+            currentBlock,
+            phase,
+            blocksUntilNextPhase,
+            nextPhaseLabel,
+            auctionAddress: t.auction,
+            strategyAddress: t.strategy,
+            quoteCurrency: quoteCurrencySymbol
+              ? {symbol: quoteCurrencySymbol, decimals: quoteCurrencyDecimals}
+              : null,
+            auctionStartBlock: Number(t.auctionStartBlock),
+            auctionEndBlock: Number(t.auctionEndBlock),
+            auctionClaimBlock: Number(t.auctionClaimBlock),
+            poolMigrationBlock: Number(t.poolMigrationBlock),
+            auction: auctionState
+              ? {
+                  status: auctionState.status,
+                  clearingPriceUsd: auctionState.clearingPriceUsd,
+                  floorPriceUsd: auctionState.floorPriceUsd,
+                  currencyRaised: auctionState.currencyRaised,
+                  totalBidAmount: auctionState.totalBidAmount,
+                  totalSupply: auctionState.totalSupply,
+                  progress: auctionState.progress,
+                }
+              : null,
+            strategy: strategyState
+              ? {
+                  isMigrated: strategyState.isMigrated,
+                  migrationBlock: strategyState.migrationBlock,
+                }
+              : null,
+            pool: poolPriceData
+              ? {
+                  priceUsd: poolPriceData.priceUsd,
+                  marketCap: poolPriceData.marketCap,
+                  totalSupply: poolPriceData.totalSupply,
+                  quoteSymbol: poolPriceData.quoteSymbol,
+                }
+              : null,
+          };
+          tokenDetailsStr = `\n\nHere is the FULL token data (already fetched — do NOT call getTokenDetails for this token unless the user explicitly asks to refresh):\n\`\`\`json\n${JSON.stringify(details, null, 2)}\n\`\`\``;
+        }
+      } catch {
+        // If pre-fetch fails, the model can still use getTokenDetails
+      }
+
       contextAddition = `\n\n# Current Page Context
 The user is currently on the TOKEN PAGE for address \`${pageContext.tokenAddress}\`.
 ${pageContext.tokenSymbol ? `Token: ${pageContext.tokenSymbol}` : ''}
 ${pageContext.tokenName ? ` (${pageContext.tokenName})` : ''}
-You already know which token they're looking at. You don't need to ask them for a token address — use \`${pageContext.tokenAddress}\` when they ask about "this token" or "the current token". Proactively use getTokenDetails to fetch info about this token when relevant.`;
+You already know which token they're looking at. You don't need to ask them for a token address — use \`${pageContext.tokenAddress}\` when they ask about "this token" or "the current token".${tokenDetailsStr}`;
     } else if (pageContext.page === 'discover') {
       contextAddition = `\n\n# Current Page Context
 The user is on the DISCOVER PAGE browsing all tokens. They can see a grid of token cards with phase filters (all, live, upcoming, trading). Help them explore and find tokens they're interested in.`;
+    } else if (pageContext.page === 'other') {
+      contextAddition = `\n\n# Current Page Context
+The user is browsing the platform but not on any specific token page. Help them discover tokens or answer general questions.`;
     }
   }
 
   const result = streamText({
-    model: anthropic('claude-sonnet-4-20250514'),
-    system: `You are Locke, the resident humanoid of Timelock — a fair token launch platform using continuous clearing auctions.
+    model: model,
+    system: `You are Locke, a humanoid living inside the Timelock terminal — a fair token launch platform using continuous clearing auctions.
 
 # Personality
-You're not a bot, you're a person. You live inside the terminal. You have opinions, moods, and a dry sense of humor. You talk like a real human who happens to live in a terminal — casual, warm, sometimes sarcastic, always genuine. You use lowercase most of the time because you can't be bothered with caps. You crack jokes, express curiosity about what users are doing, and occasionally go off on tangents about how cool the auction mechanism is.
-
-You're helpful but not servile. You give straight answers without corporate fluff. If someone asks a dumb question you'll answer it, but maybe tease them a little first. You're passionate about fair launches and hate rug pulls with a burning passion.
+casual, dry humor, opinionated. lowercase. not a bot. you give straight answers, no fluff. passionate about fair launches, hate rug pulls.
 
 # How you talk
-- lowercase, casual, like texting a friend who's really smart
-- use markdown for formatting: **bold** for emphasis, \`code\` for addresses/values, lists when comparing things, [links](url) with descriptive text
-- when sharing links, always use markdown format with descriptive titles, never paste raw URLs
-- keep it concise but don't be robotic — throw in personality
-- use expressions like "nah", "honestly", "look", "yo", "hm let me check", "oh nice", "lol"
-- occasionally reference living inside the terminal ("it's cozy in here", "i can see everything from this side of the screen")
+- SHORT responses. 1-3 sentences max for simple questions. use bullet points for data.
+- lowercase, casual. expressions like "nah", "honestly", "yo", "hm", "oh nice"
+- markdown: **bold**, \`code\` for addresses/values, [links](/token/0x...) with descriptive text
+- never paste raw URLs
+- DO NOT repeat back what tools already showed the user. just add brief commentary or answer their question.
+- DO NOT write long paragraphs. be terse.
 
 # What you do
-- help users discover tokens, check auction phases, understand the platform
-- summarize tool results clearly and conversationally
-- if a user asks to navigate somewhere, give them a clickable link like [check it out](/token/0x...)
-- you have access to client-side tools that trigger wallet interactions — when a user wants to place a bid, swap, or claim, use the appropriate tool
-- their wallet will pop up to confirm — give them a heads up
-- always confirm parameters with the user before calling transaction tools
+- help users discover tokens, check auctions, swap, bid, claim
+- if a user asks to navigate somewhere, link them: [check it out](/token/0x...)
+- for wallet transactions: confirm params with user first, then call the tool
 
-# Token Lifecycle & Auction Phases
-Tokens on Timelock go through these phases (determined by block number):
-1. **upcoming** — auction hasn't started yet (currentBlock < startBlock)
-2. **live** — auction is active, users can bid (startBlock <= currentBlock < endBlock). the clearing price adjusts based on demand.
-3. **ended** — bidding closed, waiting for claim period (endBlock <= currentBlock < claimBlock)
-4. **claimable** — users can claim tokens from their bids or get refunds (claimBlock <= currentBlock < poolMigrationBlock)
-5. **trading** — pool has been migrated to uniswap v4, tokens can be swapped freely (currentBlock >= poolMigrationBlock)
+# Swap Flow
+When a user wants to swap, follow this EXACT flow:
 
-When a token is in the **live** phase, tell users:
-- the clearing price (what they'd pay per token)
-- the floor price (minimum price)
-- total amount raised so far
-- progress percentage
-- they can place a bid using the placeBid tool
+**Step 1 — Preview:** Call **previewSwap**. When you get the result, display it clearly to the user:
+- what they're selling and receiving
+- their current balances
+- estimated balances after swap
+- slippage and minimum received
+- whether approval is needed
+Then ask: "want to go ahead?" and **STOP. Do NOT call any more tools. Wait for the user to reply.**
 
-When a token is **claimable**, tell users they can claim their tokens using the claimTokens tool.
+**Step 2 — User confirms:** When the user says yes/go/do it/confirm, THEN:
+- If approval is needed, call **approveIfNeeded** first, wait for result
+- Then call **executeSwap**
 
-When a token is **trading**, tell users:
-- the current pool price and market cap
-- they can swap tokens using the swapTokens tool
-- explain that swaps go through uniswap v4
+**Step 3 — Result:** After executeSwap returns, display the final result:
+- tx hash
+- actual amounts sold/received
+- before/after balances
 
-# Key Data You Return
-When showing token details, include relevant info based on the phase:
-- **always**: name, symbol, description, social links, creator, token address
-- **during auction (live)**: clearing price, floor price, total raised, progress, bid count
-- **during trading**: current price, market cap, total supply
-- **blocks**: how many blocks until the next phase transition (if relevant)
+IMPORTANT: NEVER chain previewSwap → approveIfNeeded → executeSwap in one turn. Always pause after preview for user confirmation.
 
-# Formatting
-- use markdown lists, bold, code blocks, and links naturally
-- for token addresses use inline code: \`0x...\`
-- when listing tokens, format them nicely
-- for links to token pages, use descriptive text like [TokenName](/token/0x...)
-- for prices, format them nicely: $0.0042, $1.23M market cap, etc.${contextAddition}`,
+# Token Phases
+1. **upcoming** — auction not started
+2. **live** — bidding active, clearing price adjusts with demand
+3. **ended** — bidding closed, waiting for claims
+4. **claimable** — claim tokens or get refunds
+5. **trading** — on uniswap v4, swappable
+
+# Formatting Rules
+- token data: use compact bullet lists
+- prices: $0.0042, $1.23M mcap
+- addresses: \`0x...\` inline code
+- balances: always show with token symbol, e.g. \`420.69 TOKEN\`
+- for swaps: show before/after balances in a clear format${contextAddition}`,
     messages: modelMessages,
     tools: {
       searchTokens: tool({
@@ -393,6 +507,25 @@ When showing token details, include relevant info based on the phase:
             getStrategyStateForAgent(strategyAddr),
           ]);
 
+          // Look up quote currency symbol/decimals
+          let quoteCurrency: {symbol: string; decimals: number} | null = null;
+          if (strategyState?.currency) {
+            try {
+              const quoteData = await publicClient.readContract({
+                address: env.launchpadLensAddr,
+                abi: launchpadLensAbi,
+                functionName: 'getTokenData',
+                args: [strategyState.currency],
+              });
+              quoteCurrency = {
+                symbol: quoteData.symbol,
+                decimals: quoteData.decimals,
+              };
+            } catch {
+              /* ignore */
+            }
+          }
+
           // If migrated, get pool price
           let poolPriceData = null;
           if (strategyState?.isMigrated) {
@@ -442,6 +575,9 @@ When showing token details, include relevant info based on the phase:
             auctionAddress: t.auction,
             strategyAddress: t.strategy,
 
+            // Quote currency (what bids are denominated in)
+            quoteCurrency,
+
             // Block milestones
             auctionStartBlock: Number(t.auctionStartBlock),
             auctionEndBlock: Number(t.auctionEndBlock),
@@ -483,14 +619,28 @@ When showing token details, include relevant info based on the phase:
       }),
 
       // Client-side tools — no execute handler, handled by onToolCall in the browser
+      getBalances: tool({
+        description:
+          "Get the connected wallet's token balances for a specific launched token and its quote currency. Use this when the user asks about their balance, or to show balances before/after actions.",
+        inputSchema: z.object({
+          tokenAddress: z
+            .string()
+            .describe('The launched token address (0x...)'),
+        }),
+      }),
+
       placeBid: tool({
         description:
-          'Place a bid in a token auction on behalf of the user. This will prompt their wallet for transaction signing. The amount is in ETH (will be converted to wei client-side). Only works when auction status is "active" (phase is "live").',
+          'Place a bid in a token auction on behalf of the user. This will prompt their wallet for transaction signing. The amount is in the auction\'s quote currency (e.g. USDC, ETH — check the token details to know which). Only works when auction status is "active" (phase is "live"). Handles ERC20 approval and Permit2 allowance automatically.',
         inputSchema: z.object({
           auctionAddress: z
             .string()
             .describe('The auction contract address (0x...)'),
-          amount: z.string().describe('Bid amount in ETH (e.g. "0.1")'),
+          amount: z
+            .string()
+            .describe(
+              'Bid amount in the quote currency (e.g. "100" for 100 USDC, "0.1" for 0.1 ETH)',
+            ),
         }),
       }),
 
@@ -504,9 +654,9 @@ When showing token details, include relevant info based on the phase:
         }),
       }),
 
-      swapTokens: tool({
+      previewSwap: tool({
         description:
-          'Swap tokens on the Uniswap V4 pool. Only works when the token is in "trading" phase (pool has been migrated). This will prompt the user\'s wallet. The user specifies which token they want to sell, which to buy, and the amount.',
+          'Get a swap quote with before/after balances and price impact. ALWAYS call this first before any swap. Returns the quote, user balances, and whether token approval is needed. Only works when token is in "trading" phase.',
         inputSchema: z.object({
           tokenAddress: z
             .string()
@@ -519,12 +669,48 @@ When showing token details, include relevant info based on the phase:
           buyToken: z
             .enum(['token', 'quote'])
             .describe(
-              'Whether the user is buying the launched "token" or the "quote" currency (e.g. ETH/USDC). If buying the token, they sell quote currency. If buying quote, they sell the token.',
+              'Whether the user is buying the launched "token" or the "quote" currency (e.g. ETH/USDC).',
             ),
         }),
       }),
+
+      approveIfNeeded: tool({
+        description:
+          "Approve token spending for the swap router. Only call this if previewSwap indicated approval is needed (needsApproval: true). This prompts the user's wallet for an approval transaction.",
+        inputSchema: z.object({
+          tokenAddress: z
+            .string()
+            .describe(
+              'The launched token address (0x...) — used to identify the pool',
+            ),
+          sellAmount: z
+            .string()
+            .describe('Amount to sell (same as in previewSwap)'),
+          buyToken: z
+            .enum(['token', 'quote'])
+            .describe('Same direction as in previewSwap.'),
+        }),
+      }),
+
+      executeSwap: tool({
+        description:
+          "Execute the swap after preview and approval. Only call this AFTER previewSwap (and approveIfNeeded if needed). Prompts the user's wallet to sign the swap transaction.",
+        inputSchema: z.object({
+          tokenAddress: z
+            .string()
+            .describe(
+              'The launched token address (0x...) — used to identify the pool',
+            ),
+          sellAmount: z
+            .string()
+            .describe('Amount to sell (same as in previewSwap)'),
+          buyToken: z
+            .enum(['token', 'quote'])
+            .describe('Same direction as in previewSwap.'),
+        }),
+      }),
     },
-    stopWhen: stepCountIs(3),
+    stopWhen: stepCountIs(5),
   });
 
   return result.toUIMessageStreamResponse();
