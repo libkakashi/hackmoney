@@ -15,6 +15,7 @@ import {useSubmitBid} from '~/hooks/cca/use-submit-bid';
 import type {AuctionState} from '~/lib/cca/auction';
 import {formatCompactNumber} from './utils';
 import {cn} from '~/lib/utils';
+import {Loader} from '../ui/loader';
 
 interface ActiveAuctionPanelProps {
   auctionAddr: Address;
@@ -176,7 +177,14 @@ export const ActiveAuctionPanel = ({
               onClick={handleBid}
               disabled={!canBid}
             >
-              {isBidding ? 'confirming...' : 'place bid'}
+              {isBidding ? (
+                <>
+                  <Loader />
+                  confirming...
+                </>
+              ) : (
+                'place bid'
+              )}
             </Button>
           ) : (
             <div className="p-4 border border-dashed border-border text-center">
