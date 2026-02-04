@@ -69,25 +69,17 @@ export default function TokenPage() {
   }
 
   return (
-    <div className="py-6 md:py-8">
+    <div className="py-6 md:py-6">
       <Container size="xl">
         {/* Command header */}
-        <div className="text-dim text-sm mb-4">
+        <div className="text-dim text-sm mb-6">
           ~/token/{token.symbol.toLowerCase()}{' '}
           <span className="text-green">$</span> cat info.md
         </div>
 
-        {/* Back link */}
-        <Link
-          href="/discover"
-          className="inline-flex items-center gap-2 text-sm text-dim hover:text-foreground mb-4"
-        >
-          <span className="text-green">&lt;</span> back to discover
-        </Link>
-
-        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-4 space-y-4">
+          <div className="lg:col-span-5 space-y-4">
             {/* Token Header */}
             <TokenMetadataCard address={address} />
 
@@ -100,7 +92,7 @@ export default function TokenPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="lg:col-span-3 space-y-4">
             {/* User Balance */}
             {userAddress &&
               auctionState &&

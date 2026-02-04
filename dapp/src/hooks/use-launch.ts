@@ -63,7 +63,7 @@ const encodeMetadata = (
   };
 };
 
-const LAUNCH_WAIT_BLOCKS = 10n; // Small buffer for tx to land
+const LAUNCH_WAIT_BLOCKS = 5n; // Small buffer for tx to land
 const DEFAULT_BLOCK_RANGE = 100n; // Range to sample for avg block time calculation
 const BLOCK_TIME_MS_FALLBACK = 12000; // 12 seconds fallback
 

@@ -14,6 +14,7 @@ import {Container} from '~/components/layout/container';
 import {Button} from '~/components/ui/button';
 import {Input} from '~/components/ui/input';
 import {useInfiniteTokens} from '~/hooks/use-tokens';
+
 import type {GetTokensQuery} from '~/graphql/generated';
 
 type Token = GetTokensQuery['Launchpad_TokenLaunched'][number];

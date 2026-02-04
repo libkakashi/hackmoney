@@ -2,7 +2,8 @@ import type {Metadata} from 'next';
 import {Geist_Mono, JetBrains_Mono} from 'next/font/google';
 import {Providers} from '~/components/providers';
 import {Navbar} from '~/components/layout/navbar';
-import {Footer} from '~/components/layout/footer';
+import {AgentProvider} from '~/components/agent/agent-context';
+import {AgentLayout} from '~/components/agent/agent-layout';
 import './globals.css';
 
 const jetbrainsMono = JetBrains_Mono({
@@ -30,11 +31,12 @@ export default function RootLayout({
         className={`${geistMono.variable} ${jetbrainsMono.variable} antialiased`}
       >
         <Providers>
-          <div className="relative flex min-h-screen flex-col">
-            <Navbar />
-            <main className="flex-1">{children}</main>
-            <Footer />
-          </div>
+          <AgentProvider>
+            <div className="flex h-screen flex-col overflow-hidden">
+              <Navbar />
+              <AgentLayout>{children}</AgentLayout>
+            </div>
+          </AgentProvider>
         </Providers>
       </body>
     </html>

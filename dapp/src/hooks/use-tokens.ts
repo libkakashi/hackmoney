@@ -2,17 +2,14 @@
 
 import {useQuery, useInfiniteQuery} from '@tanstack/react-query';
 import {Address} from 'viem';
-import {getGraphqlClient} from '~/graphql/client';
-import {env} from '~/lib/env';
-
-const client = getGraphqlClient(env.graphqlUrl);
+import {graphqlClient} from '~/graphql/client';
 
 export const TOKENS_PAGE_SIZE = 12;
 
 export const useTokens = (limit = TOKENS_PAGE_SIZE, offset = 0) => {
   return useQuery({
     queryKey: ['tokens', limit, offset],
-    queryFn: () => client.GetTokens({limit, offset}),
+    queryFn: () => graphqlClient.GetTokens({limit, offset}),
   });
 };
 
@@ -20,7 +17,7 @@ export const useInfiniteTokens = (pageSize = TOKENS_PAGE_SIZE) => {
   return useInfiniteQuery({
     queryKey: ['tokens', 'infinite', pageSize],
     queryFn: ({pageParam = 0}) =>
-      client.GetTokens({limit: pageSize, offset: pageParam}),
+      graphqlClient.GetTokens({limit: pageSize, offset: pageParam}),
     initialPageParam: 0,
     getNextPageParam: (lastPage, allPages) => {
       const tokens = lastPage.Launchpad_TokenLaunched;
@@ -40,7 +37,7 @@ export const useTokenByAddress = (token?: string) => {
 
     queryFn: () =>
       token
-        ? client.GetTokenByAddress({token: token.toLowerCase()})
+        ? graphqlClient.GetTokenByAddress({token: token.toLowerCase()})
         : undefined,
     select: data =>
       data

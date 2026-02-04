@@ -7,6 +7,8 @@ import {useState} from 'react';
 import {ConnectWallet} from '~/components/connect-wallet';
 import {FaucetModal} from '~/components/faucet-modal';
 import {Sheet, SheetContent, SheetTrigger} from '~/components/ui/sheet';
+import {Switch} from '~/components/ui/switch';
+import {useAgent} from '~/components/agent/agent-context';
 
 const NAV_LINKS = [
   {href: '/discover', label: 'discover'},
@@ -17,10 +19,11 @@ const NAV_LINKS = [
 export function Navbar() {
   const pathname = usePathname();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const {open: agentOpen, toggle: toggleAgent} = useAgent();
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-background">
-      <div className="container mx-auto flex h-14 items-center justify-between px-4">
+      <div className="mx-auto flex h-14 items-center justify-between px-4">
         {/* Logo */}
         <Link
           href="/"
@@ -52,6 +55,23 @@ export function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-4">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <span
+              className={`text-xs transition-colors ${
+                agentOpen ? 'text-green' : 'text-dim'
+              }`}
+            >
+              ai mode
+            </span>
+            <Switch
+              checked={agentOpen}
+              onCheckedChange={toggleAgent}
+              size="sm"
+              className="rounded-none border border-border data-[state=checked]:border-green data-[state=checked]:bg-green/20 data-[state=unchecked]:bg-input"
+              thumbClassName="rounded-none data-[state=checked]:bg-green data-[state=unchecked]:bg-dim"
+            />
+          </label>
+
           <div className="hidden md:block">
             <FaucetModal />
           </div>

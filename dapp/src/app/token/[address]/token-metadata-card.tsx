@@ -27,7 +27,7 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
   // priceE18 = token1/token0 scaled by 1e18 (how much token1 per token0)
   // If token is token0, priceE18 is already quote/token (correct direction)
   // If token is token1, we need to invert: 1e36 / priceE18 to get quote/token
-  const tokenIsToken0 = token0 === address;
+  const tokenIsToken0 = token0?.toLowerCase() === address?.toLowerCase();
   const quoteDecimals = tokenIsToken0 ? token1Decimals : token0Decimals;
   const tokenDecimals = tokenIsToken0 ? token0Decimals : token1Decimals;
 
@@ -42,10 +42,7 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
   // Calculate market cap: totalSupply * price
   // normalizedPriceE18 is quote/token scaled by 1e18, totalSupply is already formatted
   const marketCap =
-    normalizedPriceE18 &&
-    tokenData?.totalSupply &&
-    quoteDecimals &&
-    tokenDecimals
+    normalizedPriceE18 && tokenData && quoteDecimals && tokenDecimals
       ? Number(
           formatUnits(normalizedPriceE18, 18 + quoteDecimals - tokenDecimals),
         ) * Number(tokenData.totalSupply)
@@ -219,7 +216,7 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
             <div className="text-xs text-dim">price</div>
             <div className="tabular-nums">
               {normalizedPriceE18 && quoteDecimals && tokenDecimals
-                ? `$${formatUnits(normalizedPriceE18, 18 + quoteDecimals - tokenDecimals)}`
+                ? `$${Number(formatUnits(normalizedPriceE18, 18 + quoteDecimals - tokenDecimals)).toFixed(4)}`
                 : '-'}
             </div>
           </div>
