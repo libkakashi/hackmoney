@@ -19,7 +19,7 @@ interface AgentContextValue {
 
 const AgentContext = createContext<AgentContextValue | null>(null);
 
-export function AgentProvider({children}: {children: ReactNode}) {
+export const AgentProvider = ({children}: {children: ReactNode}) => {
   const [open, setOpen] = useState(false);
   const toggle = useCallback(() => setOpen(prev => !prev), []);
   const close = useCallback(() => setOpen(false), []);
@@ -29,13 +29,13 @@ export function AgentProvider({children}: {children: ReactNode}) {
       {children}
     </AgentContext.Provider>
   );
-}
+};
 
-export function useAgent() {
+export const useAgent = () => {
   const ctx = useContext(AgentContext);
   if (!ctx) throw new Error('useAgent must be used within AgentProvider');
   return ctx;
-}
+};
 
 export interface PageContext {
   page: 'token' | 'discover' | 'other';
@@ -44,7 +44,7 @@ export interface PageContext {
   tokenName?: string;
 }
 
-export function usePageContext(): PageContext {
+export const usePageContext = (): PageContext => {
   const pathname = usePathname();
 
   const tokenMatch = pathname.match(/^\/token\/(0x[a-fA-F0-9]{40})$/);
@@ -66,4 +66,4 @@ export function usePageContext(): PageContext {
     }
     return {page: 'other' as const};
   }, [pathname, tokenAddress, token?.symbol, token?.name]);
-}
+};

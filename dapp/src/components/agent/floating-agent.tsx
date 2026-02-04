@@ -432,9 +432,9 @@ export function FloatingAgent() {
           : pageContext.tokenAddress;
         navText = `[I just navigated to the token page for ${label}]`;
       } else if (pageContext.page === 'discover') {
-        navText = `[I just navigated to the discover page]`;
+        navText = '[I just navigated to the discover page]';
       } else {
-        navText = `[I just navigated to a different page]`;
+        navText = '[I just navigated to a different page]';
       }
       void sendMessage({text: navText});
     } else {
@@ -544,7 +544,7 @@ export function FloatingAgent() {
                 bottomRight: {cursor: 'se-resize'},
                 bottomLeft: {cursor: 'sw-resize'},
               }}
-              className="crt-bezel relative !flex !flex-col"
+              className="crt-bezel relative flex! flex-col!"
             >
               {/* Top bezel bar with title + power button */}
               <div className="drag-handle flex items-center justify-between px-3 py-1.5 bg-[#1a1720] border-b border-border cursor-grab active:cursor-grabbing">
@@ -570,7 +570,7 @@ export function FloatingAgent() {
                 {/* Scrollable messages */}
                 <div
                   ref={scrollRef}
-                  className="absolute inset-0 overflow-y-auto z-[5] flex flex-col"
+                  className="absolute inset-0 overflow-y-auto z-5 flex flex-col"
                 >
                   {/* Empty state */}
                   {messages.length === 0 && (
@@ -580,7 +580,9 @@ export function FloatingAgent() {
                       </div>
                       <div className="text-purple  leading-relaxed">
                         hey. i can place bids, execute trades, and answer
-                        anything about the platform.
+                        anything about the platform. <br /> <br />
+                        P.S. you can move this window around or resize it by
+                        clicking and dragging the edges.
                       </div>
                     </div>
                   )}
@@ -697,7 +699,7 @@ export function FloatingAgent() {
 
         {/* ── Mascot ──────────────────────────────────────────────── */}
         <div
-          className="drag-handle group relative flex-shrink-0 self-end cursor-grab active:cursor-grabbing"
+          className="drag-handle group relative shrink-0 self-end cursor-grab active:cursor-grabbing"
           onClick={handleMascotClick}
         >
           <div
