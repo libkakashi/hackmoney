@@ -110,8 +110,12 @@ function MessageContent({message}: {message: UIMessage}) {
             );
           }
           if (isToolUIPart(part)) {
-            const toolName = getToolName(part as any);
-            const p = part as any;
+            const toolName = getToolName(part);
+            const p = part;
+
+            // suggestReplies rendered separately as clickable buttons
+            if (toolName === 'suggestReplies') return null;
+
             if (p.state === 'output-available') {
               return (
                 <div key={i} className="my-2">
@@ -180,7 +184,6 @@ export function AgentSidebar() {
         body: () => ({pageContext: pageContextRef.current}),
       }),
     // Stable transport — body function reads from ref so it always gets latest context
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
@@ -226,24 +229,22 @@ export function AgentSidebar() {
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onToolCall: async ({toolCall}) => {
       const {toolName, toolCallId} = toolCall;
-      const input = (toolCall as any).input as
-        | Record<string, string>
-        | undefined;
+      const input = toolCall.input as Record<string, string> | undefined;
       if (!input) return;
 
       if (toolName === 'getBalances') {
         const result = await getBalances(input.tokenAddress);
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
       if (toolName === 'placeBid') {
         const result = await placeBid(input.auctionAddress, input.amount);
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
       if (toolName === 'claimTokens') {
         const result = await claimTokens(input.auctionAddress);
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
       if (toolName === 'previewSwap') {
@@ -252,7 +253,7 @@ export function AgentSidebar() {
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
         );
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
       if (toolName === 'approveIfNeeded') {
@@ -261,7 +262,7 @@ export function AgentSidebar() {
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
         );
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
       if (toolName === 'executeSwap') {
@@ -270,7 +271,13 @@ export function AgentSidebar() {
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
         );
-        addToolOutput({tool: toolName as any, toolCallId, output: result});
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'suggestReplies') {
+        // Don't call addToolOutput — keeps the tool "pending" which
+        // prevents the auto-send loop from firing another model round.
+        // Buttons are rendered from the tool call's args instead.
         return;
       }
     },
@@ -304,15 +311,14 @@ export function AgentSidebar() {
           : pageContext.tokenAddress;
         navText = `[I just navigated to the token page for ${label}]`;
       } else if (pageContext.page === 'discover') {
-        navText = `[I just navigated to the discover page]`;
+        navText = '[I just navigated to the discover page]';
       } else {
-        navText = `[I just navigated to a different page]`;
+        navText = '[I just navigated to a different page]';
       }
-      sendMessage({text: navText});
+      void sendMessage({text: navText});
     } else {
       prevPageRef.current = pageKey;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageKey]);
 
   useEffect(() => {
@@ -333,7 +339,7 @@ export function AgentSidebar() {
     if (!input || !input.value.trim() || isStreaming) return;
     const text = input.value.trim();
     input.value = '';
-    sendMessage({text});
+    void sendMessage({text});
   };
 
   if (!open) return null;
@@ -354,33 +360,28 @@ export function AgentSidebar() {
           <div className="flex flex-col items-center justify-center h-full text-center">
             <Bot className="size-6 text-dim mb-3" />
             <div className="text-dim text-xs mb-4">
-              ask about tokens, auctions, or the platform
+              i can place bids, execute trades, and answer anything about the
+              platform
             </div>
             <div className="flex flex-wrap gap-2 justify-center">
-              {[
-                'show live tokens',
-                'what is timelock?',
-                'list new launches',
-              ].map(suggestion => (
-                <button
-                  key={suggestion}
-                  className="text-xs border border-border px-2 py-1 text-dim hover:text-green hover:border-green transition-colors"
-                  onClick={() => {
-                    if (inputRef.current) {
-                      inputRef.current.value = suggestion;
-                      inputRef.current.focus();
-                    }
-                  }}
-                >
-                  {suggestion}
-                </button>
-              ))}
+              {['place a bid', 'show live tokens', 'swap tokens'].map(
+                suggestion => (
+                  <button
+                    key={suggestion}
+                    className="text-xs border border-border px-2 py-1 text-dim hover:text-green hover:border-green transition-colors"
+                    onClick={() => sendMessage({text: suggestion})}
+                  >
+                    {suggestion}
+                  </button>
+                ),
+              )}
             </div>
           </div>
         )}
         {messages.map(message => (
           <MessageContent key={message.id} message={message} />
         ))}
+
         {isStreaming && messages[messages.length - 1]?.role === 'user' && (
           <div className="flex items-center gap-1.5 text-dim text-xs">
             <Loader2 className="size-3 animate-spin" />
@@ -399,6 +400,32 @@ export function AgentSidebar() {
             clear
           </button>
         )}
+        {/* Quick reply suggestions */}
+        {!isStreaming &&
+          (() => {
+            const last = messages[messages.length - 1];
+            if (!last || last.role !== 'assistant') return null;
+            const replyPart = (last.parts as AnyPart[]).find(
+              p =>
+                isToolUIPart(p) && getToolName(p as any) === 'suggestReplies',
+            ) as any;
+            const replies = (replyPart?.output?.replies ??
+              replyPart?.input?.replies) as string[] | undefined;
+            if (!replies?.length) return null;
+            return (
+              <div className="flex flex-wrap gap-2 mb-2">
+                {replies.map(reply => (
+                  <button
+                    key={reply}
+                    className="text-xs border border-green/50 text-green px-2 py-1 hover:bg-green/10 hover:border-green transition-colors"
+                    onClick={() => sendMessage({text: reply})}
+                  >
+                    {reply}
+                  </button>
+                ))}
+              </div>
+            );
+          })()}
         <form onSubmit={handleSubmit} className="flex gap-2">
           <div className="flex-1 flex items-center border border-border bg-background px-3 focus-within:border-green transition-colors">
             <span className="text-green text-sm mr-2">$</span>

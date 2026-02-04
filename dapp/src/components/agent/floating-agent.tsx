@@ -6,27 +6,24 @@ import {
   useState,
   useMemo,
   useCallback,
-  type FormEvent,
+  type SubmitEventHandler,
 } from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   type UIMessage,
-  type UIMessagePart,
   isToolUIPart,
   getToolName,
   DefaultChatTransport,
-  lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import Link from 'next/link';
 import {Send, Loader2, Power} from 'lucide-react';
 import Draggable from 'react-draggable';
+import {Resizable} from 're-resizable';
 import {Button} from '~/components/ui/button';
 import {Input} from '~/components/ui/input';
-import {useAgent, usePageContext} from './agent-context';
+import {usePageContext} from './agent-context';
 import {useAgentTools} from './use-agent-tools';
 import {MarkdownRenderer} from './markdown-renderer';
-
-type AnyPart = UIMessagePart<any, any>;
 
 /* ── Mascot SVG ─────────────────────────────────────────────────────────── */
 function Mascot({className}: {className?: string}) {
@@ -163,7 +160,7 @@ function ToolResultCard({result}: {result: unknown}) {
       'error' in (result as Record<string, unknown>)
     ) {
       return (
-        <div className="text-red text-xs">
+        <div className="text-red ">
           err: {(result as {error: string}).error}
         </div>
       );
@@ -175,7 +172,7 @@ function ToolResultCard({result}: {result: unknown}) {
     ) {
       const r = result as {success: boolean; txHash?: string};
       return (
-        <div className="text-green text-xs">
+        <div className="text-green ">
           tx confirmed{r.txHash ? `: ${r.txHash.slice(0, 10)}...` : ''}
         </div>
       );
@@ -225,8 +222,8 @@ function CRTMessage({message}: {message: UIMessage}) {
     <div className={`px-3 py-1.5 ${isUser ? '' : 'crt-glow'}`}>
       {/* Role label */}
       <div
-        className={`text-[10px] uppercase tracking-wider mb-0.5 ${
-          isUser ? 'text-purple' : 'text-green'
+        className={`tracking-wider mb-0.5 ${
+          isUser ? 'text-cyan-400' : 'text-green'
         }`}
       >
         {isUser ? '> you' : '> agent'}
@@ -234,9 +231,9 @@ function CRTMessage({message}: {message: UIMessage}) {
 
       {/* Content */}
       <div
-        className={`text-xs leading-relaxed ${isUser ? 'text-foreground' : 'text-purple'}`}
+        className={`leading-relaxed ${isUser ? 'text-foreground' : 'text-purple'}`}
       >
-        {(message.parts as AnyPart[]).map((part, i) => {
+        {message.parts.map((part, i) => {
           if (part.type === 'text') {
             return (
               <div key={i}>
@@ -248,6 +245,9 @@ function CRTMessage({message}: {message: UIMessage}) {
             const toolName = getToolName(part);
             const p = part;
 
+            // suggestReplies rendered separately as clickable buttons
+            if (toolName === 'suggestReplies') return null;
+
             if (p.state === 'output-available') {
               return (
                 <div key={i} className="my-1.5">
@@ -258,16 +258,13 @@ function CRTMessage({message}: {message: UIMessage}) {
             }
             if (p.state === 'output-error') {
               return (
-                <div key={i} className="my-1 text-red text-xs">
+                <div key={i} className="my-1 text-red ">
                   err: {toolName}() failed
                 </div>
               );
             }
             return (
-              <div
-                key={i}
-                className="flex items-center gap-1 my-1 text-dim text-xs"
-              >
+              <div key={i} className="flex items-center gap-1 my-1 text-dim ">
                 <Loader2 className="size-2.5 animate-spin" />
                 {toolName}...
               </div>
@@ -280,9 +277,37 @@ function CRTMessage({message}: {message: UIMessage}) {
   );
 }
 
+/**
+ * Like lastAssistantMessageIsCompleteWithToolCalls, but excludes
+ * suggestReplies so it doesn't trigger another model round.
+ */
+function shouldAutoSend({messages}: {messages: UIMessage[]}) {
+  const message = messages[messages.length - 1];
+  if (!message || message.role !== 'assistant') return false;
+
+  const lastStepStart = message.parts.reduce(
+    (idx, part, i) => (part.type === 'step-start' ? i : idx),
+    -1,
+  );
+
+  const toolParts = message.parts
+    .slice(lastStepStart + 1)
+    .filter(isToolUIPart)
+    .filter(p => !p.providerExecuted);
+
+  // Only consider tools that should trigger another round (not suggestReplies)
+  const actionable = toolParts.filter(p => getToolName(p) !== 'suggestReplies');
+
+  return (
+    actionable.length > 0 &&
+    actionable.every(
+      p => p.state === 'output-available' || p.state === 'output-error',
+    )
+  );
+}
+
 /* ── Main Floating Agent ────────────────────────────────────────────────── */
 export function FloatingAgent() {
-  const {open, toggle} = useAgent();
   const {
     placeBid,
     claimTokens,
@@ -293,9 +318,11 @@ export function FloatingAgent() {
   } = useAgentTools();
   const pageContext = usePageContext();
   const [chatOpen, setChatOpen] = useState(false);
-  const [powering, setPowering] = useState<'on' | 'off' | null>(null);
+
   const nodeRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
+  const isResizing = useRef(false);
+  const [monitorSize, setMonitorSize] = useState({width: 400, height: 540});
 
   const pageContextRef = useRef(pageContext);
   const prevPageRef = useRef<string | undefined>(undefined);
@@ -311,13 +338,12 @@ export function FloatingAgent() {
         body: () => ({pageContext: pageContextRef.current}),
       }),
     // Stable transport — body function reads from ref so it always gets latest context
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
 
   const {messages, sendMessage, addToolOutput, status} = useChat({
     transport,
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    sendAutomaticallyWhen: shouldAutoSend,
     onToolCall: async ({toolCall}) => {
       const {toolName, toolCallId} = toolCall;
       const input = toolCall.input as Record<string, string> | undefined;
@@ -365,6 +391,17 @@ export function FloatingAgent() {
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
+      if (toolName === 'suggestReplies') {
+        // Provide a result so the SDK doesn't throw MissingToolResultsError
+        // when the user sends the next message. The custom shouldAutoSend
+        // function excludes this tool from triggering another model round.
+        void addToolOutput({
+          tool: toolName,
+          toolCallId,
+          output: {replies: input.replies},
+        });
+        return;
+      }
     },
   });
 
@@ -403,7 +440,6 @@ export function FloatingAgent() {
     } else {
       prevPageRef.current = pageKey;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageKey]);
 
   // Auto-scroll to bottom when messages change
@@ -420,15 +456,7 @@ export function FloatingAgent() {
     }
   }, [chatOpen]);
 
-  // Sync with agent context
-  useEffect(() => {
-    if (open && !chatOpen) {
-      setPowering('on');
-      setChatOpen(true);
-    }
-  }, [open, chatOpen]);
-
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit: SubmitEventHandler = e => {
     e.preventDefault();
     const input = inputRef.current;
     if (!input || !input.value.trim() || isStreaming) return;
@@ -440,55 +468,89 @@ export function FloatingAgent() {
   const handlePowerToggle = useCallback(() => {
     if (isDragging.current) return;
     if (chatOpen) {
-      // Power off
-      setPowering('off');
-      setTimeout(() => {
-        setChatOpen(false);
-        setPowering(null);
-        if (open) toggle();
-      }, 400);
+      setChatOpen(false);
     } else {
-      // Power on
-      if (!open) toggle();
-      setPowering('on');
       setChatOpen(true);
-      setTimeout(() => setPowering(null), 550);
     }
-  }, [chatOpen, open, toggle]);
+  }, [chatOpen]);
 
   const handleMascotClick = () => {
     if (isDragging.current) return;
     handlePowerToggle();
   };
 
-  if (!open && !chatOpen) return null;
-
   return (
     <Draggable
       nodeRef={nodeRef as React.RefObject<HTMLElement>}
-      cancel="input, button, a, form"
+      handle=".drag-handle"
       defaultPosition={{x: 0, y: 0}}
       onStart={() => {
+        if (isResizing.current) return false;
         isDragging.current = false;
       }}
       onDrag={() => {
         isDragging.current = true;
       }}
+      onStop={() => {
+        // Reset after a tick so the click event fires before we clear the flag
+        setTimeout(() => {
+          isDragging.current = false;
+        }, 0);
+      }}
     >
       <div
         ref={nodeRef}
-        className="text-sm fixed bottom-6 right-6 z-50 flex items-end gap-3 cursor-grab active:cursor-grabbing"
+        className="text-sm fixed bottom-6 right-6 z-50 flex items-end gap-3"
       >
         {/* ── CRT Monitor ─────────────────────────────────────────── */}
         {chatOpen && (
           <div className="flex flex-col items-center">
             {/* Monitor body */}
-            <div className="crt-bezel relative">
+            <Resizable
+              size={monitorSize}
+              minWidth={280}
+              minHeight={250}
+              maxWidth={600}
+              maxHeight={700}
+              onResizeStart={() => {
+                isResizing.current = true;
+              }}
+              onResizeStop={(_e, _dir, _ref, d) => {
+                setMonitorSize(prev => ({
+                  width: prev.width + d.width,
+                  height: prev.height + d.height,
+                }));
+                setTimeout(() => {
+                  isResizing.current = false;
+                }, 0);
+              }}
+              enable={{
+                top: true,
+                right: true,
+                bottom: true,
+                left: true,
+                topRight: true,
+                topLeft: true,
+                bottomRight: true,
+                bottomLeft: true,
+              }}
+              handleStyles={{
+                top: {cursor: 'n-resize'},
+                right: {cursor: 'e-resize'},
+                bottom: {cursor: 's-resize'},
+                left: {cursor: 'w-resize'},
+                topRight: {cursor: 'ne-resize'},
+                topLeft: {cursor: 'nw-resize'},
+                bottomRight: {cursor: 'se-resize'},
+                bottomLeft: {cursor: 'sw-resize'},
+              }}
+              className="crt-bezel relative !flex !flex-col"
+            >
               {/* Top bezel bar with title + power button */}
-              <div className="flex items-center justify-between px-3 py-1.5 bg-[#1a1720] border-b border-border">
+              <div className="drag-handle flex items-center justify-between px-3 py-1.5 bg-[#1a1720] border-b border-border cursor-grab active:cursor-grabbing">
                 <div className="flex items-center gap-2">
                   <div className="crt-led" />
-                  <span className="text-[10px] text-dim uppercase tracking-widest">
+                  <span className=" text-dim uppercase tracking-widest">
                     timelock agent v1.0
                   </span>
                 </div>
@@ -502,12 +564,8 @@ export function FloatingAgent() {
 
               {/* Screen area */}
               <div
-                className={`
-                  relative crt-screen crt-scanlines crt-vignette crt-glitch-line crt-flicker
-                  w-[360px] h-[400px]
-                  ${powering === 'on' ? 'crt-power-on' : ''}
-                  ${powering === 'off' ? 'crt-power-off' : ''}
-                `}
+                className="relative crt-screen crt-scanlines crt-vignette crt-glitch-line crt-flicker flex-1"
+                style={{height: 'calc(100% - 70px)'}}
               >
                 {/* Scrollable messages */}
                 <div
@@ -517,34 +575,12 @@ export function FloatingAgent() {
                   {/* Empty state */}
                   {messages.length === 0 && (
                     <div className="px-3 py-3 crt-glow">
-                      <div className="text-green text-[10px] uppercase tracking-wider mb-1.5">
+                      <div className="text-green  uppercase tracking-wider mb-1.5">
                         &gt; agent
                       </div>
-                      <div className="text-purple text-xs leading-relaxed">
-                        hey. ask me about tokens, auctions, or anything on the
-                        platform.
-                      </div>
-                      <div className="flex flex-wrap gap-1.5 mt-3">
-                        {[
-                          'show live tokens',
-                          'what is timelock?',
-                          'list new launches',
-                        ].map(s => (
-                          <Button
-                            key={s}
-                            variant="outline"
-                            size="xs"
-                            className="text-dim hover:text-green hover:border-green text-[10px]"
-                            onClick={() => {
-                              if (inputRef.current) {
-                                inputRef.current.value = s;
-                                inputRef.current.focus();
-                              }
-                            }}
-                          >
-                            {s}
-                          </Button>
-                        ))}
+                      <div className="text-purple  leading-relaxed">
+                        hey. i can place bids, execute trades, and answer
+                        anything about the platform.
                       </div>
                     </div>
                   )}
@@ -558,7 +594,7 @@ export function FloatingAgent() {
                   {isStreaming &&
                     messages[messages.length - 1]?.role === 'user' && (
                       <div className="px-3 py-1.5 crt-glow">
-                        <div className="flex items-center gap-1.5 text-dim text-xs">
+                        <div className="flex items-center gap-1.5 text-dim ">
                           <Loader2 className="size-2.5 animate-spin" />
                           thinking<span className="blink">_</span>
                         </div>
@@ -572,17 +608,68 @@ export function FloatingAgent() {
 
               {/* Bottom bezel with input */}
               <div className="bg-[#1a1720] border-t border-border px-2 py-2">
+                {/* Initial suggestions */}
+                {messages.length === 0 && (
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {['place a bid', 'show live tokens', 'swap tokens'].map(
+                      s => (
+                        <Button
+                          key={s}
+                          variant="outline"
+                          size="xs"
+                          className="text-dim hover:text-green hover:border-green "
+                          onClick={() => void sendMessage({text: s})}
+                        >
+                          {s}
+                        </Button>
+                      ),
+                    )}
+                  </div>
+                )}
+                {/* Quick reply suggestions */}
+                {!isStreaming &&
+                  (() => {
+                    const last = messages[messages.length - 1];
+                    if (!last || last.role !== 'assistant') return null;
+
+                    const replyPart = last.parts.find(
+                      p =>
+                        isToolUIPart(p) && getToolName(p) === 'suggestReplies',
+                    );
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                    const replies = ((replyPart as any)?.output?.replies ??
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                      (replyPart as any)?.input?.replies) as
+                      | string[]
+                      | undefined;
+
+                    if (!replies?.length) return null;
+
+                    return (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {replies.map(reply => (
+                          <Button
+                            key={reply}
+                            variant="outline"
+                            size="xs"
+                            className="text-green border-green/50 hover:bg-green/10 hover:border-green "
+                            onClick={() => void sendMessage({text: reply})}
+                          >
+                            {reply}
+                          </Button>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 <form onSubmit={handleSubmit} className="flex gap-2">
                   <div className="flex items-center gap-1 flex-1">
-                    <span className="text-green text-xs crt-glow select-none">
-                      $
-                    </span>
+                    <span className="text-green  crt-glow select-none">$</span>
                     <Input
                       ref={inputRef}
                       type="text"
                       placeholder="ask agent..."
                       disabled={isStreaming}
-                      className="flex-1 border-0 bg-transparent text-xs h-7 px-1 focus:ring-0 focus-visible:ring-0"
+                      className="flex-1 border-0 bg-transparent  h-7 px-1 focus:ring-0 focus-visible:ring-0"
                     />
                   </div>
                   <Button
@@ -600,7 +687,7 @@ export function FloatingAgent() {
                   </Button>
                 </form>
               </div>
-            </div>
+            </Resizable>
 
             {/* Monitor stand */}
             <div className="w-16 h-3 bg-[#1a1720] border-x border-b border-border" />
@@ -610,7 +697,7 @@ export function FloatingAgent() {
 
         {/* ── Mascot ──────────────────────────────────────────────── */}
         <div
-          className="group relative flex-shrink-0 self-end"
+          className="drag-handle group relative flex-shrink-0 self-end cursor-grab active:cursor-grabbing"
           onClick={handleMascotClick}
         >
           <div
