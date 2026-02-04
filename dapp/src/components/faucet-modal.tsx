@@ -185,7 +185,7 @@ export function FaucetModal({trigger}: FaucetModalProps) {
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         {trigger ?? (
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="sm" className="text-yellow">
             faucet
           </Button>
         )}

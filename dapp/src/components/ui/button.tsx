@@ -36,6 +36,77 @@ const buttonVariants = cva(
   },
 );
 
+const SCRAMBLE_CHARS = '!@#$%^&*()_+-=[]{}|;:,.<>?/~`0123456789';
+
+function useTextScramble(text: string) {
+  const [displayText, setDisplayText] = React.useState(text);
+  const intervalRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const timeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  React.useEffect(() => {
+    setDisplayText(text);
+  }, [text]);
+
+  const scramble = React.useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+
+    let iteration = 0;
+    const totalIterations = 5;
+    const intervalTime = 300 / totalIterations;
+
+    intervalRef.current = setInterval(() => {
+      setDisplayText(
+        text
+          .split('')
+          .map((char, index) => {
+            if (char === ' ') return ' ';
+            // Progressively reveal characters from left to right
+            if (index < iteration) return text[index];
+            return SCRAMBLE_CHARS[
+              Math.floor(Math.random() * SCRAMBLE_CHARS.length)
+            ];
+          })
+          .join(''),
+      );
+
+      iteration += text.length / totalIterations;
+
+      if (iteration >= text.length) {
+        if (intervalRef.current) clearInterval(intervalRef.current);
+        setDisplayText(text);
+      }
+    }, intervalTime);
+  }, [text]);
+
+  const reset = React.useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setDisplayText(text);
+  }, [text]);
+
+  React.useEffect(() => {
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, []);
+
+  return {displayText, scramble, reset};
+}
+
+function extractTextFromChildren(children: React.ReactNode): string {
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return String(children);
+  if (Array.isArray(children)) {
+    return children.map(extractTextFromChildren).join('');
+  }
+  if (React.isValidElement(children) && children.props.children) {
+    return extractTextFromChildren(children.props.children);
+  }
+  return '';
+}
+
 function Button({
   className,
   variant = 'default',
@@ -43,6 +114,8 @@ function Button({
   asChild = false,
   showPrefix = false,
   children,
+  onMouseEnter,
+  onMouseLeave,
   ...props
 }: React.ComponentProps<'button'> &
   VariantProps<typeof buttonVariants> & {
@@ -52,6 +125,26 @@ function Button({
   // Don't add prefix for icon-only buttons
   const isIconOnly = size?.toString().startsWith('icon');
   const shouldShowPrefix = showPrefix && !isIconOnly;
+
+  const text = extractTextFromChildren(children);
+  const hasTextContent = text.length > 0 && !isIconOnly;
+  const {displayText, scramble, reset} = useTextScramble(text);
+
+  const handleMouseEnter = React.useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (hasTextContent) scramble();
+      onMouseEnter?.(e);
+    },
+    [hasTextContent, scramble, onMouseEnter],
+  );
+
+  const handleMouseLeave = React.useCallback(
+    (e: React.MouseEvent<HTMLButtonElement>) => {
+      if (hasTextContent) reset();
+      onMouseLeave?.(e);
+    },
+    [hasTextContent, reset, onMouseLeave],
+  );
 
   if (asChild) {
     return (
@@ -67,16 +160,41 @@ function Button({
     );
   }
 
+  // Determine what to render - scrambled text or original children
+  const renderContent = () => {
+    if (!hasTextContent) {
+      return children;
+    }
+    // If children is just a string, render the scrambled text
+    if (typeof children === 'string') {
+      return displayText;
+    }
+    // For complex children (with icons etc), try to replace text portions
+    return React.Children.map(children, child => {
+      if (typeof child === 'string') {
+        // Find the position of this text in the overall text and get corresponding scrambled portion
+        const startIndex = text.indexOf(child);
+        if (startIndex !== -1) {
+          return displayText.slice(startIndex, startIndex + child.length);
+        }
+        return child;
+      }
+      return child;
+    });
+  };
+
   return (
     <button
       data-slot="button"
       data-variant={variant}
       data-size={size}
       className={cn(buttonVariants({variant, size, className}))}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
       {...props}
     >
       {shouldShowPrefix && <span className="text-primary">$</span>}
-      {children}
+      {renderContent()}
     </button>
   );
 }
