@@ -252,7 +252,7 @@ export const clientTools = {
 
   previewSwap: tool({
     description:
-      'Get a swap quote with before/after balances and price impact. ALWAYS call this first before any swap. Returns the quote, user balances, and whether token approval is needed. Only works when token is in "trading" phase.',
+      'Get a swap quote with before/after balances and price impact. ALWAYS call this first before any swap. Returns the quote, user balances, and whether token approval is needed. Only works when token is in "trading" phase. Supports multi-hop swaps through USDC for non-USDC quote tokens (ETH, USDT, WBTC, DAI).',
     inputSchema: z.object({
       tokenAddress: z
         .string()
@@ -265,7 +265,14 @@ export const clientTools = {
       buyToken: z
         .enum(['token', 'quote'])
         .describe(
-          'Whether the user is buying the launched "token" or the "quote" currency (e.g. ETH/USDC).',
+          'Whether the user is buying the launched "token" or the "quote" currency.',
+        ),
+      quoteToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .optional()
+        .default('USDC')
+        .describe(
+          'Which quote currency to swap with. Defaults to USDC (single-hop). Non-USDC tokens route through USDC as a 2-hop swap.',
         ),
     }),
   }),
@@ -285,12 +292,17 @@ export const clientTools = {
       buyToken: z
         .enum(['token', 'quote'])
         .describe('Same direction as in previewSwap.'),
+      quoteToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .optional()
+        .default('USDC')
+        .describe('Same quote currency as in previewSwap.'),
     }),
   }),
 
   executeSwap: tool({
     description:
-      "Execute the swap after preview and approval. Only call this AFTER previewSwap (and approveIfNeeded if needed). Prompts the user's wallet to sign the swap transaction.",
+      "Execute the swap after preview and approval. Only call this AFTER previewSwap (and approveIfNeeded if needed). Prompts the user's wallet to sign the swap transaction. Supports multi-hop swaps through USDC for non-USDC quote tokens.",
     inputSchema: z.object({
       tokenAddress: z
         .string()
@@ -303,6 +315,11 @@ export const clientTools = {
       buyToken: z
         .enum(['token', 'quote'])
         .describe('Same direction as in previewSwap.'),
+      quoteToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .optional()
+        .default('USDC')
+        .describe('Same quote currency as in previewSwap.'),
     }),
   }),
 

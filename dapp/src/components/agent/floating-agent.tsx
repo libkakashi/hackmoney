@@ -369,6 +369,7 @@ export function FloatingAgent() {
           input.tokenAddress,
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
+          input.quoteToken ?? 'USDC',
         );
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
@@ -378,6 +379,7 @@ export function FloatingAgent() {
           input.tokenAddress,
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
+          input.quoteToken ?? 'USDC',
         );
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
@@ -387,6 +389,7 @@ export function FloatingAgent() {
           input.tokenAddress,
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
+          input.quoteToken ?? 'USDC',
         );
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;

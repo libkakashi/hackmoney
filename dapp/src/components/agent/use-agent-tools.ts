@@ -29,10 +29,78 @@ import {useSwap} from '~/hooks/swap/use-swap';
 import {launchpadLensAbi} from '~/abi/launchpad-lens';
 import {quoterAbi} from '~/abi/quoter';
 import {env} from '~/lib/env';
+import {
+  QUOTE_TOKENS,
+  USDC_ADDRESS,
+  isDirectSwap,
+  type QuoteToken,
+} from '~/lib/pools';
+import type {PathKey} from '~/hooks/swap/use-quote';
 
 const QUOTER_ADDRESS = '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203' as const;
 const DEFAULT_SLIPPAGE_BPS = 100n; // 1%
 const DEFAULT_DEADLINE_MINUTES = 20;
+
+/** Look up a QuoteToken by symbol */
+const getQuoteTokenBySymbol = (symbol: string): QuoteToken => {
+  const qt = QUOTE_TOKENS.find(
+    t => t.symbol.toLowerCase() === symbol.toLowerCase(),
+  );
+  if (!qt) throw new Error(`Unknown quote token: ${symbol}`);
+  return qt;
+};
+
+/**
+ * Build multi-hop path for quoting/swapping through USDC.
+ * Same logic as use-swap.ts buildSwapPath and use-quote.ts buildMultiHopQuoteParams.
+ */
+function buildMultiHopPath({
+  poolKey,
+  quoteToken,
+  tokenAddr,
+  sellingToken,
+}: {
+  poolKey: {fee: number; tickSpacing: number; hooks: Address};
+  quoteToken: QuoteToken;
+  tokenAddr: Address;
+  sellingToken: boolean;
+}): {currencyIn: Address; path: PathKey[]} | undefined {
+  if (!quoteToken.intermediatePool) return undefined;
+  const ip = quoteToken.intermediatePool;
+
+  const launchpadPool = {
+    fee: poolKey.fee,
+    tickSpacing: poolKey.tickSpacing,
+    hooks: poolKey.hooks,
+    hookData: '0x' as Hex,
+  };
+  const usdcQuotePool = {
+    fee: ip.fee,
+    tickSpacing: ip.tickSpacing,
+    hooks: ip.hooks,
+    hookData: '0x' as Hex,
+  };
+
+  if (sellingToken) {
+    // token -> USDC -> quoteToken
+    return {
+      currencyIn: tokenAddr,
+      path: [
+        {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
+        {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+      ],
+    };
+  } else {
+    // quoteToken -> USDC -> token
+    return {
+      currencyIn: quoteToken.address,
+      path: [
+        {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
+        {...launchpadPool, intermediateCurrency: tokenAddr},
+      ],
+    };
+  }
+}
 
 export function useAgentTools() {
   const publicClient = usePublicClient();
@@ -41,7 +109,7 @@ export function useAgentTools() {
   const {mutateAsync: writeContractAsync} = useWriteContract();
   const queryClient = useQueryClient();
   const {needsErc20Approval, needsPermit2Signature} = usePermit2();
-  const {swapExactInSingle} = useSwap();
+  const {swapExactInSingle, swapExactIn} = useSwap();
 
   const placeBid = useCallback(
     async (auctionAddress: string, amountStr: string) => {
@@ -273,18 +341,23 @@ export function useAgentTools() {
     [publicClient, userAddress],
   );
 
-  // Helper to resolve swap context (pool key, direction, token data)
+  // Helper to resolve swap context (pool key, direction, token data, multi-hop info)
   const resolveSwapContext = useCallback(
     async (
       tokenAddress: string,
       sellAmount: string,
       buyToken: 'token' | 'quote',
+      quoteTokenSymbol: string = 'USDC',
     ) => {
       if (!publicClient || !userAddress) {
         throw new Error('Wallet not connected');
       }
 
       const tokenAddr = tokenAddress as Address;
+      const quoteToken = getQuoteTokenBySymbol(quoteTokenSymbol);
+      const isDirect = isDirectSwap(quoteToken);
+      const sellingToken = buyToken === 'quote';
+
       const {graphqlClient} = await import('~/graphql/client');
       const tokenData = await graphqlClient.GetTokenByAddress({
         token: tokenAddr.toLowerCase(),
@@ -316,10 +389,23 @@ export function useAgentTools() {
 
       const tokenIsToken0 =
         strategyState.currency0.toLowerCase() === tokenAddr.toLowerCase();
+
+      // For single-hop (USDC), determine direction within the launchpad pool
       const zeroForOne = buyToken === 'token' ? !tokenIsToken0 : tokenIsToken0;
 
-      const tokenIn = zeroForOne ? poolKey.currency0 : poolKey.currency1;
-      const tokenOut = zeroForOne ? poolKey.currency1 : poolKey.currency0;
+      // Determine the actual tokenIn/tokenOut from the user's perspective
+      let tokenIn: Address;
+      let tokenOut: Address;
+
+      if (isDirect) {
+        // Single-hop: swap within the launchpad pool directly
+        tokenIn = zeroForOne ? poolKey.currency0 : poolKey.currency1;
+        tokenOut = zeroForOne ? poolKey.currency1 : poolKey.currency0;
+      } else {
+        // Multi-hop: the real tokenIn/tokenOut are the launchpad token and the external quote token
+        tokenIn = sellingToken ? tokenAddr : quoteToken.address;
+        tokenOut = sellingToken ? quoteToken.address : tokenAddr;
+      }
 
       const [tokenInData, tokenOutData] = await Promise.all([
         publicClient.readContract({
@@ -338,6 +424,16 @@ export function useAgentTools() {
 
       const amountIn = parseUnits(sellAmount, tokenInData.decimals);
 
+      // Build multi-hop path if needed
+      const multiHopPath = isDirect
+        ? undefined
+        : buildMultiHopPath({
+            poolKey,
+            quoteToken,
+            tokenAddr,
+            sellingToken,
+          });
+
       return {
         poolKey,
         zeroForOne,
@@ -346,6 +442,11 @@ export function useAgentTools() {
         tokenInData,
         tokenOutData,
         amountIn,
+        tokenAddr,
+        quoteToken,
+        isDirect,
+        sellingToken,
+        multiHopPath,
       };
     },
     [publicClient, userAddress],
@@ -356,6 +457,7 @@ export function useAgentTools() {
       tokenAddress: string,
       sellAmount: string,
       buyToken: 'token' | 'quote',
+      quoteTokenSymbol: string = 'USDC',
     ) => {
       if (!publicClient || !userAddress) {
         return {
@@ -368,6 +470,7 @@ export function useAgentTools() {
           tokenAddress,
           sellAmount,
           buyToken,
+          quoteTokenSymbol,
         );
 
         // Get user balances
@@ -386,21 +489,41 @@ export function useAgentTools() {
           }),
         ]);
 
-        // Get quote
-        const quoteResult = await publicClient.simulateContract({
-          address: QUOTER_ADDRESS,
-          abi: quoterAbi,
-          functionName: 'quoteExactInputSingle',
-          args: [
-            {
-              poolKey: ctx.poolKey,
-              zeroForOne: ctx.zeroForOne,
-              exactAmount: ctx.amountIn,
-              hookData: '0x' as Hex,
-            },
-          ],
-        });
-        const quotedAmountOut = quoteResult.result[0];
+        // Get quote — single-hop or multi-hop
+        let quotedAmountOut: bigint;
+
+        if (ctx.isDirect) {
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInputSingle',
+            args: [
+              {
+                poolKey: ctx.poolKey,
+                zeroForOne: ctx.zeroForOne,
+                exactAmount: ctx.amountIn,
+                hookData: '0x' as Hex,
+              },
+            ],
+          });
+          quotedAmountOut = quoteResult.result[0];
+        } else {
+          if (!ctx.multiHopPath)
+            throw new Error('Failed to build multi-hop path');
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInput',
+            args: [
+              {
+                exactCurrency: ctx.multiHopPath.currencyIn,
+                path: ctx.multiHopPath.path,
+                exactAmount: ctx.amountIn,
+              },
+            ],
+          });
+          quotedAmountOut = quoteResult.result[0];
+        }
 
         // Check if approval is needed (ERC20 -> Permit2)
         const approvalNeeded = await needsErc20Approval(
@@ -408,7 +531,6 @@ export function useAgentTools() {
           ctx.amountIn,
         );
 
-        // Calculate price impact (rough: compare against simple ratio)
         const amountOutMin =
           quotedAmountOut - (quotedAmountOut * DEFAULT_SLIPPAGE_BPS) / 10000n;
 
@@ -435,6 +557,9 @@ export function useAgentTools() {
           receiving: `~${Number(quotedOutFormatted).toFixed(6)} ${ctx.tokenOutData.symbol}`,
           minimumReceived: `${Number(minOutFormatted).toFixed(6)} ${ctx.tokenOutData.symbol}`,
           slippage: '1%',
+          route: ctx.isDirect
+            ? `${ctx.tokenInData.symbol} -> ${ctx.tokenOutData.symbol}`
+            : `${ctx.tokenInData.symbol} -> USDC -> ${ctx.tokenOutData.symbol}`,
           balanceBefore: {
             [ctx.tokenInData.symbol]:
               `${Number(balanceInFormatted).toFixed(6)}`,
@@ -463,6 +588,7 @@ export function useAgentTools() {
       tokenAddress: string,
       sellAmount: string,
       buyToken: 'token' | 'quote',
+      quoteTokenSymbol: string = 'USDC',
     ) => {
       if (!publicClient || !walletClient || !userAddress) {
         return {
@@ -475,6 +601,7 @@ export function useAgentTools() {
           tokenAddress,
           sellAmount,
           buyToken,
+          quoteTokenSymbol,
         );
         const needsApproval = await needsErc20Approval(
           ctx.tokenIn,
@@ -523,6 +650,7 @@ export function useAgentTools() {
       tokenAddress: string,
       sellAmount: string,
       buyToken: 'token' | 'quote',
+      quoteTokenSymbol: string = 'USDC',
     ) => {
       if (!publicClient || !walletClient || !userAddress) {
         return {
@@ -535,6 +663,7 @@ export function useAgentTools() {
           tokenAddress,
           sellAmount,
           buyToken,
+          quoteTokenSymbol,
         );
 
         // Get balances before swap
@@ -553,36 +682,71 @@ export function useAgentTools() {
           }),
         ]);
 
-        // Get quote for min amount
-        const quoteResult = await publicClient.simulateContract({
-          address: QUOTER_ADDRESS,
-          abi: quoterAbi,
-          functionName: 'quoteExactInputSingle',
-          args: [
-            {
-              poolKey: ctx.poolKey,
-              zeroForOne: ctx.zeroForOne,
-              exactAmount: ctx.amountIn,
-              hookData: '0x' as Hex,
-            },
-          ],
-        });
-        const quotedAmountOut = quoteResult.result[0];
+        // Get fresh quote for min amount — single-hop or multi-hop
+        let quotedAmountOut: bigint;
+
+        if (ctx.isDirect) {
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInputSingle',
+            args: [
+              {
+                poolKey: ctx.poolKey,
+                zeroForOne: ctx.zeroForOne,
+                exactAmount: ctx.amountIn,
+                hookData: '0x' as Hex,
+              },
+            ],
+          });
+          quotedAmountOut = quoteResult.result[0];
+        } else {
+          if (!ctx.multiHopPath)
+            throw new Error('Failed to build multi-hop path');
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInput',
+            args: [
+              {
+                exactCurrency: ctx.multiHopPath.currencyIn,
+                path: ctx.multiHopPath.path,
+                exactAmount: ctx.amountIn,
+              },
+            ],
+          });
+          quotedAmountOut = quoteResult.result[0];
+        }
+
         const amountOutMin =
           quotedAmountOut - (quotedAmountOut * DEFAULT_SLIPPAGE_BPS) / 10000n;
 
-        // Execute swap
         const deadline = BigInt(
           Math.floor(Date.now() / 1000) + DEFAULT_DEADLINE_MINUTES * 60,
         );
 
-        const receipt = await swapExactInSingle(
-          ctx.poolKey,
-          ctx.amountIn,
-          amountOutMin,
-          ctx.zeroForOne,
-          deadline,
-        );
+        // Execute swap — single-hop or multi-hop
+        let receipt;
+
+        if (ctx.isDirect) {
+          receipt = await swapExactInSingle(
+            ctx.poolKey,
+            ctx.amountIn,
+            amountOutMin,
+            ctx.zeroForOne,
+            deadline,
+          );
+        } else {
+          receipt = await swapExactIn(
+            ctx.poolKey,
+            ctx.quoteToken,
+            ctx.tokenAddr,
+            ctx.amountIn,
+            amountOutMin,
+            ctx.sellingToken,
+            deadline,
+          );
+        }
 
         if (receipt.status !== 'success') {
           return {error: 'Swap transaction reverted'};
@@ -642,6 +806,7 @@ export function useAgentTools() {
       walletClient,
       userAddress,
       swapExactInSingle,
+      swapExactIn,
       queryClient,
       resolveSwapContext,
     ],
