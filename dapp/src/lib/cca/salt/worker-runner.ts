@@ -41,7 +41,7 @@ export const mineSaltAsync = async (
       }
     };
 
-    worker.onerror = (error) => {
+    worker.onerror = error => {
       worker.terminate();
       reject(new Error(`Worker error: ${error.message}`));
     };

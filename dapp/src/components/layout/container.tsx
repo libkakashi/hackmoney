@@ -13,7 +13,7 @@ export function Container({
 }: ContainerProps) {
   const sizeClasses = {
     sm: 'max-w-2xl',
-    md: 'max-w-4xl',
+    md: 'max-w-3xl',
     lg: 'max-w-6xl',
     xl: 'max-w-7xl',
     full: 'max-w-full',
