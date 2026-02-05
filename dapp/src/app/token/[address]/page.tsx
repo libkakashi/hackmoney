@@ -29,13 +29,13 @@ export default function TokenPage() {
 
   if (isLoading) {
     return (
-      <div className="py-6 md:py-8">
-        <Container>
+      <div className="py-6 md:py-6">
+        <Container size="xl">
           <div className="text-dim text-sm mb-6">
             ~/token <span className="text-green">$</span> loading...
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-            <div className="lg:col-span-3 space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
+            <div className="lg:col-span-4 space-y-4">
               <div className="border border-border p-4 h-32 animate-pulse bg-card" />
               <div className="border border-border p-4 h-75 animate-pulse bg-card" />
             </div>
