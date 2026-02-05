@@ -10,9 +10,12 @@ import {
   erc20Abi,
   maxUint48,
   maxUint160,
+  zeroAddress,
 } from 'viem';
 import {universalRouterAbi} from '~/abi/universal-router';
 import {usePermit2, PERMIT2_ADDRESS, type PermitSingle} from '../use-permit2';
+import {type QuoteToken, USDC_ADDRESS} from '~/lib/pools';
+import type {PathKey} from './use-quote';
 
 export enum Actions {
   INCREASE_LIQUIDITY = 0,
@@ -46,6 +49,9 @@ export const Commands = {
 } as const;
 
 const UNIVERSAL_ROUTER = '0x66a9893cc07d91d95644aedd05d03f95e1dba8af';
+
+const isNativeCurrency = (address: Address) =>
+  address.toLowerCase() === zeroAddress;
 
 const toHex = (n: number): Hex => `0x${n.toString(16).padStart(2, '0')}` as Hex;
 
@@ -219,6 +225,209 @@ const encodeSwapExactInSingle = (
   return {commands, inputs};
 };
 
+const PATH_KEY_ABI = [
+  {type: 'address', name: 'intermediateCurrency'},
+  {type: 'uint24', name: 'fee'},
+  {type: 'int24', name: 'tickSpacing'},
+  {type: 'address', name: 'hooks'},
+  {type: 'bytes', name: 'hookData'},
+] as const;
+
+const SWAP_EXACT_IN_ABI = [
+  {
+    type: 'tuple',
+    components: [
+      {type: 'address', name: 'currencyIn'},
+      {
+        type: 'tuple[]',
+        name: 'path',
+        components: PATH_KEY_ABI,
+      },
+      {type: 'uint128', name: 'amountIn'},
+      {type: 'uint128', name: 'amountOutMinimum'},
+    ],
+  },
+] as const;
+
+const SWAP_EXACT_OUT_ABI = [
+  {
+    type: 'tuple',
+    components: [
+      {type: 'address', name: 'currencyOut'},
+      {
+        type: 'tuple[]',
+        name: 'path',
+        components: PATH_KEY_ABI,
+      },
+      {type: 'uint128', name: 'amountOut'},
+      {type: 'uint128', name: 'amountInMaximum'},
+    ],
+  },
+] as const;
+
+const encodeSwapExactIn = (
+  currencyIn: Address,
+  path: PathKey[],
+  amountIn: bigint,
+  amountOutMinimum: bigint,
+  permitData?: PermitData,
+) => {
+  validateUint128(amountIn, 'amountIn');
+  validateUint128(amountOutMinimum, 'amountOutMinimum');
+
+  // The final currency out is the last path element's intermediateCurrency
+  const currencyOut = path[path.length - 1].intermediateCurrency;
+
+  const commands = permitData
+    ? concat([toHex(Commands.PERMIT2_PERMIT), toHex(Commands.V4_SWAP)])
+    : toHex(Commands.V4_SWAP);
+
+  const actions = concat([
+    toHex(Actions.SWAP_EXACT_IN),
+    toHex(Actions.SETTLE_ALL),
+    toHex(Actions.TAKE_ALL),
+  ]);
+  const params = [
+    encodeAbiParameters(SWAP_EXACT_IN_ABI, [
+      {currencyIn, path, amountIn, amountOutMinimum},
+    ]),
+    encodeSettleAll(currencyIn, amountIn),
+    encodeTakeAll(currencyOut, amountOutMinimum),
+  ];
+  const swapInput = encodeAbiParameters(V4_SWAP_ABI, [actions, params]);
+
+  const inputs = permitData
+    ? [
+        encodePermit2Permit(permitData.permitSingle, permitData.signature),
+        swapInput,
+      ]
+    : [swapInput];
+
+  return {commands, inputs};
+};
+
+const encodeSwapExactOut = (
+  currencyOut: Address,
+  path: PathKey[],
+  amountOut: bigint,
+  amountInMaximum: bigint,
+  permitData?: PermitData,
+) => {
+  validateUint128(amountOut, 'amountOut');
+  validateUint128(amountInMaximum, 'amountInMaximum');
+
+  // The currency we need to settle is the last path element's intermediateCurrency
+  const currencyIn = path[path.length - 1].intermediateCurrency;
+
+  const commands = permitData
+    ? concat([toHex(Commands.PERMIT2_PERMIT), toHex(Commands.V4_SWAP)])
+    : toHex(Commands.V4_SWAP);
+
+  const actions = concat([
+    toHex(Actions.SWAP_EXACT_OUT),
+    toHex(Actions.SETTLE_ALL),
+    toHex(Actions.TAKE_ALL),
+  ]);
+  const params = [
+    encodeAbiParameters(SWAP_EXACT_OUT_ABI, [
+      {currencyOut, path, amountOut, amountInMaximum},
+    ]),
+    encodeSettleAll(currencyIn, amountInMaximum),
+    encodeTakeAll(currencyOut, amountOut),
+  ];
+  const swapInput = encodeAbiParameters(V4_SWAP_ABI, [actions, params]);
+
+  const inputs = permitData
+    ? [
+        encodePermit2Permit(permitData.permitSingle, permitData.signature),
+        swapInput,
+      ]
+    : [swapInput];
+
+  return {commands, inputs};
+};
+
+/**
+ * Build multi-hop path for swap execution.
+ * Same logic as the quoter path, but for the actual swap.
+ *
+ * For exactInput: path goes from sell token to buy token.
+ *   exactCurrency = sell token, path hops lead to buy token.
+ * For exactOutput: path goes from buy token to sell token.
+ *   exactCurrency = buy token, path hops lead to sell token.
+ */
+function buildSwapPath({
+  poolKey,
+  quoteToken,
+  tokenAddr,
+  sellingToken,
+  exactInput,
+}: {
+  poolKey: PoolKey;
+  quoteToken: QuoteToken;
+  tokenAddr: Address;
+  sellingToken: boolean;
+  exactInput: boolean;
+}): {currencyExact: Address; path: PathKey[]} | undefined {
+  if (!quoteToken.intermediatePool) return undefined;
+  const ip = quoteToken.intermediatePool;
+
+  const launchpadPool = {
+    fee: poolKey.fee,
+    tickSpacing: poolKey.tickSpacing,
+    hooks: poolKey.hooks,
+    hookData: '0x' as Hex,
+  };
+  const usdcQuotePool = {
+    fee: ip.fee,
+    tickSpacing: ip.tickSpacing,
+    hooks: ip.hooks,
+    hookData: '0x' as Hex,
+  };
+
+  if (exactInput) {
+    if (sellingToken) {
+      // token -> USDC -> quoteToken
+      return {
+        currencyExact: tokenAddr,
+        path: [
+          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
+          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+        ],
+      };
+    } else {
+      // quoteToken -> USDC -> token
+      return {
+        currencyExact: quoteToken.address,
+        path: [
+          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
+          {...launchpadPool, intermediateCurrency: tokenAddr},
+        ],
+      };
+    }
+  } else {
+    if (sellingToken) {
+      // Buying exact quoteToken: quoteToken -> USDC -> token (reverse)
+      return {
+        currencyExact: quoteToken.address,
+        path: [
+          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
+          {...launchpadPool, intermediateCurrency: tokenAddr},
+        ],
+      };
+    } else {
+      // Buying exact token: token -> USDC -> quoteToken (reverse)
+      return {
+        currencyExact: tokenAddr,
+        path: [
+          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
+          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+        ],
+      };
+    }
+  }
+}
+
 const encodeSwapExactOutSingle = (
   poolKey: PoolKey,
   zeroForOne: boolean,
@@ -328,6 +537,7 @@ export const useSwap = () => {
     commands: Hex,
     inputs: Hex[],
     deadline: bigint,
+    value?: bigint,
   ) => {
     if (!publicClient || !address) throw new Error('Not connected');
 
@@ -339,6 +549,7 @@ export const useSwap = () => {
         functionName: 'execute',
         args: [commands, inputs, deadline],
         account: address,
+        ...(value ? {value} : {}),
       });
     } catch (err: unknown) {
       const error = err as Error & {
@@ -357,6 +568,7 @@ export const useSwap = () => {
     commands: Hex,
     inputs: Hex[],
     deadline: bigint,
+    value?: bigint,
   ) => {
     if (!publicClient || !address) throw new Error('Not connected');
 
@@ -367,6 +579,7 @@ export const useSwap = () => {
       abi: universalRouterAbi,
       functionName: 'execute',
       args: [commands, inputs, deadline],
+      ...(value ? {value} : {}),
     });
     toast.info('Waiting for confirmation...', {
       description: `Tx: ${hash.slice(0, 10)}...`,
@@ -473,5 +686,127 @@ export const useSwap = () => {
     ],
   );
 
-  return {swapExactInSingle, swapExactOutSingle, isPending};
+  const swapExactIn = useCallback(
+    async (
+      poolKey: PoolKey,
+      quoteToken: QuoteToken,
+      tokenAddr: Address,
+      amountIn: bigint,
+      minAmountOut: bigint,
+      sellingToken: boolean,
+      deadline: bigint,
+    ) => {
+      if (!address) throw new Error('Not connected');
+      setIsPending(true);
+
+      try {
+        const pathInfo = buildSwapPath({
+          poolKey,
+          quoteToken,
+          tokenAddr,
+          sellingToken,
+          exactInput: true,
+        });
+        if (!pathInfo) throw new Error('Failed to build swap path');
+
+        const {currencyExact: currencyIn, path} = pathInfo;
+        const native = isNativeCurrency(currencyIn);
+
+        let permitData: PermitData | undefined;
+        if (!native) {
+          await ensureErc20Approval(currencyIn, amountIn);
+          permitData = await getPermitSignatureIfNeeded(currencyIn, amountIn);
+        }
+
+        const {commands, inputs} = encodeSwapExactIn(
+          currencyIn,
+          path,
+          amountIn,
+          minAmountOut,
+          permitData,
+        );
+
+        const value = native ? amountIn : undefined;
+        await simulateSwap(commands, inputs, deadline, value);
+        return await executeSwap(commands, inputs, deadline, value);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [
+      address,
+      publicClient,
+      signPermitSingle,
+      needsErc20Approval,
+      needsPermit2Signature,
+    ],
+  );
+
+  const swapExactOut = useCallback(
+    async (
+      poolKey: PoolKey,
+      quoteToken: QuoteToken,
+      tokenAddr: Address,
+      amountOut: bigint,
+      maxAmountIn: bigint,
+      sellingToken: boolean,
+      deadline: bigint,
+    ) => {
+      if (!address) throw new Error('Not connected');
+      setIsPending(true);
+
+      try {
+        const pathInfo = buildSwapPath({
+          poolKey,
+          quoteToken,
+          tokenAddr,
+          sellingToken,
+          exactInput: false,
+        });
+        if (!pathInfo) throw new Error('Failed to build swap path');
+
+        const {currencyExact: currencyOut, path} = pathInfo;
+        const currencyIn = path[path.length - 1].intermediateCurrency;
+        const native = isNativeCurrency(currencyIn);
+
+        let permitData: PermitData | undefined;
+        if (!native) {
+          await ensureErc20Approval(currencyIn, maxAmountIn);
+          permitData = await getPermitSignatureIfNeeded(
+            currencyIn,
+            maxAmountIn,
+          );
+        }
+
+        const {commands, inputs} = encodeSwapExactOut(
+          currencyOut,
+          path,
+          amountOut,
+          maxAmountIn,
+          permitData,
+        );
+
+        const value = native ? maxAmountIn : undefined;
+        await simulateSwap(commands, inputs, deadline, value);
+        return await executeSwap(commands, inputs, deadline, value);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [
+      address,
+      publicClient,
+      signPermitSingle,
+      needsErc20Approval,
+      needsPermit2Signature,
+    ],
+  );
+
+  return {
+    swapExactInSingle,
+    swapExactOutSingle,
+    swapExactIn,
+    swapExactOut,
+    isPending,
+  };
 };

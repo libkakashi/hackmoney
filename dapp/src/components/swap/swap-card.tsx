@@ -1,7 +1,7 @@
 'use client';
 
 import {useState, useMemo} from 'react';
-import {maxUint128, parseUnits, formatUnits} from 'viem';
+import {maxUint128, parseUnits, formatUnits, type Address} from 'viem';
 import {useConnection} from 'wagmi';
 import {ArrowDownUp, ChevronDown} from 'lucide-react';
 import {toast} from 'sonner';
@@ -14,99 +14,111 @@ import {cn, PoolKey} from '~/lib/utils';
 import {useSwap} from '~/hooks/swap/use-swap';
 import {useTokenData} from '~/hooks/tokens/use-token-data';
 import {useTokenBalance} from '~/hooks/tokens/use-token-balance';
-import {useQuote} from '~/hooks/swap/use-quote';
+import {useMultiHopQuote} from '~/hooks/swap/use-quote';
+import {QUOTE_TOKENS, type QuoteToken, isDirectSwap} from '~/lib/pools';
+import {TokenSelectorModal} from './token-selector-modal';
 
 interface SwapCardProps {
   poolKey?: PoolKey | null;
+  tokenAddr?: Address;
 }
 
-export const SwapCard = ({poolKey}: SwapCardProps) => {
+export const SwapCard = ({poolKey, tokenAddr}: SwapCardProps) => {
   const queryClient = useQueryClient();
-  const token0 = poolKey?.currency0;
-  const token1 = poolKey?.currency1;
-
-  const {data: {symbol: token0Symbol, decimals: token0Decimals} = {}} =
-    useTokenData(poolKey?.currency0);
-  const {data: {symbol: token1Symbol, decimals: token1Decimals} = {}} =
-    useTokenData(poolKey?.currency1);
-
   const {address, isConnected} = useConnection();
+
+  // Launchpad token data
+  const {data: {symbol: tokenSymbol, decimals: tokenDecimals} = {}} =
+    useTokenData(tokenAddr);
+
+  // Quote token selection
+  const [selectedQuoteToken, setSelectedQuoteToken] = useState<QuoteToken>(
+    QUOTE_TOKENS[0],
+  );
+  const [showTokenSelector, setShowTokenSelector] = useState(false);
+
+  const quoteSymbol = selectedQuoteToken.symbol;
+  const quoteDecimals = selectedQuoteToken.decimals;
 
   const {
     swapExactInSingle,
     swapExactOutSingle,
+    swapExactIn,
+    swapExactOut,
     isPending: isSwapPending,
   } = useSwap();
 
   const [inputAmount, setInputAmount] = useState('');
-  const [zeroForOne, setZeroForOne] = useState(false);
+  // sellingToken=true: sell side = launchpad token, buy side = quote token
+  // sellingToken=false: sell side = quote token, buy side = launchpad token
+  const [sellingToken, setSellingToken] = useState(true);
   const [isExactInput, setIsExactInput] = useState(true);
   const [slippage, setSlippage] = useState('1');
   const [deadline, setDeadline] = useState('20');
   const [showSettings, setShowSettings] = useState(false);
   const [outputAmount, setOutputAmount] = useState('');
 
-  const tokenIn = zeroForOne ? token0 : token1;
-  const tokenOut = zeroForOne ? token1 : token0;
-  const tokenInDecimals = zeroForOne ? token0Decimals : token1Decimals;
-  const tokenOutDecimals = zeroForOne ? token1Decimals : token0Decimals;
-  const tokenInSymbol = zeroForOne ? token0Symbol : token1Symbol;
-  const tokenOutSymbol = zeroForOne ? token1Symbol : token0Symbol;
+  // Determine which side is sell vs buy
+  const sellSymbol = sellingToken ? tokenSymbol : quoteSymbol;
+  const sellDecimals = sellingToken ? tokenDecimals : quoteDecimals;
+  const buySymbol = sellingToken ? quoteSymbol : tokenSymbol;
+  const buyDecimals = sellingToken ? quoteDecimals : tokenDecimals;
 
-  const {data: tokenInBalance} = useTokenBalance(tokenIn, address);
-  const {data: tokenOutBalance} = useTokenBalance(tokenOut, address);
+  const sellTokenAddr = sellingToken ? tokenAddr : selectedQuoteToken.address;
+  const buyTokenAddr = sellingToken ? selectedQuoteToken.address : tokenAddr;
+
+  const {data: sellBalance} = useTokenBalance(sellTokenAddr, address);
+  const {data: buyBalance} = useTokenBalance(buyTokenAddr, address);
 
   const amountIn = useMemo(() => {
-    if (!inputAmount || !tokenInDecimals) return undefined;
+    if (!inputAmount || !sellDecimals) return undefined;
     try {
-      return parseUnits(inputAmount, tokenInDecimals);
+      return parseUnits(inputAmount, sellDecimals);
     } catch {
       return undefined;
     }
-  }, [inputAmount, tokenInDecimals]);
+  }, [inputAmount, sellDecimals]);
 
   const amountOut = useMemo(() => {
-    if (!outputAmount || !tokenOutDecimals) return undefined;
+    if (!outputAmount || !buyDecimals) return undefined;
     try {
-      return parseUnits(outputAmount, tokenOutDecimals);
+      return parseUnits(outputAmount, buyDecimals);
     } catch {
       return undefined;
     }
-  }, [outputAmount, tokenOutDecimals]);
+  }, [outputAmount, buyDecimals]);
 
   const exactAmount = useMemo(() => {
-    if (isExactInput) {
-      return amountIn;
-    } else {
-      return amountOut;
-    }
+    return isExactInput ? amountIn : amountOut;
   }, [isExactInput, amountIn, amountOut]);
 
   const {
     data: {quotedAmount} = {},
     isLoading: isQuoteLoading,
     error: quoteError,
-  } = useQuote(poolKey ?? undefined, {
+  } = useMultiHopQuote(poolKey ?? undefined, {
+    quoteToken: selectedQuoteToken,
+    tokenAddr,
     exactAmount,
-    zeroForOne: zeroForOne,
+    sellingToken,
     exactInput: isExactInput,
     enabled: exactAmount !== undefined && exactAmount > 0n,
   });
 
   const displayOutputAmount = useMemo(() => {
-    if (isExactInput && quotedAmount && tokenOutDecimals) {
-      return formatUnits(quotedAmount, tokenOutDecimals);
+    if (isExactInput && quotedAmount && buyDecimals) {
+      return formatUnits(quotedAmount, buyDecimals);
     }
     if (!outputAmount) return undefined;
     return outputAmount;
-  }, [isExactInput, quotedAmount, tokenOutDecimals, outputAmount]);
+  }, [isExactInput, quotedAmount, buyDecimals, outputAmount]);
 
   const displayInputAmount = useMemo(() => {
-    if (!isExactInput && quotedAmount && tokenInDecimals) {
-      return formatUnits(quotedAmount, tokenInDecimals);
+    if (!isExactInput && quotedAmount && sellDecimals) {
+      return formatUnits(quotedAmount, sellDecimals);
     }
     return inputAmount;
-  }, [isExactInput, quotedAmount, tokenInDecimals, inputAmount]);
+  }, [isExactInput, quotedAmount, sellDecimals, inputAmount]);
 
   const amountOutMin = useMemo(() => {
     if (!quotedAmount || !slippage) return 0n;
@@ -125,34 +137,57 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
       toast.error('Wallet not connected');
       return;
     }
-
-    if (!poolKey) {
+    if (!poolKey || !tokenAddr) {
       toast.error('Missing Parameters', {
         description: 'Unable to execute swap with current parameters',
       });
       return;
     }
+
     const swapDeadline = BigInt(
       Math.floor(Date.now() / 1000) + parseInt(deadline) * 60,
     );
+    const isDirect = isDirectSwap(selectedQuoteToken);
 
     try {
-      if (!amountIn) {
-        toast.error('Missing sell amount');
-        return;
-      }
       if (isExactInput) {
+        if (!amountIn) {
+          toast.error('Missing sell amount');
+          return;
+        }
         if (amountIn > maxUint128 || amountOutMin > maxUint128) {
           toast.error('Amount exceeds uint128 max');
           return;
         }
-        const receipt = await swapExactInSingle(
-          poolKey,
-          amountIn,
-          amountOutMin,
-          zeroForOne,
-          swapDeadline,
-        );
+
+        let receipt;
+        if (isDirect) {
+          // Single-hop USDC swap
+          const tokenIsCurrency0 =
+            poolKey.currency0.toLowerCase() === tokenAddr.toLowerCase();
+          const zeroForOne = sellingToken
+            ? tokenIsCurrency0
+            : !tokenIsCurrency0;
+          receipt = await swapExactInSingle(
+            poolKey,
+            amountIn,
+            amountOutMin,
+            zeroForOne,
+            swapDeadline,
+          );
+        } else {
+          // Multi-hop swap
+          receipt = await swapExactIn(
+            poolKey,
+            selectedQuoteToken,
+            tokenAddr,
+            amountIn,
+            amountOutMin,
+            sellingToken,
+            swapDeadline,
+          );
+        }
+
         if (receipt.status === 'success') {
           toast.success('Swap completed!', {
             description: `Confirmed in block ${receipt.blockNumber}`,
@@ -171,13 +206,33 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
           toast.error('Amount exceeds uint128 max');
           return;
         }
-        const receipt = await swapExactOutSingle(
-          poolKey,
-          amountOut,
-          amountInMax,
-          zeroForOne,
-          swapDeadline,
-        );
+
+        let receipt;
+        if (isDirect) {
+          const tokenIsCurrency0 =
+            poolKey.currency0.toLowerCase() === tokenAddr.toLowerCase();
+          const zeroForOne = sellingToken
+            ? tokenIsCurrency0
+            : !tokenIsCurrency0;
+          receipt = await swapExactOutSingle(
+            poolKey,
+            amountOut,
+            amountInMax,
+            zeroForOne,
+            swapDeadline,
+          );
+        } else {
+          receipt = await swapExactOut(
+            poolKey,
+            selectedQuoteToken,
+            tokenAddr,
+            amountOut,
+            amountInMax,
+            sellingToken,
+            swapDeadline,
+          );
+        }
+
         if (receipt.status === 'success') {
           toast.success('Swap completed!', {
             description: `Confirmed in block ${receipt.blockNumber}`,
@@ -204,7 +259,7 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
     const prevOutputAmount = outputAmount;
     const wasExactInput = isExactInput;
 
-    setZeroForOne(!zeroForOne);
+    setSellingToken(!sellingToken);
     setInputAmount(prevOutputAmount);
     setOutputAmount(prevInputAmount);
     setIsExactInput(!wasExactInput);
@@ -223,21 +278,30 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
   };
 
   const handleMaxInput = () => {
-    if (tokenInBalance && tokenInDecimals) {
-      setInputAmount(formatUnits(tokenInBalance, tokenInDecimals));
+    if (sellBalance && sellDecimals) {
+      setInputAmount(formatUnits(sellBalance, sellDecimals));
       setIsExactInput(true);
       setOutputAmount('');
     }
   };
 
-  const isLoading = isSwapPending;
+  const handleSelectQuoteToken = (qt: QuoteToken) => {
+    setSelectedQuoteToken(qt);
+    // Reset amounts when switching quote token
+    setInputAmount('');
+    setOutputAmount('');
+  };
 
   const hasValidAmount = isExactInput
     ? inputAmount && parseFloat(inputAmount) > 0
     : outputAmount && parseFloat(outputAmount) > 0;
 
   const canSwap =
-    isConnected && hasValidAmount && !isLoading && !isQuoteLoading && !!poolKey;
+    isConnected &&
+    hasValidAmount &&
+    !isSwapPending &&
+    !isQuoteLoading &&
+    !!poolKey;
 
   const exchangeRate = useMemo(() => {
     if (!displayOutputAmount || !displayInputAmount) return null;
@@ -247,9 +311,38 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
     return (outNum / inNum).toFixed(6);
   }, [displayOutputAmount, displayInputAmount]);
 
+  // Determine which side gets the token selector
+  // The quote token selector appears on the non-launchpad-token side
+  const renderTokenLabel = (
+    isQuoteSide: boolean,
+    symbol: string | undefined,
+  ) => {
+    if (!isQuoteSide) {
+      return (
+        <span className="text-green text-xs shrink-0">{symbol || '---'}</span>
+      );
+    }
+
+    return (
+      <button
+        type="button"
+        onClick={() => setShowTokenSelector(true)}
+        className="flex items-center gap-1 text-green text-xs hover:text-foreground transition-colors shrink-0"
+      >
+        {selectedQuoteToken.symbol}
+        <ChevronDown className="h-2.5 w-2.5" />
+      </button>
+    );
+  };
+
+  // The sell side shows the quote selector when selling quote token (!sellingToken)
+  // The buy side shows the quote selector when buying quote token (sellingToken)
+  const sellIsQuoteSide = !sellingToken;
+  const buyIsQuoteSide = sellingToken;
+
   return (
     <div className="flex flex-col justify-between space-y-3">
-      {/* Input Token Section */}
+      {/* Input Token Section (Sell) */}
       <div className="border border-border bg-background px-4 py-3 space-y-2">
         <div className="flex justify-between items-center">
           <span className="text-xs text-dim uppercase tracking-wider">
@@ -262,11 +355,11 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
           >
             bal:{' '}
             <span className="text-purple tabular-nums">
-              {tokenInBalance && tokenInDecimals
-                ? formatUnits(tokenInBalance, tokenInDecimals)
+              {sellBalance && sellDecimals
+                ? formatUnits(sellBalance, sellDecimals)
                 : '-'}
             </span>
-            {tokenInBalance && <span className="ml-1 text-green">[MAX]</span>}
+            {sellBalance && <span className="ml-1 text-green">[MAX]</span>}
           </button>
         </div>
         <div className="flex items-center gap-2">
@@ -277,9 +370,7 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
             onChange={e => handleInputChange(e.target.value)}
             className="flex-1 bg-transparent text-base tabular-nums outline-none placeholder:text-dim w-0 min-w-0 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
-          <span className="text-green text-xs shrink-0">
-            {tokenInSymbol || '---'}
-          </span>
+          {renderTokenLabel(sellIsQuoteSide, sellSymbol)}
         </div>
       </div>
 
@@ -294,15 +385,15 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
         </button>
       </div>
 
-      {/* Output Token Section */}
+      {/* Output Token Section (Buy) */}
       <div className="border border-border bg-background px-4 py-3 space-y-2">
         <div className="flex justify-between items-center">
           <span className="text-xs text-dim uppercase tracking-wider">buy</span>
           <span className="text-xs text-dim">
             bal:{' '}
             <span className="text-purple tabular-nums">
-              {tokenOutBalance && tokenOutDecimals
-                ? formatUnits(tokenOutBalance, tokenOutDecimals)
+              {buyBalance && buyDecimals
+                ? formatUnits(buyBalance, buyDecimals)
                 : '-'}
             </span>
           </span>
@@ -325,11 +416,20 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
               </div>
             )}
           </div>
-          <span className="text-green text-xs shrink-0">
-            {tokenOutSymbol || '---'}
-          </span>
+          {renderTokenLabel(buyIsQuoteSide, buySymbol)}
         </div>
       </div>
+
+      {/* Route indicator for multi-hop */}
+      {!isDirectSwap(selectedQuoteToken) && (
+        <div className="text-center">
+          <span className="text-[10px] text-dim">
+            route: {sellingToken ? tokenSymbol : selectedQuoteToken.symbol}
+            {' -> USDC -> '}
+            {sellingToken ? selectedQuoteToken.symbol : tokenSymbol}
+          </span>
+        </div>
+      )}
 
       {/* Quote Info */}
       {(quoteError || exchangeRate) && (
@@ -339,29 +439,26 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
           ) : exchangeRate ? (
             <div className="text-xs text-dim space-y-0.5">
               <div className="tabular-nums">
-                <span className="text-purple">1</span> {tokenInSymbol}{' '}
+                <span className="text-purple">1</span> {sellSymbol}{' '}
                 <span className="text-dim">=</span>{' '}
-                <span className="text-green">{exchangeRate}</span>{' '}
-                {tokenOutSymbol}
+                <span className="text-green">{exchangeRate}</span> {buySymbol}
               </div>
-              {isExactInput && amountOutMin > 0n && tokenOutDecimals && (
+              {isExactInput && amountOutMin > 0n && buyDecimals && (
                 <div className="text-dim">
                   min:{' '}
                   <span className="text-purple tabular-nums">
-                    {Number(
-                      formatUnits(amountOutMin, tokenOutDecimals),
-                    ).toFixed(4)}
+                    {Number(formatUnits(amountOutMin, buyDecimals)).toFixed(4)}
                   </span>{' '}
-                  {tokenOutSymbol}
+                  {buySymbol}
                 </div>
               )}
-              {!isExactInput && amountInMax > 0n && tokenInDecimals && (
+              {!isExactInput && amountInMax > 0n && sellDecimals && (
                 <div className="text-dim">
                   max:{' '}
                   <span className="text-purple tabular-nums">
-                    {formatUnits(amountInMax, tokenInDecimals)}
+                    {formatUnits(amountInMax, sellDecimals)}
                   </span>{' '}
-                  {tokenInSymbol}
+                  {sellSymbol}
                 </div>
               )}
             </div>
@@ -441,6 +538,14 @@ export const SwapCard = ({poolKey}: SwapCardProps) => {
           '$ swap'
         )}
       </Button>
+
+      {/* Token Selector Modal */}
+      <TokenSelectorModal
+        open={showTokenSelector}
+        onOpenChange={setShowTokenSelector}
+        selectedToken={selectedQuoteToken}
+        onSelect={handleSelectQuoteToken}
+      />
     </div>
   );
 };

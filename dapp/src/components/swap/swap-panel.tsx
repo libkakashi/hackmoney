@@ -46,7 +46,7 @@ export const SwapPanel = ({tokenAddr}: {tokenAddr?: Address}) => {
 
   const renderContent = () => {
     if (isMigrated) {
-      return <SwapCard poolKey={poolKey} />;
+      return <SwapCard poolKey={poolKey} tokenAddr={tokenAddr} />;
     }
 
     if (!canMigrate && blocksUntilMigration > 0n) {
