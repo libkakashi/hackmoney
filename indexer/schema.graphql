@@ -21,3 +21,25 @@ type Launchpad_TokenLaunched {
   createdAtBlock: BigInt!
   txHash: String!
 }
+
+type Token_Transfer {
+  id: ID!
+  token: String! @index
+  from: String! @index
+  to: String! @index
+  amount: BigInt!
+  blockNumber: Int!
+  timestamp: Int!
+  txHash: String!
+}
+
+type TokenHolder {
+  id: ID! # token_wallet
+  token: String! @index
+  wallet: String! @index
+  balance: BigInt!
+  totalSent: BigInt!
+  totalReceived: BigInt!
+  transferCount: Int!
+  lastUpdatedAt: Int!
+}

@@ -15,5 +15,9 @@ networks:
         handler: src/EventHandlers.ts
         events:
           - event: TokenLaunched(address indexed token, address indexed strategy, address indexed auction, address creator, string name, string symbol, string description, string website, string image, uint64 auctionStartBlock, uint64 auctionEndBlock, uint64 auctionClaimBlock, uint64 poolMigrationBlock, bytes32 salt)
+      - name: Token
+        handler: src/EventHandlers.ts
+        events:
+          - event: Transfer(address indexed from, address indexed to, uint256 value)
 unordered_multichain_mode: true
 preload_handlers: true
