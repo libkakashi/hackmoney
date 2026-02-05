@@ -9,7 +9,9 @@
     "lint": "gts lint",
     "clean": "gts clean",
     "fix": "gts fix",
-    "codegen": "graphql-codegen --config codegen.ts"
+    "codegen:graphql": "graphql-codegen --config codegen.ts",
+    "codegen:kysely": "kysely-codegen --include-pattern=\"public.*\" --out-file src/db/generated.ts",
+    "codegen": "npm run codegen:graphql && npm run codegen:kysely"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.36",
@@ -33,10 +35,16 @@
     "graphql-request": "^7.4.0",
     "graphql-tag": "^2.12.6",
     "iron-session": "^8.0.4",
+    "kysely": "^0.28.11",
+    "kysely-codegen": "^0.19.0",
     "lucide-react": "^0.563.0",
     "next": "16.1.6",
     "next-themes": "^0.4.6",
+<<<<<<< HEAD
     "pinata": "^2.5.3",
+=======
+    "pg": "^8.18.0",
+>>>>>>> 764dec3 (add thread integration)
     "radix-ui": "^1.4.3",
     "re-resizable": "^6.11.2",
     "react": "19.2.3",
@@ -61,6 +69,7 @@
     "@tailwindcss/postcss": "^4",
     "@types/big.js": "^6.2.2",
     "@types/node": "^20",
+    "@types/pg": "^8.16.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",

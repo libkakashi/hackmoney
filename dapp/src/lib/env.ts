@@ -23,6 +23,7 @@ const envSchema = z.object({
   launchpadLensAddr: ZAddress,
   graphqlUrl: z.string(),
   anthropicApiKey: z.string().optional(),
+  databaseUrl: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -35,4 +36,5 @@ export const env = envSchema.parse({
   graphqlUrl:
     process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8080/v1/graphql',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+  databaseUrl: process.env.DATABASE_URL,
 });
