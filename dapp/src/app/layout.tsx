@@ -1,11 +1,11 @@
-import type { Metadata } from 'next';
-import { Geist_Mono, JetBrains_Mono } from 'next/font/google';
-import { Providers } from '~/components/providers';
-import { Navbar } from '~/components/layout/navbar';
-import { AgentProvider } from '~/components/agent/agent-context';
-import { FloatingAgent } from '~/components/agent/floating-agent';
+import type {Metadata} from 'next';
+import {Geist_Mono, JetBrains_Mono} from 'next/font/google';
+import {Providers} from '~/components/providers';
+import {Navbar} from '~/components/layout/navbar';
+import {AgentProvider} from '~/components/agent/agent-context';
+import {FloatingAgent} from '~/components/agent/floating-agent';
+import {Footer} from '~/components/layout/footer';
 import './globals.css';
-import { Footer } from '~/components/layout/footer';
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],

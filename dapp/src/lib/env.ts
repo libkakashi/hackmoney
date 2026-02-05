@@ -24,6 +24,8 @@ const envSchema = z.object({
   graphqlUrl: z.string(),
   anthropicApiKey: z.string().optional(),
   databaseUrl: z.string().optional(),
+  pinataJwt: z.string().optional(),
+  pinataGateway: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -37,4 +39,6 @@ export const env = envSchema.parse({
     process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhost:8080/v1/graphql',
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
   databaseUrl: process.env.DATABASE_URL,
+  pinataJwt: process.env.PINATA_JWT,
+  pinataGateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY,
 });

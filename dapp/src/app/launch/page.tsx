@@ -1,15 +1,15 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useConnection } from 'wagmi';
-import { Globe, MessageCircle, Send, Zap, Calendar, Clock } from 'lucide-react';
-import { Loader } from '~/components/ui/loader';
-import { Container } from '~/components/layout/container';
-import { Button } from '~/components/ui/button';
-import { Input } from '~/components/ui/input';
-import { ImageUpload } from '~/components/ui/image-upload';
-import { useLaunch } from '~/hooks/use-launch';
+import {useState, useEffect, useCallback} from 'react';
+import {useRouter} from 'next/navigation';
+import {useConnection} from 'wagmi';
+import {Globe, MessageCircle, Send, Zap, Calendar, Clock} from 'lucide-react';
+import {Loader} from '~/components/ui/loader';
+import {Container} from '~/components/layout/container';
+import {Button} from '~/components/ui/button';
+import {Input} from '~/components/ui/input';
+import {ImageUpload} from '~/components/ui/image-upload';
+import {useLaunch} from '~/hooks/use-launch';
 
 type LaunchMode = 'now' | 'scheduled';
 
@@ -27,7 +27,7 @@ interface FormData {
 
 export default function LaunchPage() {
   const router = useRouter();
-  const { isConnected } = useConnection();
+  const {isConnected} = useConnection();
 
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<LaunchMode>('now');
@@ -61,16 +61,19 @@ export default function LaunchPage() {
   }, [launchResult, isConfirmed, router]);
 
   const updateForm = (field: keyof FormData, value: string) => {
-    setForm(prev => ({ ...prev, [field]: value }));
+    setForm(prev => ({...prev, [field]: value}));
   };
 
-  const handleImageChange = useCallback((url: string | undefined, cid: string | undefined) => {
-    setForm(prev => ({
-      ...prev,
-      image: url || '',
-      imageCid: cid || '',
-    }));
-  }, []);
+  const handleImageChange = useCallback(
+    (url: string | undefined, cid: string | undefined) => {
+      setForm(prev => ({
+        ...prev,
+        image: url || '',
+        imageCid: cid || '',
+      }));
+    },
+    [],
+  );
 
   const handleDeploy = async () => {
     try {
@@ -140,35 +143,52 @@ export default function LaunchPage() {
               </div>
               <div className="border-b border-border mb-6" />
 
-              <div className="space-y-5">
-                {/* Name & Symbol */}
-                <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-6">
+                {/* Image, Name & Symbol */}
+                <div className="flex gap-8">
+                  {/* Token Image */}
                   <div>
-                    <label className="text-dim text-xs block mb-2">
-                      token name <span className="text-red">*</span>
+                    <label className="text-xs block mb-2">
+                      <span className="text-dim"> token image</span>{' '}
+                      <span className="text-dim/60">(optional)</span>
                     </label>
-                    <Input
-                      type="text"
-                      placeholder="e.g. Pepe Rising"
-                      value={form.name}
-                      onChange={e => updateForm('name', e.target.value)}
-                      className="h-11 px-4"
+                    <ImageUpload
+                      value={form.image}
+                      onChange={handleImageChange}
+                      tokenSymbol={form.symbol}
+                      disabled={isDeploying}
                     />
                   </div>
-                  <div>
-                    <label className="text-dim text-xs block mb-2">
-                      symbol <span className="text-red">*</span>
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="e.g. PRISE"
-                      value={form.symbol}
-                      onChange={e =>
-                        updateForm('symbol', e.target.value.toUpperCase())
-                      }
-                      maxLength={10}
-                      className="h-11 px-4 uppercase placeholder:normal-case"
-                    />
+
+                  {/* Name & Symbol stacked */}
+                  <div className="flex-1 flex flex-col gap-4">
+                    <div>
+                      <label className="text-dim text-xs block mb-2">
+                        token name <span className="text-red">*</span>
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="e.g. Pepe Rising"
+                        value={form.name}
+                        onChange={e => updateForm('name', e.target.value)}
+                        className="h-11 px-4"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-dim text-xs block mb-2">
+                        symbol <span className="text-red">*</span>
+                      </label>
+                      <Input
+                        type="text"
+                        placeholder="e.g. PRISE"
+                        value={form.symbol}
+                        onChange={e =>
+                          updateForm('symbol', e.target.value.toUpperCase())
+                        }
+                        maxLength={10}
+                        className="h-11 px-4 uppercase placeholder:normal-case"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -183,19 +203,6 @@ export default function LaunchPage() {
                     onChange={e => updateForm('description', e.target.value)}
                     rows={4}
                     className="w-full px-4 py-3 bg-background border border-border text-sm resize-none placeholder:text-dim focus:outline-none focus:border-green"
-                  />
-                </div>
-
-                {/* Token Image */}
-                <div>
-                  <label className="text-dim text-xs block mb-2">
-                    token image <span className="text-dim/60">(optional)</span>
-                  </label>
-                  <ImageUpload
-                    value={form.image}
-                    onChange={handleImageChange}
-                    tokenSymbol={form.symbol}
-                    disabled={isDeploying}
                   />
                 </div>
 
@@ -268,8 +275,9 @@ export default function LaunchPage() {
                 <Button
                   onClick={() => setMode('now')}
                   variant="outline"
-                  className={`p-4 h-auto text-left justify-start ${mode === 'now' ? 'border-green bg-green/5' : ''
-                    }`}
+                  className={`p-4 h-auto text-left justify-start ${
+                    mode === 'now' ? 'border-green bg-green/5' : ''
+                  }`}
                 >
                   <div className="flex flex-col items-start">
                     <div className="flex items-center gap-2 mb-1">
@@ -288,8 +296,9 @@ export default function LaunchPage() {
                 <Button
                   onClick={() => setMode('scheduled')}
                   variant="outline"
-                  className={`p-4 h-auto text-left justify-start ${mode === 'scheduled' ? 'border-purple bg-purple/5' : ''
-                    }`}
+                  className={`p-4 h-auto text-left justify-start ${
+                    mode === 'scheduled' ? 'border-purple bg-purple/5' : ''
+                  }`}
                 >
                   <div className="flex flex-col items-start">
                     <div className="flex items-center gap-2 mb-1">

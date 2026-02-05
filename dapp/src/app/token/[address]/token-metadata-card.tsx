@@ -1,28 +1,28 @@
-import type { Address } from 'viem';
-import { useState } from 'react';
-import { formatUnits } from 'viem';
-import { Globe } from 'lucide-react';
+import type {Address} from 'viem';
+import {useState} from 'react';
+import {formatUnits} from 'viem';
+import {Globe} from 'lucide-react';
 
-import { TwitterIcon, DiscordIcon, TelegramIcon } from '~/components/icons';
-import { Button } from '~/components/ui/button';
-import { Skeleton } from '~/components/ui/skeleton';
-import { useTokenByAddress } from '~/hooks/use-tokens';
-import { usePoolPrice } from '~/hooks/use-pool-price';
-import { useTokenData } from '~/hooks/tokens/use-token-data';
-import { usePoolKey } from '~/hooks/swap/use-pool-key';
+import {TwitterIcon, DiscordIcon, TelegramIcon} from '~/components/icons';
+import {Button} from '~/components/ui/button';
+import {Skeleton} from '~/components/ui/skeleton';
+import {useTokenByAddress} from '~/hooks/use-tokens';
+import {usePoolPrice} from '~/hooks/use-pool-price';
+import {useTokenData} from '~/hooks/tokens/use-token-data';
+import {usePoolKey} from '~/hooks/swap/use-pool-key';
 
-export const TokenMetadataCard = ({ address }: { address?: Address }) => {
-  const { data: token } = useTokenByAddress(address);
-  const { data: { poolKey } = {} } = usePoolKey(address);
-  const { data: poolPrice } = usePoolPrice(address);
-  const { data: tokenData } = useTokenData(address);
+export const TokenMetadataCard = ({address}: {address?: Address}) => {
+  const {data: token} = useTokenByAddress(address);
+  const {data: {poolKey} = {}} = usePoolKey(address);
+  const {data: poolPrice} = usePoolPrice(address);
+  const {data: tokenData} = useTokenData(address);
   const createdAt = token ? new Date(token.createdAt * 1000) : undefined;
 
   const token0 = poolKey?.currency0;
   const token1 = poolKey?.currency1;
 
-  const { data: { decimals: token0Decimals } = {} } = useTokenData(token0);
-  const { data: { decimals: token1Decimals } = {} } = useTokenData(token1);
+  const {data: {decimals: token0Decimals} = {}} = useTokenData(token0);
+  const {data: {decimals: token1Decimals} = {}} = useTokenData(token1);
 
   // priceE18 = token1/token0 scaled by 1e18 (how much token1 per token0)
   // If token is token0, priceE18 is already quote/token (correct direction)
@@ -44,8 +44,8 @@ export const TokenMetadataCard = ({ address }: { address?: Address }) => {
   const marketCap =
     normalizedPriceE18 && tokenData && quoteDecimals && tokenDecimals
       ? Number(
-        formatUnits(normalizedPriceE18, 18 + quoteDecimals - tokenDecimals),
-      ) * Number(tokenData.totalSupply)
+          formatUnits(normalizedPriceE18, 18 + quoteDecimals - tokenDecimals),
+        ) * Number(tokenData.totalSupply)
       : undefined;
 
   const [copied, setCopied] = useState(false);
@@ -159,61 +159,61 @@ export const TokenMetadataCard = ({ address }: { address?: Address }) => {
             token.twitterUrl ||
             token.discordUrl ||
             token.telegramUrl) && (
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-auto mb-2">
-                {token.website && (
-                  <a
-                    href={token.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-dim hover:text-green"
-                  >
-                    <Globe className="w-4 h-4 shrink-0" />
-                    <span className="truncate">
-                      {token.website.replace(/^https?:\/\//, '')}
-                    </span>
-                  </a>
-                )}
-                {token.twitterUrl && (
-                  <a
-                    href={token.twitterUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-dim hover:text-green"
-                  >
-                    <TwitterIcon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">
-                      {token.twitterUrl.replace(/^https?:\/\//, '')}
-                    </span>
-                  </a>
-                )}
-                {token.discordUrl && (
-                  <a
-                    href={token.discordUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-dim hover:text-green"
-                  >
-                    <DiscordIcon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">
-                      {token.discordUrl.replace(/^https?:\/\//, '')}
-                    </span>
-                  </a>
-                )}
-                {token.telegramUrl && (
-                  <a
-                    href={token.telegramUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm text-dim hover:text-green"
-                  >
-                    <TelegramIcon className="w-4 h-4 shrink-0" />
-                    <span className="truncate">
-                      {token.telegramUrl.replace(/^https?:\/\//, '')}
-                    </span>
-                  </a>
-                )}
-              </div>
-            )}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-auto mb-2">
+              {token.website && (
+                <a
+                  href={token.website}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-dim hover:text-green"
+                >
+                  <Globe className="w-4 h-4 shrink-0" />
+                  <span className="truncate">
+                    {token.website.replace(/^https?:\/\//, '')}
+                  </span>
+                </a>
+              )}
+              {token.twitterUrl && (
+                <a
+                  href={token.twitterUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-dim hover:text-green"
+                >
+                  <TwitterIcon className="w-4 h-4 shrink-0" />
+                  <span className="truncate">
+                    {token.twitterUrl.replace(/^https?:\/\//, '')}
+                  </span>
+                </a>
+              )}
+              {token.discordUrl && (
+                <a
+                  href={token.discordUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-dim hover:text-green"
+                >
+                  <DiscordIcon className="w-4 h-4 shrink-0" />
+                  <span className="truncate">
+                    {token.discordUrl.replace(/^https?:\/\//, '')}
+                  </span>
+                </a>
+              )}
+              {token.telegramUrl && (
+                <a
+                  href={token.telegramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-dim hover:text-green"
+                >
+                  <TelegramIcon className="w-4 h-4 shrink-0" />
+                  <span className="truncate">
+                    {token.telegramUrl.replace(/^https?:\/\//, '')}
+                  </span>
+                </a>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -232,7 +232,7 @@ export const TokenMetadataCard = ({ address }: { address?: Address }) => {
             <div className="text-xs text-dim">market_cap</div>
             <div className="tabular-nums">
               {marketCap !== undefined
-                ? `$${marketCap.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                ? `$${marketCap.toLocaleString(undefined, {maximumFractionDigits: 2})}`
                 : '-'}
             </div>
           </div>
@@ -241,12 +241,12 @@ export const TokenMetadataCard = ({ address }: { address?: Address }) => {
             <div className="tabular-nums text-sm">
               {createdAt
                 ? createdAt.toLocaleString('en-US', {
-                  year: 'numeric',
-                  month: 'short',
-                  day: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
                 : '-'}
             </div>
           </div>

@@ -128,7 +128,7 @@ export default function TokenPage() {
 
         {/* Discussion + Leaderboard */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-          <div className="lg:col-span-2 border border-border bg-card p-4 flex flex-col min-h-[400px]">
+          <div className="lg:col-span-2 border border-border bg-card p-4 flex flex-col min-h-100">
             <TokenDiscussion tokenAddress={address} />
           </div>
           <div className="lg:col-span-1 border border-border bg-card p-4 h-fit">
