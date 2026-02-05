@@ -10,14 +10,15 @@ import {
 } from 'generated';
 
 /**
- * Parses the description to extract social URLs.
- * Expected format: "Description text \n\n ["twitterUrl", "discordUrl", "telegramUrl"]"
+ * Parses the description to extract social URLs and ENS name.
+ * Expected format: "Description text \n\n ["twitterUrl", "discordUrl", "telegramUrl", "ensName"]"
  */
-function parseSocialUrls(description: string): {
+function parseMetadata(description: string): {
   cleanDescription: string;
   twitterUrl: string | undefined;
   discordUrl: string | undefined;
   telegramUrl: string | undefined;
+  ensName: string | undefined;
 } {
   const parts = description.split('\n\n');
 
@@ -27,6 +28,7 @@ function parseSocialUrls(description: string): {
       twitterUrl: undefined,
       discordUrl: undefined,
       telegramUrl: undefined,
+      ensName: undefined,
     };
   }
 
@@ -34,13 +36,14 @@ function parseSocialUrls(description: string): {
 
   try {
     const parsed = JSON.parse(lastPart);
-    if (Array.isArray(parsed) && parsed.length === 3) {
+    if (Array.isArray(parsed) && (parsed.length === 3 || parsed.length === 4)) {
       const cleanDescription = parts.slice(0, -1).join('\n\n');
       return {
         cleanDescription,
         twitterUrl: parsed[0] || undefined,
         discordUrl: parsed[1] || undefined,
         telegramUrl: parsed[2] || undefined,
+        ensName: parsed[3] || undefined,
       };
     }
   } catch {
@@ -52,6 +55,7 @@ function parseSocialUrls(description: string): {
     twitterUrl: undefined,
     discordUrl: undefined,
     telegramUrl: undefined,
+    ensName: undefined,
   };
 }
 
@@ -62,8 +66,8 @@ Launchpad.TokenLaunched.contractRegister(
 );
 
 Launchpad.TokenLaunched.handler(async ({event, context}) => {
-  const {cleanDescription, twitterUrl, discordUrl, telegramUrl} =
-    parseSocialUrls(event.params.description);
+  const {cleanDescription, twitterUrl, discordUrl, telegramUrl, ensName} =
+    parseMetadata(event.params.description);
 
   const entity: Launchpad_TokenLaunched = {
     id: `${event.chainId}_${event.block.number}_${event.logIndex}`,
@@ -78,6 +82,7 @@ Launchpad.TokenLaunched.handler(async ({event, context}) => {
     twitterUrl,
     discordUrl,
     telegramUrl,
+    ensName,
     image: event.params.image,
     auctionStartBlock: event.params.auctionStartBlock,
     auctionEndBlock: event.params.auctionEndBlock,

@@ -18,9 +18,9 @@ This create 'fair-launches' and eliminates timing games, front-running and MEV e
   {
     q: 'how does CCA actually work?',
     a: ` CCA works in three main steps:
-    
+
     1. Create Auction: Projects set token ticker, name and image along with auction parameters like total token supply, floor price, auction schedule etc.
-    
+
 2. Price Discovery: Traders submit their budget, and their bids are uniformly spread over the entire auction period where a clearing price is calculated per block based on demand & supply, ensuring fair pricing.
 
 3. Long-Term Liquidity: Post-auction, proceeds seed a Uniswap v4 pool at the discovered price, enabling seamless trading.
@@ -60,7 +60,7 @@ This minimizes timing attacks and promotes stable pricing, unlike one-shot aucti
     q: 'how do i place a bid?',
     a: `Connect your wallet, navigate to the token you want to bid on, and enter the amount of USDC you wish to commit.
 
-The platform uses Permit2 for gasless approvals, so you'll sign a message and then submit your bid transaction. 
+The platform uses Permit2 for gasless approvals, so you'll sign a message and then submit your bid transaction.
 
 You can view your active bids and their status on the token page at any time. There's no minimum bid amount.`,
     tag: 'guide',
@@ -225,253 +225,582 @@ L2 networks offer significantly lower gas costs for both creators and bidders.`,
 
 const beginnerFAQs = [
   // ─── DEFI BASICS (The ABCs) ───
-  { q: 'what is defi?', a: `DeFi = Decentralized Finance. 
-    
-    basically, money lego blocks without the suits. no banks, no managers, just code and chaos.`, tag: 'basics' },
-  { q: 'what is a smart contract?', a: `it's a robot that keeps its promises.
-    
-    unlike your ex, once this code is deployed, it does exactly what it says. no takebacks.`, tag: 'basics' },
-  { q: 'what is an amm?', a: `Automated Market Maker.
-    
-    it's a vending machine for tokens. you put money in, you get tokens out. math determines the price, not a guy on a trading floor.`, tag: 'mechanics' },
-  { q: 'what is a liquidity pool?', a: `a big pile of money that makes trading possible.
-    
-    think of it as the cash register. people put tokens in so others can swap. if the pool is empty, the shop is closed.`, tag: 'mechanics' },
-  { q: 'what is a token?', a: `digital bragging rights.
-    
-    could be money, could be a picture of a dog, could be absolutely nothing. welcome to crypto.`, tag: 'basics' },
-  { q: 'what is blockchain?', a: `the receipt that never fades.
-    
-    a public list of who sent what to whom. everyone has a copy, so you can't fake it.`, tag: 'basics' },
-  { q: 'what does decentralized mean?', a: `no boss key.
-    
-    nobody can shut it down, nobody can freeze your account (mostly). it's the wild west, baby.`, tag: 'basics' },
-  { q: 'what is a dex?', a: `Decentralized Exchange.
-    
-    like the NYSE but run by code and accessible in your underwear. uniswap is the king here.`, tag: 'basics' },
-  { q: 'what is supply?', a: `how many slices of the pizza exist.
-    
-    if supply is huge, price is usually small (unless you're shib). know your math.`, tag: 'basics' },
-  { q: 'what is market cap?', a: `price x supply. the only number that actually matters.
-    
-    don't look at "cheap" price per token. look at how much the whole bag is worth.`, tag: 'basics' },
+  {
+    q: 'what is defi?',
+    a: `DeFi = Decentralized Finance.
+
+    basically, money lego blocks without the suits. no banks, no managers, just code and chaos.`,
+    tag: 'basics',
+  },
+  {
+    q: 'what is a smart contract?',
+    a: `it's a robot that keeps its promises.
+
+    unlike your ex, once this code is deployed, it does exactly what it says. no takebacks.`,
+    tag: 'basics',
+  },
+  {
+    q: 'what is an amm?',
+    a: `Automated Market Maker.
+
+    it's a vending machine for tokens. you put money in, you get tokens out. math determines the price, not a guy on a trading floor.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'what is a liquidity pool?',
+    a: `a big pile of money that makes trading possible.
+
+    think of it as the cash register. people put tokens in so others can swap. if the pool is empty, the shop is closed.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'what is a token?',
+    a: `digital bragging rights.
+
+    could be money, could be a picture of a dog, could be absolutely nothing. welcome to crypto.`,
+    tag: 'basics',
+  },
+  {
+    q: 'what is blockchain?',
+    a: `the receipt that never fades.
+
+    a public list of who sent what to whom. everyone has a copy, so you can't fake it.`,
+    tag: 'basics',
+  },
+  {
+    q: 'what does decentralized mean?',
+    a: `no boss key.
+
+    nobody can shut it down, nobody can freeze your account (mostly). it's the wild west, baby.`,
+    tag: 'basics',
+  },
+  {
+    q: 'what is a dex?',
+    a: `Decentralized Exchange.
+
+    like the NYSE but run by code and accessible in your underwear. uniswap is the king here.`,
+    tag: 'basics',
+  },
+  {
+    q: 'what is supply?',
+    a: `how many slices of the pizza exist.
+
+    if supply is huge, price is usually small (unless you're shib). know your math.`,
+    tag: 'basics',
+  },
+  {
+    q: 'what is market cap?',
+    a: `price x supply. the only number that actually matters.
+
+    don't look at "cheap" price per token. look at how much the whole bag is worth.`,
+    tag: 'basics',
+  },
   // ─── LAUNCHING (Sending It) ───
-  { q: 'how do i launch a memecoin?', a: `1. click launch.
+  {
+    q: 'how do i launch a memecoin?',
+    a: `1. click launch.
     2. name your child.
     3. pay gas.
-    
-    congrats, you're a dev now. don't rug us.`, tag: 'guide' },
-  { q: 'can anyone create a memecoin?', a: `literally anyone.
-    
-    your grandma, your dog, that guy from high school. permissionless means PERMISSIONLESS.`, tag: 'guide' },
-  { q: 'do i need coding skills?', a: `nope. if you can click buttons, you can deploy.
-    
-    we handle the spaghetti code; you handle the memes.`, tag: 'guide' },
-  { q: 'how long does it take?', a: `faster than heating a hot pocket.
-    
-    block times are fast. seconds, maybe minutes if congested.`, tag: 'guide' },
-  { q: 'can i change details later?', a: `nope. immutable means forever.
-    
-    check your spelling. "dige" instead of "doge" is forever.`, tag: 'guide' },
-  { q: 'can i launch multiple tokens?', a: `go crazy. launch a zoo.
-    
-    just remember quality > quantity (usually).`, tag: 'guide' },
-  { q: 'what makes a good name?', a: `make me laugh or make me money.
-    
-    catchy, memeable, slightly offensive? usually wins.`, tag: 'guide' },
-  { q: 'can i add utility later?', a: `sure, but let's be real—the meme IS the utility.`, tag: 'guide' },
-  { q: 'do i control the token?', a: `you launched it, but the market owns it now.
-    
-    renounced ownership is the way. don't be a controlling dev.`, tag: 'safety' },
-  { q: 'what happens after launch?', a: `chaos.
-    
-    liquidity activates, bots snipe, chart goes brrr (or nukes). enjoy the ride.`, tag: 'mechanics' },
+
+    congrats, you're a dev now. don't rug us.`,
+    tag: 'guide',
+  },
+  {
+    q: 'can anyone create a memecoin?',
+    a: `literally anyone.
+
+    your grandma, your dog, that guy from high school. permissionless means PERMISSIONLESS.`,
+    tag: 'guide',
+  },
+  {
+    q: 'do i need coding skills?',
+    a: `nope. if you can click buttons, you can deploy.
+
+    we handle the spaghetti code; you handle the memes.`,
+    tag: 'guide',
+  },
+  {
+    q: 'how long does it take?',
+    a: `faster than heating a hot pocket.
+
+    block times are fast. seconds, maybe minutes if congested.`,
+    tag: 'guide',
+  },
+  {
+    q: 'can i change details later?',
+    a: `nope. immutable means forever.
+
+    check your spelling. "dige" instead of "doge" is forever.`,
+    tag: 'guide',
+  },
+  {
+    q: 'can i launch multiple tokens?',
+    a: `go crazy. launch a zoo.
+
+    just remember quality > quantity (usually).`,
+    tag: 'guide',
+  },
+  {
+    q: 'what makes a good name?',
+    a: `make me laugh or make me money.
+
+    catchy, memeable, slightly offensive? usually wins.`,
+    tag: 'guide',
+  },
+  {
+    q: 'can i add utility later?',
+    a: `sure, but let's be real—the meme IS the utility.`,
+    tag: 'guide',
+  },
+  {
+    q: 'do i control the token?',
+    a: `you launched it, but the market owns it now.
+
+    renounced ownership is the way. don't be a controlling dev.`,
+    tag: 'safety',
+  },
+  {
+    q: 'what happens after launch?',
+    a: `chaos.
+
+    liquidity activates, bots snipe, chart goes brrr (or nukes). enjoy the ride.`,
+    tag: 'mechanics',
+  },
   // ─── TRADING (Aping In) ───
-  { q: 'how do i buy?', a: `connect wallet -> pick coin -> swap.
-    
-    if you can order food online, you can lose money on chain.`, tag: 'guide' },
-  { q: 'how do i sell?', a: `same thing but backwards.
-    
-    swap token -> usdc/eth. paper handing? shame.`, tag: 'guide' },
-  { q: 'can i trade 24/7?', a: `crypto never sleeps.
-    
-    markets remain open while you ruin your sleep schedule staring at charts.`, tag: 'guide' },
-  { q: 'why do prices move so fast?', a: `low liquidity + high hype = giga volatility.
-    
-    welcome to the thunderdome. blinking is expensive.`, tag: 'mechanics' },
-  { q: 'what is slippage?', a: `the "i don't care, just buy it" tax.
-    
-    price changes while your transaction confirms. high slippage = you pay whatever price to get in.`, tag: 'mechanics' },
-  { q: 'what is volume?', a: `how loud the party is.
-    
-    high volume = everyone is trading. low volume = crickets.`, tag: 'mechanics' },
-  { q: 'what is price impact?', a: `how fat your splash is.
-    
-    if you buy 50% of the supply, price goes to mars. don't wreck yourself.`, tag: 'mechanics' },
-  { q: 'why did my trade fail?', a: `probably slippage too low or you're broke (no gas).
-    
-    increase slippage or top up your eth/sol.`, tag: 'guide' },
-  { q: 'what is swapping?', a: `trading one magic bean for another.`, tag: 'basics' },
-  { q: 'can i cancel a trade?', a: `once it's on chain, it's god's plan.
-    
-    no customer support line here.`, tag: 'guide' },
+  {
+    q: 'how do i buy?',
+    a: `connect wallet -> pick coin -> swap.
+
+    if you can order food online, you can lose money on chain.`,
+    tag: 'guide',
+  },
+  {
+    q: 'how do i sell?',
+    a: `same thing but backwards.
+
+    swap token -> usdc/eth. paper handing? shame.`,
+    tag: 'guide',
+  },
+  {
+    q: 'can i trade 24/7?',
+    a: `crypto never sleeps.
+
+    markets remain open while you ruin your sleep schedule staring at charts.`,
+    tag: 'guide',
+  },
+  {
+    q: 'why do prices move so fast?',
+    a: `low liquidity + high hype = giga volatility.
+
+    welcome to the thunderdome. blinking is expensive.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'what is slippage?',
+    a: `the "i don't care, just buy it" tax.
+
+    price changes while your transaction confirms. high slippage = you pay whatever price to get in.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'what is volume?',
+    a: `how loud the party is.
+
+    high volume = everyone is trading. low volume = crickets.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'what is price impact?',
+    a: `how fat your splash is.
+
+    if you buy 50% of the supply, price goes to mars. don't wreck yourself.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'why did my trade fail?',
+    a: `probably slippage too low or you're broke (no gas).
+
+    increase slippage or top up your eth/sol.`,
+    tag: 'guide',
+  },
+  {
+    q: 'what is swapping?',
+    a: `trading one magic bean for another.`,
+    tag: 'basics',
+  },
+  {
+    q: 'can i cancel a trade?',
+    a: `once it's on chain, it's god's plan.
+
+    no customer support line here.`,
+    tag: 'guide',
+  },
   // ─── WALLETS (Your Keys) ───
-  { q: 'what is a wallet?', a: `your digital backpack. holds your coins, nfts, and bad decisions.`, tag: 'tools' },
-  { q: 'do i need one?', a: `yes. no wallet, no crypto.
-    
-    metamask, rainbow, rabby, phantom - pick your weapon.`, tag: 'tools' },
-  { q: 'are wallets safe?', a: `as safe as you are smart.
-    
-    click a bad link? dry. keep your seed phrase offline? safe.`, tag: 'safety' },
-  { q: 'what is a private key?', a: `the master password.
-    
-    shows access to everything. never share it. ever. not even with "support".`, tag: 'safety' },
-  { q: 'what is a seed phrase?', a: `12-24 words that save your life if you lose your phone.
-    
-    write it on paper. put it in a safe. tattoo it on your dog (don't do that).`, tag: 'safety' },
-  { q: 'what if i lose my seed phrase?', a: `F.
-    
-    game over. money gone. sorry bro.`, tag: 'safety' },
-  { q: 'does the platform hold my funds?', a: `nope. self-custody.
-    
-    your keys, your coins. we just provide the interface.`, tag: 'safety' },
-  { q: 'is there KYC?', a: `lol. no.
-    
-    we don't want your ID. keep it anonymous.`, tag: 'tools' },
+  {
+    q: 'what is a wallet?',
+    a: `your digital backpack. holds your coins, nfts, and bad decisions.`,
+    tag: 'tools',
+  },
+  {
+    q: 'do i need one?',
+    a: `yes. no wallet, no crypto.
+
+    metamask, rainbow, rabby, phantom - pick your weapon.`,
+    tag: 'tools',
+  },
+  {
+    q: 'are wallets safe?',
+    a: `as safe as you are smart.
+
+    click a bad link? dry. keep your seed phrase offline? safe.`,
+    tag: 'safety',
+  },
+  {
+    q: 'what is a private key?',
+    a: `the master password.
+
+    shows access to everything. never share it. ever. not even with "support".`,
+    tag: 'safety',
+  },
+  {
+    q: 'what is a seed phrase?',
+    a: `12-24 words that save your life if you lose your phone.
+
+    write it on paper. put it in a safe. tattoo it on your dog (don't do that).`,
+    tag: 'safety',
+  },
+  {
+    q: 'what if i lose my seed phrase?',
+    a: `F.
+
+    game over. money gone. sorry bro.`,
+    tag: 'safety',
+  },
+  {
+    q: 'does the platform hold my funds?',
+    a: `nope. self-custody.
+
+    your keys, your coins. we just provide the interface.`,
+    tag: 'safety',
+  },
+  {
+    q: 'is there KYC?',
+    a: `lol. no.
+
+    we don't want your ID. keep it anonymous.`,
+    tag: 'tools',
+  },
   // ─── RISKS (Getting Rekt) ───
-  { q: 'are memecoins risky?', a: `is swimming with sharks risky?
-    
-    yes. you can lose everything. only bet what you can light on fire.`, tag: 'safety' },
-  { q: 'can prices crash?', a: `faster than gravity.
-    
-    -99% is a rite of passage.`, tag: 'safety' },
-  { q: 'what is a rug pull?', a: `when the dev drains the pool and buys a lambo.
-    
-    at Nyx, we auto-lock liquidity so devs CAN'T rug standard pools. you're welcome.`, tag: 'safety' },
-  { q: 'can hype die?', a: `attention spans are short.
-    
-    if the timeline stops posting about it, it's probably dead.`, tag: 'slang' },
-  { q: 'should i invest my life savings?', a: `NO.
-    
-    go to a casino if you want to ruin your life. this is for fun money.`, tag: 'safety' },
-  { q: 'are scams common?', a: `everywhere.
-    
-    if a hot girl DMs you about crypto, it's a dude in a basement. block them.`, tag: 'safety' },
-  { q: 'can whales wreck me?', a: `yes.
-    
-    if moby dick decides to sell, you're gonna feel the splash.`, tag: 'mechanics' },
+  {
+    q: 'are memecoins risky?',
+    a: `is swimming with sharks risky?
+
+    yes. you can lose everything. only bet what you can light on fire.`,
+    tag: 'safety',
+  },
+  {
+    q: 'can prices crash?',
+    a: `faster than gravity.
+
+    -99% is a rite of passage.`,
+    tag: 'safety',
+  },
+  {
+    q: 'what is a rug pull?',
+    a: `when the dev drains the pool and buys a lambo.
+
+    at Nyx, we auto-lock liquidity so devs CAN'T rug standard pools. you're welcome.`,
+    tag: 'safety',
+  },
+  {
+    q: 'can hype die?',
+    a: `attention spans are short.
+
+    if the timeline stops posting about it, it's probably dead.`,
+    tag: 'slang',
+  },
+  {
+    q: 'should i invest my life savings?',
+    a: `NO.
+
+    go to a casino if you want to ruin your life. this is for fun money.`,
+    tag: 'safety',
+  },
+  {
+    q: 'are scams common?',
+    a: `everywhere.
+
+    if a hot girl DMs you about crypto, it's a dude in a basement. block them.`,
+    tag: 'safety',
+  },
+  {
+    q: 'can whales wreck me?',
+    a: `yes.
+
+    if moby dick decides to sell, you're gonna feel the splash.`,
+    tag: 'mechanics',
+  },
   // ─── MEME CULTURE (The Vibes) ───
-  { q: 'why do memes matter?', a: `memes control the world.
-    
-    elon tweets, doge pumps. vibes > fundamentals.`, tag: 'slang' },
-  { q: 'what is "aping in"?', a: `buying without thinking.
-    
-    monke see, monke do, monke buy.`, tag: 'slang' },
-  { q: 'wen moon?', a: `when the green candle goes vertical.
-    
-    the target destination for every bagholder.`, tag: 'slang' },
-  { q: 'what are diamond hands?', a: `holding while your portfolio is -50%.
-    
-    conviction or delusion? fine line.`, tag: 'slang' },
-  { q: 'what are paper hands?', a: `selling at the first sign of trouble.
-    
-    ngmi (not gonna make it).`, tag: 'slang' },
-  { q: 'what is FOMO?', a: `fear of missing out.
-    
-    buying the top because your friends are getting rich. usually ends poorly.`, tag: 'slang' },
-  { q: 'what is GM?', a: `good morning.
-    
-    say it back. it's civilization.`, tag: 'slang' },
-  { q: 'what is shilling?', a: `"bro trust me it's the next pepe".
-    
-    begging people to buy your bags.`, tag: 'slang' },
-  { q: 'why do communities matter?', a: `strength in numbers.
-    
-    a coin with no community is just a dead smart contract.`, tag: 'slang' },
-  { q: 'what makes a meme viral?', a: `magic. timing. resonance.
-    
-    and usually a cute animal or wojak.`, tag: 'slang' },
+  {
+    q: 'why do memes matter?',
+    a: `memes control the world.
+
+    elon tweets, doge pumps. vibes > fundamentals.`,
+    tag: 'slang',
+  },
+  {
+    q: 'what is "aping in"?',
+    a: `buying without thinking.
+
+    monke see, monke do, monke buy.`,
+    tag: 'slang',
+  },
+  {
+    q: 'wen moon?',
+    a: `when the green candle goes vertical.
+
+    the target destination for every bagholder.`,
+    tag: 'slang',
+  },
+  {
+    q: 'what are diamond hands?',
+    a: `holding while your portfolio is -50%.
+
+    conviction or delusion? fine line.`,
+    tag: 'slang',
+  },
+  {
+    q: 'what are paper hands?',
+    a: `selling at the first sign of trouble.
+
+    ngmi (not gonna make it).`,
+    tag: 'slang',
+  },
+  {
+    q: 'what is FOMO?',
+    a: `fear of missing out.
+
+    buying the top because your friends are getting rich. usually ends poorly.`,
+    tag: 'slang',
+  },
+  {
+    q: 'what is GM?',
+    a: `good morning.
+
+    say it back. it's civilization.`,
+    tag: 'slang',
+  },
+  {
+    q: 'what is shilling?',
+    a: `"bro trust me it's the next pepe".
+
+    begging people to buy your bags.`,
+    tag: 'slang',
+  },
+  {
+    q: 'why do communities matter?',
+    a: `strength in numbers.
+
+    a coin with no community is just a dead smart contract.`,
+    tag: 'slang',
+  },
+  {
+    q: 'what makes a meme viral?',
+    a: `magic. timing. resonance.
+
+    and usually a cute animal or wojak.`,
+    tag: 'slang',
+  },
   // ─── LIQUIDITY & PRICING (The Math) ───
-  { q: 'why does liquidity matter?', a: `thicc liquidity = stable price.
-    thin liquidity = rollercoaster.`, tag: 'mechanics' },
-  { q: 'what happens with low liquidity?', a: `you try to sell $100 and price dumps 50%.
-    
-    it's bad.`, tag: 'mechanics' },
-  { q: 'what affects price?', a: `buyers vs sellers.
-    
-    more buying -> higher price. more selling -> lower price. simple economics.`, tag: 'mechanics' },
-  { q: 'why buy early?', a: `bond curves favor the brave (and the early).
-    
-    get in before the masses.`, tag: 'alpha' },
-  { q: 'what is price discovery?', a: `market figuring out what this jpeg is worth.
-    
-    usually volatile at start.`, tag: 'mechanics' },
-  { q: 'can price be manipulated?', a: `in low liquidity? yes.
-    
-    watch out for wash trading (fake volume).`, tag: 'safety' },
-  { q: 'what is volatility?', a: `the heart attack factor.
-    
-    how much the price swings up and down.`, tag: 'mechanics' },
-  { q: 'what are whales?', a: `guys with big bags.
-    
-    they move the market. follow their tail or get crushed.`, tag: 'slang' },
-  { q: 'what is circulating supply?', a: `tokens actually in hands.
-    
-    burned tokens don't count. locked tokens don't count (yet).`, tag: 'mechanics' },
+  {
+    q: 'why does liquidity matter?',
+    a: `thicc liquidity = stable price.
+    thin liquidity = rollercoaster.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'what happens with low liquidity?',
+    a: `you try to sell $100 and price dumps 50%.
+
+    it's bad.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'what affects price?',
+    a: `buyers vs sellers.
+
+    more buying -> higher price. more selling -> lower price. simple economics.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'why buy early?',
+    a: `bond curves favor the brave (and the early).
+
+    get in before the masses.`,
+    tag: 'alpha',
+  },
+  {
+    q: 'what is price discovery?',
+    a: `market figuring out what this jpeg is worth.
+
+    usually volatile at start.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'can price be manipulated?',
+    a: `in low liquidity? yes.
+
+    watch out for wash trading (fake volume).`,
+    tag: 'safety',
+  },
+  {
+    q: 'what is volatility?',
+    a: `the heart attack factor.
+
+    how much the price swings up and down.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'what are whales?',
+    a: `guys with big bags.
+
+    they move the market. follow their tail or get crushed.`,
+    tag: 'slang',
+  },
+  {
+    q: 'what is circulating supply?',
+    a: `tokens actually in hands.
+
+    burned tokens don't count. locked tokens don't count (yet).`,
+    tag: 'mechanics',
+  },
   // ─── PLATFORM USAGE (Using This) ───
-  { q: 'do i need an account?', a: `no. connect wallet and go.
-    
-    web3 baby.`, tag: 'guide' },
-  { q: 'can i explore trending?', a: `yeah, check the leaderboard.
-    
-    follow the heat `, tag: 'guide' },
-  { q: 'are transactions instant?', a: `blockchain speed.
-    
-    usually fast, sometimes lags if network is clogged.`, tag: 'mechanics' },
-  { q: 'is everything on chain?', a: `yup. public ledger.
-    
-    everyone can see you bought "cumrocket" at the top.`, tag: 'privacy' },
-  { q: 'can i trade on mobile?', a: `if your wallet works on mobile, yes.
-    
-    trade from the toilet. living the dream.`, tag: 'tools' },
+  {
+    q: 'do i need an account?',
+    a: `no. connect wallet and go.
+
+    web3 baby.`,
+    tag: 'guide',
+  },
+  {
+    q: 'can i explore trending?',
+    a: `yeah, check the leaderboard.
+
+    follow the heat `,
+    tag: 'guide',
+  },
+  {
+    q: 'are transactions instant?',
+    a: `blockchain speed.
+
+    usually fast, sometimes lags if network is clogged.`,
+    tag: 'mechanics',
+  },
+  {
+    q: 'is everything on chain?',
+    a: `yup. public ledger.
+
+    everyone can see you bought "cumrocket" at the top.`,
+    tag: 'privacy',
+  },
+  {
+    q: 'can i trade on mobile?',
+    a: `if your wallet works on mobile, yes.
+
+    trade from the toilet. living the dream.`,
+    tag: 'tools',
+  },
   // ─── ADVANCED BASICS (Big Brain) ───
-  { q: 'what is tokenomics?', a: `the economic rules of the coin.
-    
-    how many? who gets them? inflation? deflation?`, tag: 'alpha' },
-  { q: 'what is an LP token?', a: `receipt for providing liquidity.
-    
-    proves you own a piece of the pool. earn fees with it.`, tag: 'alpha' },
-  { q: 'what is impermanent loss?', a: `the confusing way you lose money by providing liquidity.
-    
-    basically: if token moons, you might have made more just holding.`, tag: 'alpha' },
-  { q: 'what is staking?', a: `internet interest.
-    
-    lock tokens, get more tokens.`, tag: 'alpha' },
-  { q: 'what is a governance token?', a: `voting rights.
-    
-    decide the future of the protocol (usually).`, tag: 'alpha' },
-  { q: 'what is burning?', a: `sending tokens to token heaven.
-    
-    destroys them forever. reduces supply. usually good for price.`, tag: 'alpha' },
-  { q: 'what is minting?', a: `printing money.
-    
-    creating new tokens from thin air.`, tag: 'alpha' },
-  { q: 'what is a whitelist?', a: `the VIP list.
-    
-    only cool kids get in early. usually sold or won.`, tag: 'alpha' },
+  {
+    q: 'what is tokenomics?',
+    a: `the economic rules of the coin.
+
+    how many? who gets them? inflation? deflation?`,
+    tag: 'alpha',
+  },
+  {
+    q: 'what is an LP token?',
+    a: `receipt for providing liquidity.
+
+    proves you own a piece of the pool. earn fees with it.`,
+    tag: 'alpha',
+  },
+  {
+    q: 'what is impermanent loss?',
+    a: `the confusing way you lose money by providing liquidity.
+
+    basically: if token moons, you might have made more just holding.`,
+    tag: 'alpha',
+  },
+  {
+    q: 'what is staking?',
+    a: `internet interest.
+
+    lock tokens, get more tokens.`,
+    tag: 'alpha',
+  },
+  {
+    q: 'what is a governance token?',
+    a: `voting rights.
+
+    decide the future of the protocol (usually).`,
+    tag: 'alpha',
+  },
+  {
+    q: 'what is burning?',
+    a: `sending tokens to token heaven.
+
+    destroys them forever. reduces supply. usually good for price.`,
+    tag: 'alpha',
+  },
+  {
+    q: 'what is minting?',
+    a: `printing money.
+
+    creating new tokens from thin air.`,
+    tag: 'alpha',
+  },
+  {
+    q: 'what is a whitelist?',
+    a: `the VIP list.
+
+    only cool kids get in early. usually sold or won.`,
+    tag: 'alpha',
+  },
 ];
 
 type Tab = 'traders' | 'creators' | 'beginners';
 
 const ASCII_FAQ_LINES = [
-  { text: '+----------------------------------------------+', color: 'text-purple' },
-  { text: '|  ███████╗     █████╗      ██████╗           |', color: 'text-green' },
-  { text: '|  ██╔════╝    ██╔══██╗   ██╔═══██╗          |', color: 'text-green' },
-  { text: '|  █████╗       ███████║   ██║     ██║          |', color: 'text-yellow' },
-  { text: '|  ██╔══╝       ██╔══██║   ██║▄▄  ██║          |', color: 'text-yellow' },
-  { text: '|  ██║            ██║   ██║   ╚██████╔╝          |', color: 'text-green' },
-  { text: '|  ╚═╝            ╚═╝   ╚═╝     ╚══▀▀═╝           |', color: 'text-green' },
-  { text: '+----------------------------------------------+', color: 'text-purple' },
+  {
+    text: '+----------------------------------------------+',
+    color: 'text-purple',
+  },
+  {
+    text: '|  ███████╗     █████╗      ██████╗           |',
+    color: 'text-green',
+  },
+  {text: '|  ██╔════╝    ██╔══██╗   ██╔═══██╗          |', color: 'text-green'},
+  {
+    text: '|  █████╗       ███████║   ██║     ██║          |',
+    color: 'text-yellow',
+  },
+  {
+    text: '|  ██╔══╝       ██╔══██║   ██║▄▄  ██║          |',
+    color: 'text-yellow',
+  },
+  {
+    text: '|  ██║            ██║   ██║   ╚██████╔╝          |',
+    color: 'text-green',
+  },
+  {
+    text: '|  ╚═╝            ╚═╝   ╚═╝     ╚══▀▀═╝           |',
+    color: 'text-green',
+  },
+  {
+    text: '+----------------------------------------------+',
+    color: 'text-purple',
+  },
 ];
 
 const tagColors: Record<string, string> = {
@@ -546,8 +875,8 @@ export default function FAQPage() {
             <h1 className="text-2xl font-bold sm:hidden">FAQ</h1>
 
             <div className="text-dim text-xs mt-2">
-              <span className="text-green font-mono">[output]</span>{' '}
-              frequently asked questions
+              <span className="text-green font-mono">[output]</span> frequently
+              asked questions
             </div>
           </div>
         </Container>

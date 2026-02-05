@@ -11,6 +11,7 @@ type Launchpad_TokenLaunched {
   twitterUrl: String
   discordUrl: String
   telegramUrl: String
+  ensName: String
   image: String!
   auctionStartBlock: BigInt!
   auctionEndBlock: BigInt!
