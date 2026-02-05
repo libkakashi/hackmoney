@@ -8,11 +8,11 @@ import {HelpSection} from './help-section';
 const traderFAQs = [
   {
     q: 'what is a continuous clearing auction?',
-    a: `A Continuous Clearing Auction (CCA) is a fair price discovery mechanism where all participants pay the exact same final price, regardless of when they bid or how much they bid.
+    a: `Continuous Clearing Auction or CCA is a novel onchain auction mechanism developed by Uniswap for fair token distributions and liquidity bootstrapping in DeFi.
 
-Unlike traditional auctions where early bidders might get better prices or snipers swoop in at the last second, CCAs calculate a single "clearing price" at the end based on total demand divided by available supply.
+Unlike traditional launchpads which use bonding curves which are plagued by snipers and MEV bots which take undue advantage over retail, CCA enables market driven price discovery and immediate liquidity seeding into Uniswap v4 pools.
 
-This eliminates timing games, front-running, and MEV extraction that plague traditional token sales. The auction runs for approximately 30 minutes, continuously updating the clearing price as new bids come in.`,
+This create 'fair-launches' and eliminates timing games, front-running and MEV extraction that plague traditional token sales.`,
     tag: 'core',
   },
   {
