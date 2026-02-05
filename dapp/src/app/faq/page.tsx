@@ -464,14 +464,14 @@ const beginnerFAQs = [
 type Tab = 'traders' | 'creators' | 'beginners';
 
 const ASCII_FAQ_LINES = [
-  {text: '┌────────────────────────────────────────┐', color: 'text-purple'},
-  {text: '│ ███████╗ █████╗     ██████╗            │', color: 'text-green'},
-  {text: '│ ██╔════╝██╔══██╗   ██╔═══██╗           │', color: 'text-green'},
-  {text: '│ █████╗  ███████║   ██║   ██║           │', color: 'text-yellow'},
-  {text: '│ ██╔══╝  ██╔══██║   ██║▄▄ ██║           │', color: 'text-yellow'},
-  {text: '│ ██║     ██║  ██║   ╚██████╔╝           │', color: 'text-green'},
-  {text: '│ ╚═╝     ╚═╝  ╚═╝    ╚══▀▀═╝            │', color: 'text-green'},
-  {text: '└────────────────────────────────────────┘', color: 'text-purple'},
+  { text: '+----------------------------------------------+', color: 'text-purple' },
+  { text: '|  ███████╗     █████╗      ██████╗           |', color: 'text-green' },
+  { text: '|  ██╔════╝    ██╔══██╗   ██╔═══██╗          |', color: 'text-green' },
+  { text: '|  █████╗       ███████║   ██║     ██║          |', color: 'text-yellow' },
+  { text: '|  ██╔══╝       ██╔══██║   ██║▄▄  ██║          |', color: 'text-yellow' },
+  { text: '|  ██║            ██║   ██║   ╚██████╔╝          |', color: 'text-green' },
+  { text: '|  ╚═╝            ╚═╝   ╚═╝     ╚══▀▀═╝           |', color: 'text-green' },
+  { text: '+----------------------------------------------+', color: 'text-purple' },
 ];
 
 const tagColors: Record<string, string> = {
