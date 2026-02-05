@@ -132,7 +132,7 @@ export default function TokenPage() {
             <TokenDiscussion />
           </div>
           <div className="lg:col-span-1 border border-border bg-card p-4 h-fit">
-            <TokenLeaderboard />
+            <TokenLeaderboard tokenAddress={address} />
           </div>
         </div>
 

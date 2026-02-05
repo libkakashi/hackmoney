@@ -1,10 +1,13 @@
+import * as dotenv from 'dotenv';
 import type {CodegenConfig} from '@graphql-codegen/cli';
+
+dotenv.config();
 
 const config: CodegenConfig = {
   overwrite: true,
   generates: {
     'src/graphql/generated.ts': {
-      schema: process.env.GRAPHQL_SCHEMA || 'http://localhost:8080/v1/graphql',
+      schema: process.env.NEXT_PUBLIC_GRAPHQL_URL,
       documents: 'src/graphql/queries.graphql',
       plugins: [
         'typescript',

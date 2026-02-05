@@ -244,6 +244,164 @@ export type StringComparisonExp = {
   _similar?: InputMaybe<Scalars['String']['input']>;
 };
 
+/** columns and relationships of "TokenHolder" */
+export type TokenHolder = {
+  __typename: 'TokenHolder';
+  balance: Scalars['numeric']['output'];
+  id: Scalars['String']['output'];
+  lastUpdatedAt: Scalars['Int']['output'];
+  token: Scalars['String']['output'];
+  totalReceived: Scalars['numeric']['output'];
+  totalSent: Scalars['numeric']['output'];
+  transferCount: Scalars['Int']['output'];
+  wallet: Scalars['String']['output'];
+};
+
+/** Boolean expression to filter rows from the table "TokenHolder". All fields are combined with a logical 'AND'. */
+export type TokenHolderBoolExp = {
+  _and?: InputMaybe<Array<TokenHolderBoolExp>>;
+  _not?: InputMaybe<TokenHolderBoolExp>;
+  _or?: InputMaybe<Array<TokenHolderBoolExp>>;
+  balance?: InputMaybe<NumericComparisonExp>;
+  id?: InputMaybe<StringComparisonExp>;
+  lastUpdatedAt?: InputMaybe<IntComparisonExp>;
+  token?: InputMaybe<StringComparisonExp>;
+  totalReceived?: InputMaybe<NumericComparisonExp>;
+  totalSent?: InputMaybe<NumericComparisonExp>;
+  transferCount?: InputMaybe<IntComparisonExp>;
+  wallet?: InputMaybe<StringComparisonExp>;
+};
+
+/** Ordering options when selecting data from "TokenHolder". */
+export type TokenHolderOrderBy = {
+  balance?: InputMaybe<OrderBy>;
+  id?: InputMaybe<OrderBy>;
+  lastUpdatedAt?: InputMaybe<OrderBy>;
+  token?: InputMaybe<OrderBy>;
+  totalReceived?: InputMaybe<OrderBy>;
+  totalSent?: InputMaybe<OrderBy>;
+  transferCount?: InputMaybe<OrderBy>;
+  wallet?: InputMaybe<OrderBy>;
+};
+
+/** select columns of table "TokenHolder" */
+export type TokenHolderSelectColumn =
+  /** column name */
+  | 'balance'
+  /** column name */
+  | 'id'
+  /** column name */
+  | 'lastUpdatedAt'
+  /** column name */
+  | 'token'
+  /** column name */
+  | 'totalReceived'
+  /** column name */
+  | 'totalSent'
+  /** column name */
+  | 'transferCount'
+  /** column name */
+  | 'wallet';
+
+/** Streaming cursor of the table "TokenHolder" */
+export type TokenHolderStreamCursorInput = {
+  /** Stream column input with initial value */
+  initial_value: TokenHolderStreamCursorValueInput;
+  /** cursor ordering */
+  ordering?: InputMaybe<CursorOrdering>;
+};
+
+/** Initial value of the column from where the streaming should start */
+export type TokenHolderStreamCursorValueInput = {
+  balance?: InputMaybe<Scalars['numeric']['input']>;
+  id?: InputMaybe<Scalars['String']['input']>;
+  lastUpdatedAt?: InputMaybe<Scalars['Int']['input']>;
+  token?: InputMaybe<Scalars['String']['input']>;
+  totalReceived?: InputMaybe<Scalars['numeric']['input']>;
+  totalSent?: InputMaybe<Scalars['numeric']['input']>;
+  transferCount?: InputMaybe<Scalars['Int']['input']>;
+  wallet?: InputMaybe<Scalars['String']['input']>;
+};
+
+/** columns and relationships of "Token_Transfer" */
+export type TokenTransfer = {
+  __typename: 'Token_Transfer';
+  amount: Scalars['numeric']['output'];
+  blockNumber: Scalars['Int']['output'];
+  from: Scalars['String']['output'];
+  id: Scalars['String']['output'];
+  timestamp: Scalars['Int']['output'];
+  to: Scalars['String']['output'];
+  token: Scalars['String']['output'];
+  txHash: Scalars['String']['output'];
+};
+
+/** Boolean expression to filter rows from the table "Token_Transfer". All fields are combined with a logical 'AND'. */
+export type TokenTransferBoolExp = {
+  _and?: InputMaybe<Array<TokenTransferBoolExp>>;
+  _not?: InputMaybe<TokenTransferBoolExp>;
+  _or?: InputMaybe<Array<TokenTransferBoolExp>>;
+  amount?: InputMaybe<NumericComparisonExp>;
+  blockNumber?: InputMaybe<IntComparisonExp>;
+  from?: InputMaybe<StringComparisonExp>;
+  id?: InputMaybe<StringComparisonExp>;
+  timestamp?: InputMaybe<IntComparisonExp>;
+  to?: InputMaybe<StringComparisonExp>;
+  token?: InputMaybe<StringComparisonExp>;
+  txHash?: InputMaybe<StringComparisonExp>;
+};
+
+/** Ordering options when selecting data from "Token_Transfer". */
+export type TokenTransferOrderBy = {
+  amount?: InputMaybe<OrderBy>;
+  blockNumber?: InputMaybe<OrderBy>;
+  from?: InputMaybe<OrderBy>;
+  id?: InputMaybe<OrderBy>;
+  timestamp?: InputMaybe<OrderBy>;
+  to?: InputMaybe<OrderBy>;
+  token?: InputMaybe<OrderBy>;
+  txHash?: InputMaybe<OrderBy>;
+};
+
+/** select columns of table "Token_Transfer" */
+export type TokenTransferSelectColumn =
+  /** column name */
+  | 'amount'
+  /** column name */
+  | 'blockNumber'
+  /** column name */
+  | 'from'
+  /** column name */
+  | 'id'
+  /** column name */
+  | 'timestamp'
+  /** column name */
+  | 'to'
+  /** column name */
+  | 'token'
+  /** column name */
+  | 'txHash';
+
+/** Streaming cursor of the table "Token_Transfer" */
+export type TokenTransferStreamCursorInput = {
+  /** Stream column input with initial value */
+  initial_value: TokenTransferStreamCursorValueInput;
+  /** cursor ordering */
+  ordering?: InputMaybe<CursorOrdering>;
+};
+
+/** Initial value of the column from where the streaming should start */
+export type TokenTransferStreamCursorValueInput = {
+  amount?: InputMaybe<Scalars['numeric']['input']>;
+  blockNumber?: InputMaybe<Scalars['Int']['input']>;
+  from?: InputMaybe<Scalars['String']['input']>;
+  id?: InputMaybe<Scalars['String']['input']>;
+  timestamp?: InputMaybe<Scalars['Int']['input']>;
+  to?: InputMaybe<Scalars['String']['input']>;
+  token?: InputMaybe<Scalars['String']['input']>;
+  txHash?: InputMaybe<Scalars['String']['input']>;
+};
+
 /** columns and relationships of "_meta" */
 export type Meta = {
   __typename: '_meta';
@@ -505,6 +663,14 @@ export type QueryRoot = {
   Launchpad_TokenLaunched: Array<LaunchpadTokenLaunched>;
   /** fetch data from the table: "Launchpad_TokenLaunched" using primary key columns */
   Launchpad_TokenLaunched_by_pk?: Maybe<LaunchpadTokenLaunched>;
+  /** fetch data from the table: "TokenHolder" */
+  TokenHolder: Array<TokenHolder>;
+  /** fetch data from the table: "TokenHolder" using primary key columns */
+  TokenHolder_by_pk?: Maybe<TokenHolder>;
+  /** fetch data from the table: "Token_Transfer" */
+  Token_Transfer: Array<TokenTransfer>;
+  /** fetch data from the table: "Token_Transfer" using primary key columns */
+  Token_Transfer_by_pk?: Maybe<TokenTransfer>;
   /** fetch data from the table: "_meta" */
   _meta: Array<Meta>;
   /** fetch data from the table: "chain_metadata" */
@@ -524,6 +690,30 @@ export type QueryRootLaunchpadTokenLaunchedArgs = {
 };
 
 export type QueryRootLaunchpadTokenLaunchedByPkArgs = {
+  id: Scalars['String']['input'];
+};
+
+export type QueryRootTokenHolderArgs = {
+  distinct_on?: InputMaybe<Array<TokenHolderSelectColumn>>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  order_by?: InputMaybe<Array<TokenHolderOrderBy>>;
+  where?: InputMaybe<TokenHolderBoolExp>;
+};
+
+export type QueryRootTokenHolderByPkArgs = {
+  id: Scalars['String']['input'];
+};
+
+export type QueryRootTokenTransferArgs = {
+  distinct_on?: InputMaybe<Array<TokenTransferSelectColumn>>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  order_by?: InputMaybe<Array<TokenTransferOrderBy>>;
+  where?: InputMaybe<TokenTransferBoolExp>;
+};
+
+export type QueryRootTokenTransferByPkArgs = {
   id: Scalars['String']['input'];
 };
 
@@ -687,6 +877,18 @@ export type SubscriptionRoot = {
   Launchpad_TokenLaunched_by_pk?: Maybe<LaunchpadTokenLaunched>;
   /** fetch data from the table in a streaming manner: "Launchpad_TokenLaunched" */
   Launchpad_TokenLaunched_stream: Array<LaunchpadTokenLaunched>;
+  /** fetch data from the table: "TokenHolder" */
+  TokenHolder: Array<TokenHolder>;
+  /** fetch data from the table: "TokenHolder" using primary key columns */
+  TokenHolder_by_pk?: Maybe<TokenHolder>;
+  /** fetch data from the table in a streaming manner: "TokenHolder" */
+  TokenHolder_stream: Array<TokenHolder>;
+  /** fetch data from the table: "Token_Transfer" */
+  Token_Transfer: Array<TokenTransfer>;
+  /** fetch data from the table: "Token_Transfer" using primary key columns */
+  Token_Transfer_by_pk?: Maybe<TokenTransfer>;
+  /** fetch data from the table in a streaming manner: "Token_Transfer" */
+  Token_Transfer_stream: Array<TokenTransfer>;
   /** fetch data from the table: "_meta" */
   _meta: Array<Meta>;
   /** fetch data from the table in a streaming manner: "_meta" */
@@ -719,6 +921,42 @@ export type SubscriptionRootLaunchpadTokenLaunchedStreamArgs = {
   batch_size: Scalars['Int']['input'];
   cursor: Array<InputMaybe<LaunchpadTokenLaunchedStreamCursorInput>>;
   where?: InputMaybe<LaunchpadTokenLaunchedBoolExp>;
+};
+
+export type SubscriptionRootTokenHolderArgs = {
+  distinct_on?: InputMaybe<Array<TokenHolderSelectColumn>>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  order_by?: InputMaybe<Array<TokenHolderOrderBy>>;
+  where?: InputMaybe<TokenHolderBoolExp>;
+};
+
+export type SubscriptionRootTokenHolderByPkArgs = {
+  id: Scalars['String']['input'];
+};
+
+export type SubscriptionRootTokenHolderStreamArgs = {
+  batch_size: Scalars['Int']['input'];
+  cursor: Array<InputMaybe<TokenHolderStreamCursorInput>>;
+  where?: InputMaybe<TokenHolderBoolExp>;
+};
+
+export type SubscriptionRootTokenTransferArgs = {
+  distinct_on?: InputMaybe<Array<TokenTransferSelectColumn>>;
+  limit?: InputMaybe<Scalars['Int']['input']>;
+  offset?: InputMaybe<Scalars['Int']['input']>;
+  order_by?: InputMaybe<Array<TokenTransferOrderBy>>;
+  where?: InputMaybe<TokenTransferBoolExp>;
+};
+
+export type SubscriptionRootTokenTransferByPkArgs = {
+  id: Scalars['String']['input'];
+};
+
+export type SubscriptionRootTokenTransferStreamArgs = {
+  batch_size: Scalars['Int']['input'];
+  cursor: Array<InputMaybe<TokenTransferStreamCursorInput>>;
+  where?: InputMaybe<TokenTransferBoolExp>;
 };
 
 export type SubscriptionRootMetaArgs = {
@@ -813,6 +1051,48 @@ export type GetTokensQuery = {
   }>;
 };
 
+export type GetTokenHoldersByBalanceQueryVariables = Exact<{
+  token: Scalars['String']['input'];
+  limit: Scalars['Int']['input'];
+  offset: Scalars['Int']['input'];
+}>;
+
+export type GetTokenHoldersByBalanceQuery = {
+  __typename: 'query_root';
+  TokenHolder: Array<{
+    __typename: 'TokenHolder';
+    id: string;
+    token: string;
+    wallet: string;
+    balance: any;
+    totalSent: any;
+    totalReceived: any;
+    transferCount: number;
+    lastUpdatedAt: number;
+  }>;
+};
+
+export type GetTokenHoldersByVolumeQueryVariables = Exact<{
+  token: Scalars['String']['input'];
+  limit: Scalars['Int']['input'];
+  offset: Scalars['Int']['input'];
+}>;
+
+export type GetTokenHoldersByVolumeQuery = {
+  __typename: 'query_root';
+  TokenHolder: Array<{
+    __typename: 'TokenHolder';
+    id: string;
+    token: string;
+    wallet: string;
+    balance: any;
+    totalSent: any;
+    totalReceived: any;
+    transferCount: number;
+    lastUpdatedAt: number;
+  }>;
+};
+
 export type GetTokenByAddressQueryVariables = Exact<{
   token: Scalars['String']['input'];
 }>;
@@ -873,6 +1153,44 @@ export const GetTokensDocument = gql`
       createdAt
       createdAtBlock
       txHash
+    }
+  }
+`;
+export const GetTokenHoldersByBalanceDocument = gql`
+  query GetTokenHoldersByBalance($token: String!, $limit: Int!, $offset: Int!) {
+    TokenHolder(
+      where: {token: {_eq: $token}, balance: {_gt: "0"}}
+      order_by: {balance: desc}
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      token
+      wallet
+      balance
+      totalSent
+      totalReceived
+      transferCount
+      lastUpdatedAt
+    }
+  }
+`;
+export const GetTokenHoldersByVolumeDocument = gql`
+  query GetTokenHoldersByVolume($token: String!, $limit: Int!, $offset: Int!) {
+    TokenHolder(
+      where: {token: {_eq: $token}}
+      order_by: {totalSent: desc}
+      limit: $limit
+      offset: $offset
+    ) {
+      id
+      token
+      wallet
+      balance
+      totalSent
+      totalReceived
+      transferCount
+      lastUpdatedAt
     }
   }
 `;
@@ -937,6 +1255,42 @@ export function getSdk(
             signal,
           }),
         'GetTokens',
+        'query',
+        variables,
+      );
+    },
+    GetTokenHoldersByBalance(
+      variables: GetTokenHoldersByBalanceQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit['signal'],
+    ): Promise<GetTokenHoldersByBalanceQuery> {
+      return withWrapper(
+        wrappedRequestHeaders =>
+          client.request<GetTokenHoldersByBalanceQuery>({
+            document: GetTokenHoldersByBalanceDocument,
+            variables,
+            requestHeaders: {...requestHeaders, ...wrappedRequestHeaders},
+            signal,
+          }),
+        'GetTokenHoldersByBalance',
+        'query',
+        variables,
+      );
+    },
+    GetTokenHoldersByVolume(
+      variables: GetTokenHoldersByVolumeQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit['signal'],
+    ): Promise<GetTokenHoldersByVolumeQuery> {
+      return withWrapper(
+        wrappedRequestHeaders =>
+          client.request<GetTokenHoldersByVolumeQuery>({
+            document: GetTokenHoldersByVolumeDocument,
+            variables,
+            requestHeaders: {...requestHeaders, ...wrappedRequestHeaders},
+            signal,
+          }),
+        'GetTokenHoldersByVolume',
         'query',
         variables,
       );

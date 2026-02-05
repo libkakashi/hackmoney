@@ -127,7 +127,7 @@ const PLACEHOLDER_COMMENTS: Comment[] = [
     author: 'newbie_2024',
     authorAddress: '0xeeee...ffff',
     content:
-      "First time participating in a CCA. The UI makes it pretty straightforward. Is there a guide for optimal bidding strategy?",
+      'First time participating in a CCA. The UI makes it pretty straightforward. Is there a guide for optimal bidding strategy?',
     timestamp: '5h ago',
     votes: 15,
     userVote: 0,
@@ -452,8 +452,7 @@ export function TokenDiscussion() {
         />
         <div className="flex items-center justify-between">
           <span className="text-xs text-dim">
-            posting as{' '}
-            <span className="text-foreground">0x????...????</span>
+            posting as <span className="text-foreground">0x????...????</span>
           </span>
           <Button
             size="xs"

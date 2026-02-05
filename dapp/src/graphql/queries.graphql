@@ -28,6 +28,42 @@ query GetTokens($limit: Int!, $offset: Int!) {
   }
 }
 
+query GetTokenHoldersByBalance($token: String!, $limit: Int!, $offset: Int!) {
+  TokenHolder(
+    where: {token: {_eq: $token}, balance: {_gt: "0"}}
+    order_by: {balance: desc}
+    limit: $limit
+    offset: $offset
+  ) {
+    id
+    token
+    wallet
+    balance
+    totalSent
+    totalReceived
+    transferCount
+    lastUpdatedAt
+  }
+}
+
+query GetTokenHoldersByVolume($token: String!, $limit: Int!, $offset: Int!) {
+  TokenHolder(
+    where: {token: {_eq: $token}}
+    order_by: {totalSent: desc}
+    limit: $limit
+    offset: $offset
+  ) {
+    id
+    token
+    wallet
+    balance
+    totalSent
+    totalReceived
+    transferCount
+    lastUpdatedAt
+  }
+}
+
 query GetTokenByAddress($token: String!) {
   Launchpad_TokenLaunched(where: {address: {_eq: $token}}) {
     id

@@ -30,6 +30,38 @@ export const useInfiniteTokens = (pageSize = TOKENS_PAGE_SIZE) => {
   });
 };
 
+export const useTokenHoldersByBalance = (token?: string, limit = 10) => {
+  return useQuery({
+    queryKey: ['tokenHolders', 'balance', token, limit],
+    enabled: !!token,
+    queryFn: () =>
+      token
+        ? graphqlClient.GetTokenHoldersByBalance({
+            token: token.toLowerCase(),
+            limit,
+            offset: 0,
+          })
+        : undefined,
+    select: data => data?.TokenHolder,
+  });
+};
+
+export const useTokenHoldersByVolume = (token?: string, limit = 10) => {
+  return useQuery({
+    queryKey: ['tokenHolders', 'volume', token, limit],
+    enabled: !!token,
+    queryFn: () =>
+      token
+        ? graphqlClient.GetTokenHoldersByVolume({
+            token: token.toLowerCase(),
+            limit,
+            offset: 0,
+          })
+        : undefined,
+    select: data => data?.TokenHolder,
+  });
+};
+
 export const useTokenByAddress = (token?: string) => {
   return useQuery({
     queryKey: ['token', token],
