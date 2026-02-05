@@ -4,6 +4,7 @@ import {formatUnits} from 'viem';
 import {Globe} from 'lucide-react';
 
 import {TwitterIcon, DiscordIcon, TelegramIcon} from '~/components/icons';
+import {VerifiedBadge} from '~/components/verified-badge';
 import {Button} from '~/components/ui/button';
 import {Skeleton} from '~/components/ui/skeleton';
 import {useTokenByAddress} from '~/hooks/use-tokens';
@@ -121,7 +122,12 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
         <div className="flex-1 min-w-0 flex flex-col h-48">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h1 className="text-xl font-medium">{token.name}</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-medium">{token.name}</h1>
+                {token.ensName && (
+                  <VerifiedBadge ensName={token.ensName} showName />
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-sm text-dim">{token.symbol}</span>
                 <Button

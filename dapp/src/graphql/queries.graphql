@@ -16,6 +16,7 @@ query GetTokens($limit: Int!, $offset: Int!) {
     twitterUrl
     discordUrl
     telegramUrl
+    ensName
     image
     auctionStartBlock
     auctionEndBlock
@@ -78,6 +79,7 @@ query GetTokenByAddress($token: String!) {
     twitterUrl
     discordUrl
     telegramUrl
+    ensName
     image
     auctionStartBlock
     auctionEndBlock

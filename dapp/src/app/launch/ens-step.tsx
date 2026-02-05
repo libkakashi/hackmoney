@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import {Button} from '~/components/ui/button';
 import {Loader} from '~/components/ui/loader';
+import {VerifiedBadge} from '~/components/verified-badge';
 import {useRegisterEns} from '~/hooks/ens/use-register-ens';
 import {useCheckEnsAvailability} from '~/hooks/ens/use-check-ens-availability';
 import {useDebounce} from '~/hooks/utils/use-debounce';
@@ -202,15 +203,17 @@ export const ENSStep = ({
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-sm">
                     <span className="truncate">{form.name}</span>
-                    <BadgeCheck className="h-4 w-4 text-green shrink-0" />
+                    <VerifiedBadge ensName={currentName || 'yourtoken'} />
                   </div>
                   <div className="text-dim text-sm">${form.symbol}</div>
                 </div>
               </div>
-              <div className="flex items-center gap-1.5 text-green/80">
-                <BadgeCheck className="h-3 w-3" />
-                {currentName || 'yourtoken'}.eth
-              </div>
+              <VerifiedBadge
+                ensName={currentName || 'yourtoken'}
+                showName
+                className="text-green/80"
+                iconClassName="h-3 w-3"
+              />
             </div>
           </div>
 
@@ -324,7 +327,10 @@ export const ENSStep = ({
                   </span>
                 ) : showStatus && isOwnedByUser ? (
                   <>
-                    <BadgeCheck className="h-3.5 w-3.5 text-green" />
+                    <VerifiedBadge
+                      ensName={currentName}
+                      iconClassName="h-3.5 w-3.5"
+                    />
                     <span className="text-green">registered by you</span>
                   </>
                 ) : showStatus && isAvailable ? (
@@ -489,7 +495,9 @@ export const ENSStep = ({
       {/* Registration complete */}
       {isRegistered && (
         <div className="border border-green/30 bg-green/5 p-6 text-center">
-          <BadgeCheck className="h-10 w-10 text-green mx-auto mb-3" />
+          <div className="flex justify-center mb-3">
+            <VerifiedBadge ensName={currentName} iconClassName="h-10 w-10" />
+          </div>
           <div className="text-lg text-green mb-1">
             {currentName}.eth registered!
           </div>

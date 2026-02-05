@@ -1,8 +1,9 @@
 'use client';
 
-import {BadgeCheck, Globe, MessageCircle, Send} from 'lucide-react';
+import {Globe, MessageCircle, Send} from 'lucide-react';
 import {Button} from '~/components/ui/button';
 import {Loader} from '~/components/ui/loader';
+import {VerifiedBadge} from '~/components/verified-badge';
 import type {FormData} from './config-step';
 
 interface DeployStepProps {
@@ -78,13 +79,11 @@ export const DeployStep = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-lg">{form.name}</span>
-              {ensName && (
-                <BadgeCheck className="h-4 w-4 text-green shrink-0" />
-              )}
+              {ensName && <VerifiedBadge ensName={ensName} />}
             </div>
             <div className="text-dim mb-1">${form.symbol}</div>
             {ensName && (
-              <div className="text-green text-sm mb-2">{ensName}.eth</div>
+              <VerifiedBadge ensName={ensName} showName className="mb-2" />
             )}
             {form.description && (
               <p className="text-dim text-sm leading-relaxed">
