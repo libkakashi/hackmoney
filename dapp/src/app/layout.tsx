@@ -5,6 +5,7 @@ import {Navbar} from '~/components/layout/navbar';
 import {AgentProvider} from '~/components/agent/agent-context';
 import {FloatingAgent} from '~/components/agent/floating-agent';
 import './globals.css';
+import {Footer} from '~/components/layout/footer';
 
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
@@ -34,7 +35,10 @@ export default function RootLayout({
           <AgentProvider>
             <div className="flex h-screen flex-col overflow-hidden">
               <Navbar />
-              <main className="flex-1 overflow-y-auto">{children}</main>
+              <main className="flex-1 overflow-y-auto">
+                {children}
+                <Footer />
+              </main>
               <FloatingAgent />
             </div>
           </AgentProvider>

@@ -11,6 +11,8 @@ import {Button} from '~/components/ui/button';
 import {SwapPanel} from '~/components/swap/swap-panel';
 import {BidsSection} from '~/components/auction/bids-section';
 import {TokenMetadataCard} from './token-metadata-card';
+import {TokenDiscussion} from '~/components/discussion/token-discussion';
+import {TokenLeaderboard} from '~/components/discussion/token-leaderboard';
 
 import {useTokenByAddress} from '~/hooks/use-tokens';
 import {useTokenBalance} from '~/hooks/tokens/use-token-balance';
@@ -77,9 +79,9 @@ export default function TokenPage() {
           <span className="text-green">$</span> cat info.md
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-8 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
           {/* Main Content */}
-          <div className="lg:col-span-5 space-y-4">
+          <div className="lg:col-span-4 space-y-4">
             {/* Token Header */}
             <TokenMetadataCard address={address} />
 
@@ -92,7 +94,7 @@ export default function TokenPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-3 space-y-4">
+          <div className="lg:col-span-2 space-y-4">
             {/* User Balance */}
             {userAddress &&
               auctionState &&
@@ -121,6 +123,16 @@ export default function TokenPage() {
             )}
 
             <SwapPanel tokenAddr={token.address} />
+          </div>
+        </div>
+
+        {/* Discussion + Leaderboard */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
+          <div className="lg:col-span-2 border border-border bg-card p-4">
+            <TokenDiscussion />
+          </div>
+          <div className="lg:col-span-1 border border-border bg-card p-4 h-fit">
+            <TokenLeaderboard />
           </div>
         </div>
 
