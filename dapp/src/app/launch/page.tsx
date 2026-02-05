@@ -1,14 +1,15 @@
 'use client';
 
-import {useState, useEffect} from 'react';
-import {useRouter} from 'next/navigation';
-import {useConnection} from 'wagmi';
-import {Globe, MessageCircle, Send, Zap, Calendar, Clock} from 'lucide-react';
-import {Loader} from '~/components/ui/loader';
-import {Container} from '~/components/layout/container';
-import {Button} from '~/components/ui/button';
-import {Input} from '~/components/ui/input';
-import {useLaunch} from '~/hooks/use-launch';
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useConnection } from 'wagmi';
+import { Globe, MessageCircle, Send, Zap, Calendar, Clock } from 'lucide-react';
+import { Loader } from '~/components/ui/loader';
+import { Container } from '~/components/layout/container';
+import { Button } from '~/components/ui/button';
+import { Input } from '~/components/ui/input';
+import { ImageUpload } from '~/components/ui/image-upload';
+import { useLaunch } from '~/hooks/use-launch';
 
 type LaunchMode = 'now' | 'scheduled';
 
@@ -16,6 +17,8 @@ interface FormData {
   name: string;
   symbol: string;
   description: string;
+  image: string;
+  imageCid: string;
   website: string;
   twitter: string;
   discord: string;
@@ -24,7 +27,7 @@ interface FormData {
 
 export default function LaunchPage() {
   const router = useRouter();
-  const {isConnected} = useConnection();
+  const { isConnected } = useConnection();
 
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<LaunchMode>('now');
@@ -33,6 +36,8 @@ export default function LaunchPage() {
     name: '',
     symbol: '',
     description: '',
+    image: '',
+    imageCid: '',
     website: '',
     twitter: '',
     discord: '',
@@ -56,8 +61,16 @@ export default function LaunchPage() {
   }, [launchResult, isConfirmed, router]);
 
   const updateForm = (field: keyof FormData, value: string) => {
-    setForm(prev => ({...prev, [field]: value}));
+    setForm(prev => ({ ...prev, [field]: value }));
   };
+
+  const handleImageChange = useCallback((url: string | undefined, cid: string | undefined) => {
+    setForm(prev => ({
+      ...prev,
+      image: url || '',
+      imageCid: cid || '',
+    }));
+  }, []);
 
   const handleDeploy = async () => {
     try {
@@ -65,6 +78,7 @@ export default function LaunchPage() {
         name: form.name,
         symbol: form.symbol,
         description: form.description || undefined,
+        image: form.image || undefined,
         websiteUrl: form.website || undefined,
         twitterUrl: form.twitter || undefined,
         discordUrl: form.discord || undefined,
@@ -172,6 +186,19 @@ export default function LaunchPage() {
                   />
                 </div>
 
+                {/* Token Image */}
+                <div>
+                  <label className="text-dim text-xs block mb-2">
+                    token image <span className="text-dim/60">(optional)</span>
+                  </label>
+                  <ImageUpload
+                    value={form.image}
+                    onChange={handleImageChange}
+                    tokenSymbol={form.symbol}
+                    disabled={isDeploying}
+                  />
+                </div>
+
                 {/* Social links */}
                 <div>
                   <label className="text-xs block mb-2">
@@ -241,9 +268,8 @@ export default function LaunchPage() {
                 <Button
                   onClick={() => setMode('now')}
                   variant="outline"
-                  className={`p-4 h-auto text-left justify-start ${
-                    mode === 'now' ? 'border-green bg-green/5' : ''
-                  }`}
+                  className={`p-4 h-auto text-left justify-start ${mode === 'now' ? 'border-green bg-green/5' : ''
+                    }`}
                 >
                   <div className="flex flex-col items-start">
                     <div className="flex items-center gap-2 mb-1">
@@ -262,9 +288,8 @@ export default function LaunchPage() {
                 <Button
                   onClick={() => setMode('scheduled')}
                   variant="outline"
-                  className={`p-4 h-auto text-left justify-start ${
-                    mode === 'scheduled' ? 'border-purple bg-purple/5' : ''
-                  }`}
+                  className={`p-4 h-auto text-left justify-start ${mode === 'scheduled' ? 'border-purple bg-purple/5' : ''
+                    }`}
                 >
                   <div className="flex flex-col items-start">
                     <div className="flex items-center gap-2 mb-1">
@@ -316,8 +341,16 @@ export default function LaunchPage() {
               <div className="border-b border-border mb-6" />
 
               <div className="flex items-center gap-4 mb-4">
-                <div className="w-14 h-14 border border-border flex items-center justify-center text-purple text-xl">
-                  {form.symbol.slice(0, 2) || '??'}
+                <div className="w-14 h-14 border border-border flex items-center justify-center text-purple text-xl overflow-hidden">
+                  {form.image ? (
+                    <img
+                      src={form.image}
+                      alt={form.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    form.symbol.slice(0, 2) || '??'
+                  )}
                 </div>
                 <div>
                   <div className="text-lg">{form.name}</div>

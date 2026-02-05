@@ -1,25 +1,26 @@
 'use client';
 
-import {useCallback, useState} from 'react';
+import { useCallback, useState } from 'react';
 import {
   usePublicClient,
   useWriteContract,
   useWaitForTransactionReceipt,
   useConnection,
 } from 'wagmi';
-import type {Address, Hex} from 'viem';
-import {env} from '~/lib/env';
+import type { Address, Hex } from 'viem';
+import { env } from '~/lib/env';
 import {
   fetchLaunchpadConfig,
   mineSaltAsync,
   type SaltMiningResult,
 } from '~/lib/cca/salt';
-import {launchpadAbi} from '~/abi/launchpad';
+import { launchpadAbi } from '~/abi/launchpad';
 
 export interface LaunchParams {
   name: string;
   symbol: string;
   description?: string;
+  image?: string;
   websiteUrl?: string;
   twitterUrl?: string;
   discordUrl?: string;
@@ -69,7 +70,7 @@ const BLOCK_TIME_MS_FALLBACK = 12000; // 12 seconds fallback
 
 export const useLaunch = () => {
   const publicClient = usePublicClient();
-  const {address: creator} = useConnection();
+  const { address: creator } = useConnection();
 
   const [isMining, setIsMining] = useState(false);
   const [miningProgress, setMiningProgress] = useState<string | null>(null);
@@ -114,8 +115,8 @@ export const useLaunch = () => {
 
           const referenceBlock = currentBlock - DEFAULT_BLOCK_RANGE;
           const [currentBlockData, referenceBlockData] = await Promise.all([
-            publicClient.getBlock({blockNumber: currentBlock}),
-            publicClient.getBlock({blockNumber: referenceBlock}),
+            publicClient.getBlock({ blockNumber: currentBlock }),
+            publicClient.getBlock({ blockNumber: referenceBlock }),
           ]);
 
           const blocksDiff = Number(currentBlock - referenceBlock);
@@ -180,6 +181,7 @@ export const useLaunch = () => {
           symbol: params.symbol,
           metadata: encodeMetadata({
             description: params.description,
+            image: params.image,
             websiteUrl: params.websiteUrl,
             twitterUrl: params.twitterUrl,
             discordUrl: params.discordUrl,
