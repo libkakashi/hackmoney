@@ -95,9 +95,9 @@ Launchpad.TokenLaunched.handler(async ({event, context}) => {
 const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
 
 Token.Transfer.handler(async ({event, context}) => {
-  const token = event.srcAddress;
-  const from = event.params.from;
-  const to = event.params.to;
+  const token = event.srcAddress.toLowerCase();
+  const from = event.params.from.toLowerCase();
+  const to = event.params.to.toLowerCase();
   const amount = event.params.value;
 
   // Store the transfer event
