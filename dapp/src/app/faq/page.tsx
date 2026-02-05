@@ -21,7 +21,7 @@ This create 'fair-launches' and eliminates timing games, front-running and MEV e
     
     1. Create Auction: Projects set token ticker, name and image along with auction parameters like total token supply, floor price, auction schedule etc.
     
-2. Price Discovery: Investors submit their budget, and their bids are uniformly spread over the entire auction period where a clearing price is calculated per block based on demand & supply, ensuring fair pricing.
+2. Price Discovery: Traders submit their budget, and their bids are uniformly spread over the entire auction period where a clearing price is calculated per block based on demand & supply, ensuring fair pricing.
 
 3. Long-Term Liquidity: Post-auction, proceeds seed a Uniswap v4 pool at the discovered price, enabling seamless trading.
 This ensures transparent, onchain processes with no arbitrary pricing or offchain deals.
@@ -32,9 +32,9 @@ This ensures transparent, onchain processes with no arbitrary pricing or offchai
     q: 'how do i place a bid?',
     a: `Connect your wallet, navigate to the token you want to bid on, and enter the amount of USDC you wish to commit.
 
-The platform uses Permit2 for gasless approvals, so you'll sign a message and then submit your bid transaction. Once submitted, your USDC is locked until the auction concludes.
+The platform uses Permit2 for gasless approvals, so you'll sign a message and then submit your bid transaction. 
 
-You can view your active bids and their status on the token page at any time. There's no minimum bid amount, but very small bids may not be economical after gas costs.`,
+You can view your active bids and their status on the token page at any time. There's no minimum bid amount.`,
     tag: 'guide',
   },
   {
@@ -48,45 +48,35 @@ You can, however, place additional bids on the same auction. Each new bid is tre
   },
   {
     q: 'when and how do i receive my tokens?',
-    a: `After the auction ends, there's a short waiting period while the protocol finalizes the clearing price and migrates liquidity to Uniswap V4.
+    a: `After the auction ends, the protocol finalizes the clearing price and migrates liquidity to Uniswap V4.
 
-This typically takes around 10-20 blocks. Once claims are enabled, visit the token page and click the claim button to receive your allocated tokens.
-
-If the final clearing price exceeded your maximum bid price, you'll receive a full USDC refund instead. You can claim tokens and refunds in a single batched transaction.`,
+This typically takes around 10-20 blocks and you can claim your tokens post that. Once claims are enabled, visit the token page and click the claim button to receive your allocated tokens.
+`,
     tag: 'guide',
   },
   {
-    q: 'what happens if my bid is outbid?',
-    a: `Unlike traditional auctions, you cannot be "outbid" in the conventional sense since everyone pays the same clearing price.
-
-However, if the final clearing price rises above the maximum price you set when bidding, your bid won't be filled and you'll receive a complete USDC refund.
-
-If the clearing price is at or below your max price, you'll receive tokens proportional to your bid amount at the uniform clearing price.`,
-    tag: 'rules',
-  },
-  {
     q: 'why is bidding early beneficial?',
-    a: `The auction uses time-weighted calculations that reward earlier participation.
+    a: `CCA splits bids evenly over every block in auction duration. When you bid early, your bid gets split over more blocks.
 
-When you bid early, your commitment accumulates more "milli-bips" (allocation units) over the auction duration compared to last-minute bids. This means early bidders receive slightly better token allocations.
+    This means early bidders receive slightly better token allocations.
 
-The mechanism discourages sniping and creates a more stable auction environment. Early bidding also gives you more time to add additional bids if needed.`,
+The mechanism discourages sniping and front-running, createing a more stable auction environment. Early bidding also gives you more time to add additional bids if needed.`,
     tag: 'rules',
   },
   {
     q: 'is this protected from MEV and front-running?',
     a: `Yes, CCAs are inherently MEV-resistant by design.
 
-Since every participant pays the identical final clearing price, there's nothing for bots or validators to extract through front-running or sandwich attacks.
+Since every bid is split over the entire auction duration, there's nothing for bots or validators to extract through front-running or sandwich attacks.
 
-In traditional token sales, front-running a large buy is profitable. In a CCA, the price is determined after all bids are in, making such attacks pointless. The time-weighted mechanism also means late bidders get worse allocations.`,
+In traditional token sales or bonding curves, front-running a large buy is profitable since it allows a bot to corner large supply at cheaper prices. In CCA, everyone essentially receives a TWAP(time weighted average price) since they enter the auction.`,
     tag: 'security',
   },
   {
     q: 'what currencies can i bid with?',
     a: `All auctions on Timelock are denominated in USDC (USD Coin).
 
-You'll need USDC in your wallet on the same network as the auction (Ethereum mainnet, Base, Arbitrum, or Unichain). If you only have ETH or other tokens, swap for USDC first using any DEX.
+You'll need USDC in your wallet on the same network as the auction.  If you have ETH or other tokens, swap for USDC first using any DEX.
 
 We chose USDC because it provides stable, predictable pricing and eliminates volatility risk.`,
     tag: 'guide',
@@ -97,7 +87,7 @@ We chose USDC because it provides stable, predictable pricing and eliminates vol
 
 First, the final clearing price is calculated and locked in. Then, the raised USDC and tokens are migrated to create a Uniswap V4 liquidity pool at the clearing price.
 
-After migration completes (~20 blocks), claims open for bidders to collect their tokens or refunds. The entire process is trustless and on-chain.`,
+After migration completes (~20 blocks), claims open for bidders to collect their tokens or refunds. The entire process is trustless, immutable and on-chain.`,
     tag: 'guide',
   },
 ];
