@@ -16,12 +16,16 @@ This create 'fair-launches' and eliminates timing games, front-running and MEV e
     tag: 'core',
   },
   {
-    q: 'how does pricing actually work?',
-    a: `The clearing price is determined by a simple formula: total USDC bid divided by total tokens available.
+    q: 'how does CCA actually work?',
+    a: ` CCA works in three main steps:
+    
+    1. Create Auction: Projects set token ticker, name and image along with auction parameters like total token supply, floor price, auction schedule etc.
+    
+2. Price Discovery: Investors submit their budget, and their bids are uniformly spread over the entire auction period where a clearing price is calculated per block based on demand & supply, ensuring fair pricing.
 
-For example, if $500,000 USDC is bid into an auction for 100,000 tokens, the clearing price becomes $5 per token.
-
-There's also a time-weighting component that benefits early bidders. Bids placed earlier accumulate more "weight" over time, meaning early participants receive slightly better effective allocations. This incentivizes early commitment rather than last-second speculation.`,
+3. Long-Term Liquidity: Post-auction, proceeds seed a Uniswap v4 pool at the discovered price, enabling seamless trading.
+This ensures transparent, onchain processes with no arbitrary pricing or offchain deals.
+    `,
     tag: 'core',
   },
   {
