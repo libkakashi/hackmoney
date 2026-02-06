@@ -152,6 +152,8 @@ Benefits include:
 • Makes it much harder for impersonators to create fake versions
 • Easier for users to find, share, verify, and remember your project
 
+Tokens deployed with ENS names are shown with a green checkmark on Nyx pages.
+
 The process is fully on-chain, transparent, and optional — but strongly recommended for serious projects.`,
     tag: 'security',
   },
