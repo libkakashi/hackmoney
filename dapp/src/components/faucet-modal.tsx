@@ -10,6 +10,8 @@ import {
   parseUnits,
   type Address,
 } from 'viem';
+import {useConnectModal} from '@rainbow-me/rainbowkit';
+import {Wallet} from 'lucide-react';
 import {useBalance, useConnection} from 'wagmi';
 
 import {useTokenBalance} from '~/hooks/tokens/use-token-balance';
@@ -91,6 +93,7 @@ export function FaucetModal({trigger}: FaucetModalProps) {
   const [beforeBalances, setBeforeBalances] = useState<Balances | null>(null);
 
   const {address, isConnected} = useConnection();
+  const {openConnectModal} = useConnectModal();
 
   const {data: ethBalance, refetch: refetchEth} = useBalance({address});
   const {data: usdcBalance, refetch: refetchUsdc} = useTokenBalance(
@@ -202,89 +205,97 @@ export function FaucetModal({trigger}: FaucetModalProps) {
             // claim test tokens for trying nyx out
           </p>
 
-          {!isConnected ? (
-            <div className="p-4 border border-dashed border-border text-center">
-              <p className="text-xs text-dim">connect wallet to use faucet</p>
+          {/* Balances - only show when connected */}
+          {isConnected && (
+            <div className="text-sm border border-border p-3">
+              <div className="text-dim mb-2">current_balances</div>
+              <div className="space-y-1">
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-dim">ETH</span>
+                  <span className="space-x-2">
+                    {isSuccess && beforeBalances && (
+                      <span className="text-dim line-through">
+                        {Number(formatEther(beforeBalances.eth)).toLocaleString(
+                          undefined,
+                          {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          },
+                        )}
+                      </span>
+                    )}
+                    <span className="text-green">
+                      {Number(
+                        formatEther(ethBalance?.value ?? 0n),
+                      ).toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </span>
+                  </span>
+                </div>
+                <div className="flex justify-between items-center gap-2">
+                  <span className="text-dim">USDC</span>
+
+                  <span className="space-x-2">
+                    {isSuccess && beforeBalances && (
+                      <span className="text-dim line-through">
+                        {Number(
+                          formatUnits(beforeBalances.usdc, 6),
+                        ).toLocaleString(undefined, {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </span>
+                    )}
+                    <span className="text-purple">
+                      {Number(formatUnits(usdcBalance ?? 0n, 6)).toLocaleString(
+                        undefined,
+                        {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        },
+                      )}
+                    </span>
+                  </span>
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Token amount cards - always visible */}
+          <div className="grid grid-cols-2 gap-4">
+            {/* ETH Card */}
+            <div className="border border-border p-6 flex flex-col items-center gap-3">
+              <EthLogo className="w-12 h-12" />
+              <div className="text-center">
+                <div className="text-xl text-green tabular-nums">100</div>
+                <div className="text-sm text-dim">ETH</div>
+              </div>
+            </div>
+
+            {/* USDC Card */}
+            <div className="border border-border p-6 flex flex-col items-center gap-3">
+              <UsdcLogo className="w-12 h-12" />
+              <div className="text-center">
+                <div className="text-xl text-purple tabular-nums">10000</div>
+                <div className="text-sm text-dim">USDC</div>
+              </div>
+            </div>
+          </div>
+
+          {/* Connect or Claim Button */}
+          {!isConnected ? (
+            <Button
+              className="w-full h-12"
+              onClick={openConnectModal}
+              showPrefix
+            >
+              <Wallet className="h-4 w-4 mr-1" />
+              connect wallet to claim
+            </Button>
           ) : (
             <>
-              {/* Balances */}
-              <div className="text-sm border border-border p-3">
-                <div className="text-dim mb-2">current_balances</div>
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-dim">ETH</span>
-                    <span className="space-x-2">
-                      {isSuccess && beforeBalances && (
-                        <span className="text-dim line-through">
-                          {Number(
-                            formatEther(beforeBalances.eth),
-                          ).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      )}
-                      <span className="text-green">
-                        {Number(
-                          formatEther(ethBalance?.value ?? 0n),
-                        ).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center gap-2">
-                    <span className="text-dim">USDC</span>
-
-                    <span className="space-x-2">
-                      {isSuccess && beforeBalances && (
-                        <span className="text-dim line-through">
-                          {Number(
-                            formatUnits(beforeBalances.usdc, 6),
-                          ).toLocaleString(undefined, {
-                            minimumFractionDigits: 2,
-                            maximumFractionDigits: 2,
-                          })}
-                        </span>
-                      )}
-                      <span className="text-purple">
-                        {Number(
-                          formatUnits(usdcBalance ?? 0n, 6),
-                        ).toLocaleString(undefined, {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
-                      </span>
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                {/* ETH Card */}
-                <div className="border border-border p-6 flex flex-col items-center gap-3">
-                  <EthLogo className="w-12 h-12" />
-                  <div className="text-center">
-                    <div className="text-xl text-green tabular-nums">100</div>
-                    <div className="text-sm text-dim">ETH</div>
-                  </div>
-                </div>
-
-                {/* USDC Card */}
-                <div className="border border-border p-6 flex flex-col items-center gap-3">
-                  <UsdcLogo className="w-12 h-12" />
-                  <div className="text-center">
-                    <div className="text-xl text-purple tabular-nums">
-                      10000
-                    </div>
-                    <div className="text-sm text-dim">USDC</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Claim Button */}
               {!isSuccess && (
                 <Button
                   className="w-full h-12"
@@ -302,7 +313,6 @@ export function FaucetModal({trigger}: FaucetModalProps) {
                 </Button>
               )}
 
-              {/* Success */}
               {isSuccess && (
                 <div className="p-3 border border-green text-center">
                   <p className="text-xs text-green">
