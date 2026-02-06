@@ -308,6 +308,7 @@ const encodeSwapExactIn = (
 
 const encodeSwapExactOut = (
   currencyOut: Address,
+  currencyIn: Address,
   path: PathKey[],
   amountOut: bigint,
   amountInMaximum: bigint,
@@ -315,9 +316,6 @@ const encodeSwapExactOut = (
 ) => {
   validateUint128(amountOut, 'amountOut');
   validateUint128(amountInMaximum, 'amountInMaximum');
-
-  // The currency we need to settle is the last path element's intermediateCurrency
-  const currencyIn = path[path.length - 1].intermediateCurrency;
 
   const commands = permitData
     ? concat([toHex(Commands.PERMIT2_PERMIT), toHex(Commands.V4_SWAP)])
@@ -368,7 +366,9 @@ function buildSwapPath({
   tokenAddr: Address;
   sellingToken: boolean;
   exactInput: boolean;
-}): {currencyExact: Address; path: PathKey[]} | undefined {
+}):
+  | {currencyExact: Address; currencyOther: Address; path: PathKey[]}
+  | undefined {
   if (!quoteToken.intermediatePool) return undefined;
   const ip = quoteToken.intermediatePool;
 
@@ -390,6 +390,7 @@ function buildSwapPath({
       // token -> USDC -> quoteToken
       return {
         currencyExact: tokenAddr,
+        currencyOther: quoteToken.address,
         path: [
           {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
           {...usdcQuotePool, intermediateCurrency: quoteToken.address},
@@ -399,6 +400,7 @@ function buildSwapPath({
       // quoteToken -> USDC -> token
       return {
         currencyExact: quoteToken.address,
+        currencyOther: tokenAddr,
         path: [
           {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
           {...launchpadPool, intermediateCurrency: tokenAddr},
@@ -406,22 +408,29 @@ function buildSwapPath({
       };
     }
   } else {
+    // exactOutput: the V4Router iterates the path in REVERSE.
+    // Each hop's intermediateCurrency points backward so that when
+    // paired with the current outputCurrency it forms the correct pool.
     if (sellingToken) {
-      // Buying exact quoteToken: quoteToken -> USDC -> token (reverse)
+      // Forward: token -[launchpad]-> USDC -[intermediate]-> quoteToken
+      // Reverse: path[1]+quoteToken → pool(quoteToken,USDC), path[0]+USDC → pool(USDC,token)
       return {
         currencyExact: quoteToken.address,
+        currencyOther: tokenAddr,
         path: [
-          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
           {...launchpadPool, intermediateCurrency: tokenAddr},
+          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
         ],
       };
     } else {
-      // Buying exact token: token -> USDC -> quoteToken (reverse)
+      // Forward: quoteToken -[intermediate]-> USDC -[launchpad]-> token
+      // Reverse: path[1]+token → pool(token,USDC), path[0]+USDC → pool(USDC,quoteToken)
       return {
         currencyExact: tokenAddr,
+        currencyOther: quoteToken.address,
         path: [
-          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
           {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
         ],
       };
     }
@@ -765,8 +774,11 @@ export const useSwap = () => {
         });
         if (!pathInfo) throw new Error('Failed to build swap path');
 
-        const {currencyExact: currencyOut, path} = pathInfo;
-        const currencyIn = path[path.length - 1].intermediateCurrency;
+        const {
+          currencyExact: currencyOut,
+          currencyOther: currencyIn,
+          path,
+        } = pathInfo;
         const native = isNativeCurrency(currencyIn);
 
         let permitData: PermitData | undefined;
@@ -780,6 +792,7 @@ export const useSwap = () => {
 
         const {commands, inputs} = encodeSwapExactOut(
           currencyOut,
+          currencyIn,
           path,
           amountOut,
           maxAmountIn,

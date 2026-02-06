@@ -13,6 +13,40 @@ import {
   getPhase,
 } from './on-chain';
 
+/** Common coin ID aliases so users can say "btc" instead of "bitcoin" */
+const COIN_ALIASES: Record<string, string> = {
+  btc: 'bitcoin',
+  eth: 'ethereum',
+  sol: 'solana',
+  bnb: 'binancecoin',
+  xrp: 'ripple',
+  ada: 'cardano',
+  doge: 'dogecoin',
+  dot: 'polkadot',
+  avax: 'avalanche-2',
+  matic: 'polygon-ecosystem-token',
+  link: 'chainlink',
+  uni: 'uniswap',
+  aave: 'aave',
+  arb: 'arbitrum',
+  op: 'optimism',
+  atom: 'cosmos',
+  near: 'near',
+  apt: 'aptos',
+  sui: 'sui',
+  pepe: 'pepe',
+  shib: 'shiba-inu',
+  wbtc: 'wrapped-bitcoin',
+  usdc: 'usd-coin',
+  usdt: 'tether',
+  dai: 'dai',
+};
+
+function resolveCoinId(query: string): string {
+  const q = query.toLowerCase().trim();
+  return COIN_ALIASES[q] ?? q;
+}
+
 /** Server-side tools — have execute handlers that run on the server */
 export const serverTools = {
   searchTokens: tool({
@@ -213,6 +247,58 @@ export const serverTools = {
       };
     },
   }),
+
+  getTokenPrice: tool({
+    description:
+      'Get the current price of any cryptocurrency by name or ticker symbol (e.g. "btc", "ethereum", "sol"). Returns USD price, 24h change, market cap, and volume. Use this when users ask about crypto prices.',
+    inputSchema: z.object({
+      coin: z
+        .string()
+        .describe(
+          'Coin name or ticker symbol (e.g. "btc", "bitcoin", "eth", "solana", "doge")',
+        ),
+    }),
+    execute: async ({coin}) => {
+      const coinId = resolveCoinId(coin);
+      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(coinId)}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`;
+
+      try {
+        const res = await fetch(url);
+        if (!res.ok) {
+          return {error: `CoinGecko API error: ${res.status}`};
+        }
+        const data = (await res.json()) as Record<
+          string,
+          {
+            usd?: number;
+            usd_24h_change?: number;
+            usd_market_cap?: number;
+            usd_24h_vol?: number;
+          }
+        >;
+        const info = data[coinId];
+        if (!info || info.usd === undefined) {
+          return {
+            error: `Coin "${coin}" not found. Try using the full name (e.g. "bitcoin") or a common ticker (e.g. "btc").`,
+          };
+        }
+        return {
+          coin: coinId,
+          price: info.usd,
+          change24h: info.usd_24h_change
+            ? `${info.usd_24h_change.toFixed(2)}%`
+            : null,
+          marketCap: info.usd_market_cap ?? null,
+          volume24h: info.usd_24h_vol ?? null,
+        };
+      } catch (err) {
+        return {
+          error:
+            err instanceof Error ? err.message : 'Failed to fetch price data',
+        };
+      }
+    },
+  }),
 };
 
 /** Client-side tools — no execute handler, handled by onToolCall in the browser */
@@ -300,7 +386,7 @@ export const clientTools = {
     }),
   }),
 
-  executeSwap: tool({
+  executeSwapExactInput: tool({
     description:
       "Execute the swap after preview and approval. Only call this AFTER previewSwap (and approveIfNeeded if needed). Prompts the user's wallet to sign the swap transaction. Supports multi-hop swaps through USDC for non-USDC quote tokens.",
     inputSchema: z.object({
@@ -323,16 +409,133 @@ export const clientTools = {
     }),
   }),
 
+  previewSwapExactOutput: tool({
+    description:
+      'Get a swap quote when the user specifies an exact OUTPUT amount they want to receive (e.g. "I want to receive exactly 0.001 WBTC"). Returns the estimated input amount needed, max input with slippage, balances, and whether approval is needed. Use this instead of previewSwap when the user specifies how much they want to receive rather than how much they want to sell.',
+    inputSchema: z.object({
+      tokenAddress: z
+        .string()
+        .describe(
+          'The launched token address (0x...) — used to identify the pool',
+        ),
+      receiveAmount: z
+        .string()
+        .describe(
+          'Exact amount the user wants to receive (in human-readable units, e.g. "0.001")',
+        ),
+      buyToken: z
+        .enum(['token', 'quote'])
+        .describe(
+          'Whether the user is buying the launched "token" or the "quote" currency.',
+        ),
+      quoteToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .optional()
+        .default('USDC')
+        .describe(
+          'Which quote currency to swap with. Defaults to USDC (single-hop). Non-USDC tokens route through USDC as a 2-hop swap.',
+        ),
+    }),
+  }),
+
+  executeSwapExactOutput: tool({
+    description:
+      "Execute an exact output swap after previewSwapExactOutput and approval. Only call this AFTER previewSwapExactOutput (and approveIfNeeded if needed). Prompts the user's wallet to sign the swap transaction. The user will receive exactly the specified amount; the input amount may vary up to the max with slippage.",
+    inputSchema: z.object({
+      tokenAddress: z
+        .string()
+        .describe(
+          'The launched token address (0x...) — used to identify the pool',
+        ),
+      receiveAmount: z
+        .string()
+        .describe(
+          'Exact amount to receive (same as in previewSwapExactOutput)',
+        ),
+      buyToken: z
+        .enum(['token', 'quote'])
+        .describe('Same direction as in previewSwapExactOutput.'),
+      quoteToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .optional()
+        .default('USDC')
+        .describe('Same quote currency as in previewSwapExactOutput.'),
+    }),
+  }),
+
   suggestReplies: tool({
     description:
-      'Show 2-3 short clickable reply suggestions (max 4 words each) so the user can tap instead of typing. Use this whenever you ask the user a question or present a choice. Examples: after a swap preview use ["yes, do it", "no, cancel"]; after showing token info use ["bid on it", "show more"]; when asking which token use the token symbols as options.',
+      'Show 2-3 short clickable reply suggestions (max 4 words each) so the user can tap instead of typing. Use this whenever you ask the user a question or present a choice. Examples: after a swap preview use ["yes, do it", "no, cancel"]; after showing token info use ["bid on it", "show more"]; when asking which token use the token symbols as options. Each reply can be a plain string or an object with { text, timerSeconds } — use timerSeconds to show a countdown that disables the button until it expires (e.g. for the 60-second ENS commitment wait).',
     inputSchema: z.object({
       replies: z
-        .array(z.string())
+        .array(
+          z.union([
+            z.string(),
+            z.object({
+              text: z.string().describe('The reply button label'),
+              timerSeconds: z
+                .number()
+                .optional()
+                .describe(
+                  'If set, the button is disabled with a countdown timer for this many seconds before it becomes clickable.',
+                ),
+            }),
+          ]),
+        )
         .min(2)
         .max(3)
         .describe(
-          'Short reply options (max 4 words each) for the user to pick from',
+          'Short reply options (max 4 words each) for the user to pick from. Use { text, timerSeconds } for replies that need a countdown.',
+        ),
+    }),
+  }),
+
+  // ── ENS tools ─────────────────────────────────────────────────────────────
+
+  getMyEnsName: tool({
+    description:
+      "Look up the connected wallet's primary ENS name (reverse resolution). Returns the name that the user's address currently resolves to, or null if none is set. Use this when the user asks about their ENS name, identity, or username.",
+    inputSchema: z.object({}),
+  }),
+
+  checkEnsName: tool({
+    description:
+      'Check if an ENS name is available, already owned by the user, or taken by someone else. Also returns the yearly rent price if available. Use this when the user wants to check a name before buying.',
+    inputSchema: z.object({
+      name: z
+        .string()
+        .describe('The ENS name to check (without .eth suffix, e.g. "myname")'),
+    }),
+  }),
+
+  commitEnsName: tool({
+    description:
+      'Step 1 of ENS registration: submit a commitment for a name. This is required before registering. After committing, the user must wait ~60 seconds before they can call registerEnsName. Prompts wallet for a transaction. Only call this after checkEnsName confirms the name is available.',
+    inputSchema: z.object({
+      name: z
+        .string()
+        .describe('The ENS name to commit to (without .eth suffix)'),
+    }),
+  }),
+
+  registerEnsName: tool({
+    description:
+      'Step 2 of ENS registration: register the name after the commitment has matured (~60 seconds after commitEnsName). Prompts wallet for a transaction with ETH payment. Only call this after commitEnsName succeeded AND at least 60 seconds have passed. This also sets the name as the primary reverse record.',
+    inputSchema: z.object({
+      name: z
+        .string()
+        .describe('The ENS name to register (without .eth suffix)'),
+    }),
+  }),
+
+  setPrimaryEnsName: tool({
+    description:
+      'Change which ENS name the connected wallet resolves to (set primary/reverse record). The user must already own the name. Use this when the user wants to switch their display name to a different ENS name they own.',
+    inputSchema: z.object({
+      name: z
+        .string()
+        .describe(
+          'The ENS name to set as primary (without .eth suffix, e.g. "myname")',
         ),
     }),
   }),

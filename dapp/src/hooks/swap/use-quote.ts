@@ -255,26 +255,30 @@ function buildMultiHopQuoteParams({
       };
     }
   } else {
-    // quoteExactOutput: exactCurrency = buy token, path leads to sell token
+    // quoteExactOutput: exactCurrency = buy token.
+    // The V4 quoter iterates the path in REVERSE for exact output.
+    // Each hop's intermediateCurrency points backward (to the previous
+    // currency in the forward direction) so that the quoter can pair it
+    // with the current outputCurrency to form the correct pool.
     if (sellingToken) {
-      // Selling launchpad token, buying exact quoteToken amount
-      // quoteToken -[intermediate pool]-> USDC -[launchpad pool]-> token
+      // Forward: token -[launchpad]-> USDC -[intermediate]-> quoteToken
+      // Reverse: path[1]+quoteToken → pool(quoteToken,USDC), path[0]+USDC → pool(USDC,token)
       return {
         exactCurrency: quoteToken.address,
         path: [
-          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
           {...launchpadPool, intermediateCurrency: tokenAddr},
+          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
         ],
         exactAmount,
       };
     } else {
-      // Selling quoteToken, buying exact launchpad token amount
-      // token -[launchpad pool]-> USDC -[intermediate pool]-> quoteToken
+      // Forward: quoteToken -[intermediate]-> USDC -[launchpad]-> token
+      // Reverse: path[1]+token → pool(token,USDC), path[0]+USDC → pool(USDC,quoteToken)
       return {
         exactCurrency: tokenAddr,
         path: [
-          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
           {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
         ],
         exactAmount,
       };

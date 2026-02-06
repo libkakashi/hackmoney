@@ -16,7 +16,7 @@ import {
   DefaultChatTransport,
 } from 'ai';
 import Link from 'next/link';
-import {Send, Loader2, Power} from 'lucide-react';
+import {Send, Loader2, Power, Clock} from 'lucide-react';
 import Draggable from 'react-draggable';
 import {Resizable} from 're-resizable';
 import {Button} from '~/components/ui/button';
@@ -173,7 +173,7 @@ function ToolResultCard({result}: {result: unknown}) {
       const r = result as {success: boolean; txHash?: string};
       return (
         <div className="text-green ">
-          tx confirmed{r.txHash ? `: ${r.txHash.slice(0, 10)}...` : ''}
+          {r.txHash ? `tx confirmed: ${r.txHash.slice(0, 10)}...` : 'done'}
         </div>
       );
     }
@@ -306,6 +306,72 @@ function shouldAutoSend({messages}: {messages: UIMessage[]}) {
   );
 }
 
+/* ── Reply type from suggestReplies ──────────────────────────────────── */
+type SuggestReply = string | {text: string; timerSeconds?: number};
+
+function getReplyText(reply: SuggestReply): string {
+  return typeof reply === 'string' ? reply : reply.text;
+}
+
+function getReplyTimer(reply: SuggestReply): number | undefined {
+  return typeof reply === 'string' ? undefined : reply.timerSeconds;
+}
+
+/* ── Timer button for countdown replies ─────────────────────────────── */
+function TimerReplyButton({
+  reply,
+  onSend,
+}: {
+  reply: SuggestReply;
+  onSend: (text: string) => void;
+}) {
+  const text = getReplyText(reply);
+  const timerSeconds = getReplyTimer(reply);
+  const [remaining, setRemaining] = useState(timerSeconds ?? 0);
+
+  useEffect(() => {
+    if (!timerSeconds) return;
+    setRemaining(timerSeconds);
+    const interval = setInterval(() => {
+      setRemaining(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timerSeconds]);
+
+  const isDisabled = timerSeconds !== null && remaining > 0;
+
+  return (
+    <Button
+      variant="outline"
+      size="xs"
+      disabled={isDisabled}
+      className={
+        isDisabled
+          ? 'border-yellow/40 cursor-not-allowed tabular-nums gap-1.5'
+          : 'text-green border-green/50 hover:bg-green/10 hover:border-green'
+      }
+      onClick={() => !isDisabled && onSend(text)}
+    >
+      {isDisabled ? (
+        <>
+          <Clock className="size-2.5 text-yellow" />
+          <span className="text-yellow">{remaining}s</span>
+          <span className="text-yellow">|</span>
+          <span className="text-foreground">{text}</span>
+        </>
+      ) : (
+        text
+      )}
+    </Button>
+  );
+}
+
 /* ── Main Floating Agent ────────────────────────────────────────────────── */
 export function FloatingAgent() {
   const {
@@ -314,7 +380,14 @@ export function FloatingAgent() {
     getBalances,
     previewSwap,
     approveIfNeeded,
-    executeSwap,
+    executeSwapExactInput,
+    previewSwapExactOutput,
+    executeSwapExactOutput,
+    getMyEnsName,
+    checkEnsName,
+    commitEnsName,
+    registerEnsName,
+    setPrimaryEnsName,
   } = useAgentTools();
   const pageContext = usePageContext();
   const [chatOpen, setChatOpen] = useState(false);
@@ -384,13 +457,58 @@ export function FloatingAgent() {
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
-      if (toolName === 'executeSwap') {
-        const result = await executeSwap(
+      if (toolName === 'executeSwapExactInput') {
+        const result = await executeSwapExactInput(
           input.tokenAddress,
           input.sellAmount,
           input.buyToken as 'token' | 'quote',
           input.quoteToken ?? 'USDC',
         );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'previewSwapExactOutput') {
+        const result = await previewSwapExactOutput(
+          input.tokenAddress,
+          input.receiveAmount,
+          input.buyToken as 'token' | 'quote',
+          input.quoteToken ?? 'USDC',
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'executeSwapExactOutput') {
+        const result = await executeSwapExactOutput(
+          input.tokenAddress,
+          input.receiveAmount,
+          input.buyToken as 'token' | 'quote',
+          input.quoteToken ?? 'USDC',
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'getMyEnsName') {
+        const result = await getMyEnsName();
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'checkEnsName') {
+        const result = await checkEnsName(input.name);
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'commitEnsName') {
+        const result = await commitEnsName(input.name);
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'registerEnsName') {
+        const result = await registerEnsName(input.name);
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'setPrimaryEnsName') {
+        const result = await setPrimaryEnsName(input.name);
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
@@ -645,23 +763,19 @@ export function FloatingAgent() {
                     const replies = ((replyPart as any)?.output?.replies ??
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       (replyPart as any)?.input?.replies) as
-                      | string[]
+                      | SuggestReply[]
                       | undefined;
 
                     if (!replies?.length) return null;
 
                     return (
                       <div className="flex flex-wrap gap-1.5 mb-2">
-                        {replies.map(reply => (
-                          <Button
-                            key={reply}
-                            variant="outline"
-                            size="xs"
-                            className="text-green border-green/50 hover:bg-green/10 hover:border-green "
-                            onClick={() => void sendMessage({text: reply})}
-                          >
-                            {reply}
-                          </Button>
+                        {replies.map((reply, idx) => (
+                          <TimerReplyButton
+                            key={getReplyText(reply) + idx}
+                            reply={reply}
+                            onSend={text => void sendMessage({text})}
+                          />
                         ))}
                       </div>
                     );

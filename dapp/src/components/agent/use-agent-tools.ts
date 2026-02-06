@@ -7,9 +7,7 @@ import {
   parseUnits,
   formatUnits,
   erc20Abi,
-  zeroAddress,
-  maxUint160,
-  maxUint48,
+  namehash,
 } from 'viem';
 import {
   usePublicClient,
@@ -18,13 +16,7 @@ import {
   useWriteContract,
 } from 'wagmi';
 import {useQueryClient} from '@tanstack/react-query';
-import {ccaAbi} from '~/abi/cca';
-import {permit2Abi} from '~/abi/permit2';
 import {PERMIT2_ADDRESS, usePermit2} from '~/hooks/use-permit2';
-import {roundPriceToTick} from '~/lib/cca/utils';
-import {getAuctionState} from '~/lib/cca/auction';
-import {getUserBids} from '~/lib/cca/bid';
-import {exitAndClaimBatch} from '~/lib/cca/claim';
 import {useSwap} from '~/hooks/swap/use-swap';
 import {launchpadLensAbi} from '~/abi/launchpad-lens';
 import {quoterAbi} from '~/abi/quoter';
@@ -36,6 +28,19 @@ import {
   type QuoteToken,
 } from '~/lib/pools';
 import type {PathKey} from '~/hooks/swap/use-quote';
+// CCA hooks (imperative versions for agent)
+import {useSubmitBidImperative} from '~/hooks/cca/use-submit-bid-imperative';
+import {useClaimTokensImperative} from '~/hooks/cca/use-claim-tokens-imperative';
+// ENS hooks
+import {useCommitEns} from '~/hooks/ens/use-commit-ens';
+import {useRegisterEnsImperative} from '~/hooks/ens/use-register-ens-imperative';
+import {useSetPrimaryEns} from '~/hooks/ens/use-set-primary-ens';
+import {
+  ensRegistrarControllerAbi,
+  ENS_DEFAULT_DURATION,
+  ENS_MIN_NAME_LENGTH,
+} from '~/abi/ens-registrar';
+import {getRegistrarAddress} from '~/hooks/ens/utils';
 
 const QUOTER_ADDRESS = '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203' as const;
 const DEFAULT_SLIPPAGE_BPS = 100n; // 1%
@@ -52,18 +57,22 @@ const getQuoteTokenBySymbol = (symbol: string): QuoteToken => {
 
 /**
  * Build multi-hop path for quoting/swapping through USDC.
- * Same logic as use-swap.ts buildSwapPath and use-quote.ts buildMultiHopQuoteParams.
+ *
+ * For exactInput:  exactCurrency = sell token, path leads toward buy token.
+ * For exactOutput: exactCurrency = buy token, path leads toward sell token (reversed).
  */
 function buildMultiHopPath({
   poolKey,
   quoteToken,
   tokenAddr,
   sellingToken,
+  exactInput = true,
 }: {
   poolKey: {fee: number; tickSpacing: number; hooks: Address};
   quoteToken: QuoteToken;
   tokenAddr: Address;
   sellingToken: boolean;
+  exactInput?: boolean;
 }): {currencyIn: Address; path: PathKey[]} | undefined {
   if (!quoteToken.intermediatePool) return undefined;
   const ip = quoteToken.intermediatePool;
@@ -81,24 +90,63 @@ function buildMultiHopPath({
     hookData: '0x' as Hex,
   };
 
-  if (sellingToken) {
-    // token -> USDC -> quoteToken
-    return {
-      currencyIn: tokenAddr,
-      path: [
-        {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
-        {...usdcQuotePool, intermediateCurrency: quoteToken.address},
-      ],
-    };
+  if (exactInput) {
+    if (sellingToken) {
+      // token -> USDC -> quoteToken
+      return {
+        currencyIn: tokenAddr,
+        path: [
+          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
+          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+        ],
+      };
+    } else {
+      // quoteToken -> USDC -> token
+      return {
+        currencyIn: quoteToken.address,
+        path: [
+          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
+          {...launchpadPool, intermediateCurrency: tokenAddr},
+        ],
+      };
+    }
   } else {
-    // quoteToken -> USDC -> token
-    return {
-      currencyIn: quoteToken.address,
-      path: [
-        {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
-        {...launchpadPool, intermediateCurrency: tokenAddr},
-      ],
-    };
+    // exactOutput: exactCurrency = buy token.
+    // The V4 quoter iterates the path array in REVERSE for exact output.
+    // At each reverse step it pairs the current outputCurrency with
+    // pathKey.intermediateCurrency to form the pool, then sets
+    // outputCurrency = pathKey.intermediateCurrency for the next hop.
+    //
+    // So the path keeps the same pool order as exact input, but each
+    // hop's intermediateCurrency points backward (to the previous
+    // currency in the forward direction) instead of forward.
+    if (sellingToken) {
+      // Forward: token -[launchpad]-> USDC -[intermediate]-> quoteToken
+      // exactCurrency = quoteToken (buy token)
+      // Reverse iteration:
+      //   path[1] + quoteToken → pool(quoteToken, USDC) via usdcQuotePool ✓
+      //   path[0] + USDC       → pool(USDC, token)      via launchpadPool ✓
+      return {
+        currencyIn: quoteToken.address,
+        path: [
+          {...launchpadPool, intermediateCurrency: tokenAddr},
+          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
+        ],
+      };
+    } else {
+      // Forward: quoteToken -[intermediate]-> USDC -[launchpad]-> token
+      // exactCurrency = tokenAddr (buy token)
+      // Reverse iteration:
+      //   path[1] + token → pool(token, USDC)      via launchpadPool ✓
+      //   path[0] + USDC  → pool(USDC, quoteToken) via usdcQuotePool ✓
+      return {
+        currencyIn: tokenAddr,
+        path: [
+          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
+        ],
+      };
+    }
   }
 }
 
@@ -108,160 +156,50 @@ export function useAgentTools() {
   const {address: userAddress} = useConnection();
   const {mutateAsync: writeContractAsync} = useWriteContract();
   const queryClient = useQueryClient();
-  const {needsErc20Approval, needsPermit2Signature} = usePermit2();
-  const {swapExactInSingle, swapExactIn} = useSwap();
+  const {needsErc20Approval} = usePermit2();
+  const {swapExactInSingle, swapExactIn, swapExactOutSingle, swapExactOut} =
+    useSwap();
+
+  // CCA hooks (imperative)
+  const submitBidMutation = useSubmitBidImperative();
+  const claimTokensMutation = useClaimTokensImperative();
+
+  // ENS hooks
+  const commitEnsMutation = useCommitEns();
+  const registerEnsMutation = useRegisterEnsImperative();
+  const setPrimaryEnsMutation = useSetPrimaryEns();
 
   const placeBid = useCallback(
     async (auctionAddress: string, amountStr: string) => {
-      if (!publicClient || !walletClient || !userAddress) {
-        return {
-          error: 'Wallet not connected. Please connect your wallet first.',
-        };
-      }
-
-      const auctionAddr = auctionAddress as Address;
-
       try {
-        // Read auction state to get currency info and decimals
-        const auctionState = await getAuctionState(auctionAddr, publicClient);
-        if (auctionState.status !== 'active') {
-          return {
-            error: `Cannot bid: auction is '${auctionState.status}', not 'active'.`,
-          };
-        }
-
-        const currency = auctionState.currency;
-        const isNative = currency === zeroAddress;
-        const amount = parseUnits(amountStr, auctionState.currencyDecimals);
-        const hookData: Hex = '0x';
-
-        // Handle ERC20 approvals if needed (mirrors use-submit-bid.ts exactly)
-        if (!isNative) {
-          const needsApproval = await needsErc20Approval(currency, amount);
-          if (needsApproval) {
-            const approvalHash = await writeContractAsync({
-              address: currency,
-              abi: erc20Abi,
-              functionName: 'approve',
-              args: [PERMIT2_ADDRESS, 2n ** 256n - 1n],
-            });
-            await publicClient.waitForTransactionReceipt({hash: approvalHash});
-          }
-
-          // Check Permit2 allowance for auction (use 1n to check for any valid allowance)
-          const needsPermit = await needsPermit2Signature(
-            currency,
-            auctionAddr,
-            1n,
-          );
-          if (needsPermit) {
-            const approveHash = await writeContractAsync({
-              address: PERMIT2_ADDRESS,
-              abi: permit2Abi,
-              functionName: 'approve',
-              args: [currency, auctionAddr, maxUint160, Number(maxUint48)],
-            });
-            await publicClient.waitForTransactionReceipt({hash: approveHash});
-          }
-        }
-
-        // Get max bid price and round it
-        const maxBidPrice = await publicClient.readContract({
-          address: auctionAddr,
-          abi: ccaAbi,
-          functionName: 'MAX_BID_PRICE',
+        const result = await submitBidMutation.mutateAsync({
+          auctionAddress,
+          amount: amountStr,
         });
-        const maxPriceQ96 = roundPriceToTick(
-          maxBidPrice,
-          auctionState.tickSpacingQ96,
-          auctionState.floorPriceQ96,
-        );
-
-        // Simulate first
-        await publicClient.simulateContract({
-          address: auctionAddr,
-          abi: ccaAbi,
-          functionName: 'submitBid',
-          args: [maxPriceQ96, amount, userAddress, hookData],
-          account: userAddress,
-          value: isNative ? amount : 0n,
-        });
-
-        // Execute bid
-        const hash = await writeContractAsync({
-          address: auctionAddr,
-          abi: ccaAbi,
-          functionName: 'submitBid',
-          args: [maxPriceQ96, amount, userAddress, hookData],
-          value: isNative ? amount : 0n,
-        });
-        await publicClient.waitForTransactionReceipt({hash});
-
-        await queryClient.invalidateQueries();
-        return {success: true, txHash: hash, amount: amountStr};
+        return {success: true, txHash: result.txHash, amount: result.amount};
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Transaction failed';
         return {error: msg};
       }
     },
-    [
-      publicClient,
-      walletClient,
-      userAddress,
-      writeContractAsync,
-      queryClient,
-      needsErc20Approval,
-      needsPermit2Signature,
-    ],
+    [submitBidMutation],
   );
 
   const claimTokens = useCallback(
     async (auctionAddress: string) => {
-      if (!publicClient || !walletClient || !userAddress) {
-        return {
-          error: 'Wallet not connected. Please connect your wallet first.',
-        };
-      }
-
-      const auctionAddr = auctionAddress as Address;
-
       try {
-        const auctionState = await getAuctionState(auctionAddr, publicClient);
-        if (auctionState.status !== 'claimable') {
-          return {
-            error: `Cannot claim: auction is '${auctionState.status}', not 'claimable'.`,
-          };
-        }
-
-        const bids = await getUserBids(
-          auctionAddr,
-          userAddress,
-          publicClient,
-          auctionState.startBlock,
-        );
-
-        if (bids.length === 0) {
-          return {error: 'No bids found for this auction.'};
-        }
-
-        const bidIds = bids.map(b => b.id);
-        const hash = await exitAndClaimBatch(
-          walletClient,
-          publicClient,
-          auctionAddr,
-          bidIds,
-          userAddress,
-        );
-        await publicClient.waitForTransactionReceipt({hash});
-
-        await queryClient.invalidateQueries();
-        return {success: true, txHash: hash, bidsProcessed: bids.length};
+        const result = await claimTokensMutation.mutateAsync(auctionAddress);
+        return {
+          success: true,
+          txHash: result.txHash,
+          bidsProcessed: result.bidsProcessed,
+        };
       } catch (err: unknown) {
         const msg = err instanceof Error ? err.message : 'Transaction failed';
         return {error: msg};
       }
     },
-    [publicClient, walletClient, userAddress, queryClient],
+    [claimTokensMutation],
   );
 
   const getBalances = useCallback(
@@ -583,6 +521,149 @@ export function useAgentTools() {
     [publicClient, userAddress, resolveSwapContext, needsErc20Approval],
   );
 
+  const previewSwapExactOutput = useCallback(
+    async (
+      tokenAddress: string,
+      receiveAmount: string,
+      buyToken: 'token' | 'quote',
+      quoteTokenSymbol: string = 'USDC',
+    ) => {
+      if (!publicClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+
+      try {
+        // We still resolve the same swap context to get pool info, directions, etc.
+        // We pass "1" as a dummy sellAmount since we only need the context, not amountIn.
+        const ctx = await resolveSwapContext(
+          tokenAddress,
+          '1',
+          buyToken,
+          quoteTokenSymbol,
+        );
+
+        const amountOut = parseUnits(receiveAmount, ctx.tokenOutData.decimals);
+
+        // Get user balances
+        const [balanceIn, balanceOut] = await Promise.all([
+          publicClient.readContract({
+            address: ctx.tokenIn,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+          publicClient.readContract({
+            address: ctx.tokenOut,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+        ]);
+
+        // Quote exact output — get the required input amount
+        let quotedAmountIn: bigint;
+
+        if (ctx.isDirect) {
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactOutputSingle',
+            args: [
+              {
+                poolKey: ctx.poolKey,
+                zeroForOne: ctx.zeroForOne,
+                exactAmount: amountOut,
+                hookData: '0x' as Hex,
+              },
+            ],
+          });
+          quotedAmountIn = quoteResult.result[0];
+        } else {
+          const multiHopPath = buildMultiHopPath({
+            poolKey: ctx.poolKey,
+            quoteToken: ctx.quoteToken,
+            tokenAddr: ctx.tokenAddr,
+            sellingToken: ctx.sellingToken,
+            exactInput: false,
+          });
+          if (!multiHopPath) throw new Error('Failed to build multi-hop path');
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactOutput',
+            args: [
+              {
+                exactCurrency: multiHopPath.currencyIn,
+                path: multiHopPath.path,
+                exactAmount: amountOut,
+              },
+            ],
+          });
+          quotedAmountIn = quoteResult.result[0];
+        }
+
+        // Check if approval is needed
+        const approvalNeeded = await needsErc20Approval(
+          ctx.tokenIn,
+          quotedAmountIn,
+        );
+
+        // Slippage on input side: maxAmountIn = quotedAmountIn + slippage
+        const maxAmountIn =
+          quotedAmountIn + (quotedAmountIn * DEFAULT_SLIPPAGE_BPS) / 10000n;
+
+        const balanceInFormatted = formatUnits(
+          balanceIn,
+          ctx.tokenInData.decimals,
+        );
+        const balanceOutFormatted = formatUnits(
+          balanceOut,
+          ctx.tokenOutData.decimals,
+        );
+        const quotedInFormatted = formatUnits(
+          quotedAmountIn,
+          ctx.tokenInData.decimals,
+        );
+        const maxInFormatted = formatUnits(
+          maxAmountIn,
+          ctx.tokenInData.decimals,
+        );
+
+        return {
+          success: true,
+          exactOutput: true,
+          selling: `~${Number(quotedInFormatted).toFixed(6)} ${ctx.tokenInData.symbol}`,
+          receiving: `${receiveAmount} ${ctx.tokenOutData.symbol}`,
+          maximumSold: `${Number(maxInFormatted).toFixed(6)} ${ctx.tokenInData.symbol}`,
+          slippage: '1%',
+          route: ctx.isDirect
+            ? `${ctx.tokenInData.symbol} -> ${ctx.tokenOutData.symbol}`
+            : `${ctx.tokenInData.symbol} -> USDC -> ${ctx.tokenOutData.symbol}`,
+          balanceBefore: {
+            [ctx.tokenInData.symbol]:
+              `${Number(balanceInFormatted).toFixed(6)}`,
+            [ctx.tokenOutData.symbol]:
+              `${Number(balanceOutFormatted).toFixed(6)}`,
+          },
+          balanceAfter: {
+            [ctx.tokenInData.symbol]:
+              `${Number(Number(balanceInFormatted) - Number(quotedInFormatted)).toFixed(6)}`,
+            [ctx.tokenOutData.symbol]:
+              `${Number(Number(balanceOutFormatted) + Number(receiveAmount)).toFixed(6)}`,
+          },
+          needsApproval: approvalNeeded,
+          approvalToken: approvalNeeded ? ctx.tokenInData.symbol : null,
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Preview failed';
+        return {error: msg};
+      }
+    },
+    [publicClient, userAddress, resolveSwapContext, needsErc20Approval],
+  );
+
   const approveIfNeeded = useCallback(
     async (
       tokenAddress: string,
@@ -645,7 +726,7 @@ export function useAgentTools() {
     ],
   );
 
-  const executeSwap = useCallback(
+  const executeSwapExactInput = useCallback(
     async (
       tokenAddress: string,
       sellAmount: string,
@@ -812,12 +893,392 @@ export function useAgentTools() {
     ],
   );
 
+  const executeSwapExactOutput = useCallback(
+    async (
+      tokenAddress: string,
+      receiveAmount: string,
+      buyToken: 'token' | 'quote',
+      quoteTokenSymbol: string = 'USDC',
+    ) => {
+      if (!publicClient || !walletClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+
+      try {
+        const ctx = await resolveSwapContext(
+          tokenAddress,
+          '1',
+          buyToken,
+          quoteTokenSymbol,
+        );
+
+        const amountOut = parseUnits(receiveAmount, ctx.tokenOutData.decimals);
+
+        // Get balances before swap
+        const [balanceInBefore, balanceOutBefore] = await Promise.all([
+          publicClient.readContract({
+            address: ctx.tokenIn,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+          publicClient.readContract({
+            address: ctx.tokenOut,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+        ]);
+
+        // Get fresh quote for max amount in
+        let quotedAmountIn: bigint;
+
+        if (ctx.isDirect) {
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactOutputSingle',
+            args: [
+              {
+                poolKey: ctx.poolKey,
+                zeroForOne: ctx.zeroForOne,
+                exactAmount: amountOut,
+                hookData: '0x' as Hex,
+              },
+            ],
+          });
+          quotedAmountIn = quoteResult.result[0];
+        } else {
+          const multiHopPath = buildMultiHopPath({
+            poolKey: ctx.poolKey,
+            quoteToken: ctx.quoteToken,
+            tokenAddr: ctx.tokenAddr,
+            sellingToken: ctx.sellingToken,
+            exactInput: false,
+          });
+          if (!multiHopPath) throw new Error('Failed to build multi-hop path');
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactOutput',
+            args: [
+              {
+                exactCurrency: multiHopPath.currencyIn,
+                path: multiHopPath.path,
+                exactAmount: amountOut,
+              },
+            ],
+          });
+          quotedAmountIn = quoteResult.result[0];
+        }
+
+        const maxAmountIn =
+          quotedAmountIn + (quotedAmountIn * DEFAULT_SLIPPAGE_BPS) / 10000n;
+
+        const deadline = BigInt(
+          Math.floor(Date.now() / 1000) + DEFAULT_DEADLINE_MINUTES * 60,
+        );
+
+        // Execute swap — single-hop or multi-hop exact output
+        let receipt;
+
+        if (ctx.isDirect) {
+          receipt = await swapExactOutSingle(
+            ctx.poolKey,
+            amountOut,
+            maxAmountIn,
+            ctx.zeroForOne,
+            deadline,
+          );
+        } else {
+          receipt = await swapExactOut(
+            ctx.poolKey,
+            ctx.quoteToken,
+            ctx.tokenAddr,
+            amountOut,
+            maxAmountIn,
+            ctx.sellingToken,
+            deadline,
+          );
+        }
+
+        if (receipt.status !== 'success') {
+          return {error: 'Swap transaction reverted'};
+        }
+
+        // Get balances after swap
+        const [balanceInAfter, balanceOutAfter] = await Promise.all([
+          publicClient.readContract({
+            address: ctx.tokenIn,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+          publicClient.readContract({
+            address: ctx.tokenOut,
+            abi: erc20Abi,
+            functionName: 'balanceOf',
+            args: [userAddress],
+          }),
+        ]);
+
+        await queryClient.invalidateQueries();
+
+        return {
+          success: true,
+          txHash: receipt.transactionHash,
+          sold: `${formatUnits(balanceInBefore - balanceInAfter, ctx.tokenInData.decimals)} ${ctx.tokenInData.symbol}`,
+          received: `${formatUnits(balanceOutAfter - balanceOutBefore, ctx.tokenOutData.decimals)} ${ctx.tokenOutData.symbol}`,
+          balanceBefore: {
+            [ctx.tokenInData.symbol]: formatUnits(
+              balanceInBefore,
+              ctx.tokenInData.decimals,
+            ),
+            [ctx.tokenOutData.symbol]: formatUnits(
+              balanceOutBefore,
+              ctx.tokenOutData.decimals,
+            ),
+          },
+          balanceAfter: {
+            [ctx.tokenInData.symbol]: formatUnits(
+              balanceInAfter,
+              ctx.tokenInData.decimals,
+            ),
+            [ctx.tokenOutData.symbol]: formatUnits(
+              balanceOutAfter,
+              ctx.tokenOutData.decimals,
+            ),
+          },
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Swap failed';
+        return {error: msg};
+      }
+    },
+    [
+      publicClient,
+      walletClient,
+      userAddress,
+      swapExactOutSingle,
+      swapExactOut,
+      queryClient,
+      resolveSwapContext,
+    ],
+  );
+
+  // ── ENS tools ──────────────────────────────────────────────────────────────
+
+  const ENS_REGISTRY = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e' as const;
+  const ensRegistryResolverAbi = [
+    {
+      name: 'resolver',
+      type: 'function',
+      stateMutability: 'view',
+      inputs: [{name: 'node', type: 'bytes32'}],
+      outputs: [{name: '', type: 'address'}],
+    },
+  ] as const;
+  const reverseResolverNameAbi = [
+    {
+      name: 'name',
+      type: 'function',
+      stateMutability: 'view',
+      inputs: [{name: 'node', type: 'bytes32'}],
+      outputs: [{name: '', type: 'string'}],
+    },
+  ] as const;
+
+  const getMyEnsName = useCallback(async () => {
+    if (!publicClient || !userAddress) {
+      return {error: 'Wallet not connected.'};
+    }
+    try {
+      const addr = userAddress.toLowerCase().slice(2);
+      const reverseNode = namehash(`${addr}.addr.reverse`);
+      const resolver = await publicClient.readContract({
+        address: ENS_REGISTRY,
+        abi: ensRegistryResolverAbi,
+        functionName: 'resolver',
+        args: [reverseNode],
+      });
+      if (
+        !resolver ||
+        resolver === '0x0000000000000000000000000000000000000000'
+      ) {
+        return {
+          success: true,
+          address: userAddress,
+          ensName: null,
+          message: 'No primary ENS name set for this address.',
+        };
+      }
+      const name = await publicClient.readContract({
+        address: resolver,
+        abi: reverseResolverNameAbi,
+        functionName: 'name',
+        args: [reverseNode],
+      });
+      return {
+        success: true,
+        address: userAddress,
+        ensName: name || null,
+        message: name
+          ? `Your primary ENS name is ${name}`
+          : 'No primary ENS name set for this address.',
+      };
+    } catch (err: unknown) {
+      return {
+        error:
+          err instanceof Error ? err.message : 'Failed to look up ENS name',
+      };
+    }
+  }, [publicClient, userAddress]);
+
+  const checkEnsName = useCallback(
+    async (name: string) => {
+      if (!publicClient || !userAddress)
+        return {error: 'Wallet not connected.'};
+      try {
+        if (name.length < ENS_MIN_NAME_LENGTH)
+          return {
+            error: `Name must be at least ${ENS_MIN_NAME_LENGTH} characters.`,
+          };
+
+        const registrar = getRegistrarAddress(publicClient.chain?.id ?? 1);
+        const available = await publicClient.readContract({
+          address: registrar,
+          abi: ensRegistrarControllerAbi,
+          functionName: 'available',
+          args: [name],
+        });
+
+        let rentPrice: string | null = null;
+        if (available) {
+          const price = await publicClient.readContract({
+            address: registrar,
+            abi: ensRegistrarControllerAbi,
+            functionName: 'rentPrice',
+            args: [name, BigInt(ENS_DEFAULT_DURATION)],
+          });
+          rentPrice = formatUnits(price.base + price.premium, 18);
+        }
+
+        let isOwnedByUser = false;
+        if (!available) {
+          try {
+            const ownerAbi = [
+              {
+                name: 'owner',
+                type: 'function',
+                stateMutability: 'view',
+                inputs: [{name: 'node', type: 'bytes32'}],
+                outputs: [{name: '', type: 'address'}],
+              },
+            ] as const;
+            const ownerAddr = await publicClient.readContract({
+              address: ENS_REGISTRY,
+              abi: ownerAbi,
+              functionName: 'owner',
+              args: [namehash(`${name}.eth`)],
+            });
+            isOwnedByUser =
+              ownerAddr.toLowerCase() === userAddress.toLowerCase();
+          } catch {
+            /* ignore */
+          }
+        }
+
+        return {
+          success: true,
+          name: `${name}.eth`,
+          isAvailable: available,
+          isOwnedByUser,
+          rentPriceEth: rentPrice,
+          message: available
+            ? `${name}.eth is available! (~${Number(rentPrice).toFixed(4)} ETH/year)`
+            : isOwnedByUser
+              ? `${name}.eth is already registered by you.`
+              : `${name}.eth is taken by someone else.`,
+        };
+      } catch (err: unknown) {
+        return {error: err instanceof Error ? err.message : 'Check failed'};
+      }
+    },
+    [publicClient, userAddress],
+  );
+
+  const commitEnsName = useCallback(
+    async (name: string) => {
+      try {
+        const result = await commitEnsMutation.mutateAsync(name);
+        return {
+          success: true,
+          txHash: result.txHash,
+          name: `${name}.eth`,
+          message: `Commitment submitted for ${name}.eth! You must wait ~60 seconds before registering. Tell me when you're ready, or just wait a minute and ask me to register it.`,
+        };
+      } catch (err: unknown) {
+        return {error: err instanceof Error ? err.message : 'Commit failed'};
+      }
+    },
+    [commitEnsMutation],
+  );
+
+  const registerEnsName = useCallback(
+    async (name: string) => {
+      try {
+        const result = await registerEnsMutation.mutateAsync(name);
+        return {
+          success: true,
+          txHash: result.txHash,
+          name: `${name}.eth`,
+          message: `${name}.eth is now registered and set as your primary name!`,
+        };
+      } catch (err: unknown) {
+        return {
+          error: err instanceof Error ? err.message : 'Registration failed',
+        };
+      }
+    },
+    [registerEnsMutation],
+  );
+
+  const setPrimaryEnsName = useCallback(
+    async (name: string) => {
+      try {
+        const hash = await setPrimaryEnsMutation.mutateAsync(name);
+        const fullName = name.endsWith('.eth') ? name : `${name}.eth`;
+        return {
+          success: true,
+          txHash: hash,
+          name: fullName,
+          message: `Primary name updated to ${fullName}!`,
+        };
+      } catch (err: unknown) {
+        return {
+          error:
+            err instanceof Error ? err.message : 'Failed to set primary name',
+        };
+      }
+    },
+    [setPrimaryEnsMutation],
+  );
+
   return {
     placeBid,
     claimTokens,
     getBalances,
     previewSwap,
     approveIfNeeded,
-    executeSwap,
+    executeSwapExactInput,
+    getMyEnsName,
+    checkEnsName,
+    commitEnsName,
+    registerEnsName,
+    setPrimaryEnsName,
+    previewSwapExactOutput,
+    executeSwapExactOutput,
   };
 }
