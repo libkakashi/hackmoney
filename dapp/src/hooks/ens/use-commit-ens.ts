@@ -1,7 +1,12 @@
 'use client';
 
 import {useMutation} from '@tanstack/react-query';
-import {usePublicClient, useChainId, useConnection, useWriteContract} from 'wagmi';
+import {
+  usePublicClient,
+  useChainId,
+  useConnection,
+  useWriteContract,
+} from 'wagmi';
 import {
   ensRegistrarControllerAbi,
   ENS_DEFAULT_DURATION,
