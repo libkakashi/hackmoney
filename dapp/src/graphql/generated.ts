@@ -1100,6 +1100,44 @@ export type GetTokenHoldersByVolumeQuery = {
   }>;
 };
 
+export type FilterTokensQueryVariables = Exact<{
+  limit: Scalars['Int']['input'];
+  offset: Scalars['Int']['input'];
+  where?: InputMaybe<LaunchpadTokenLaunchedBoolExp>;
+  order_by?: InputMaybe<
+    Array<LaunchpadTokenLaunchedOrderBy> | LaunchpadTokenLaunchedOrderBy
+  >;
+}>;
+
+export type FilterTokensQuery = {
+  __typename: 'query_root';
+  Launchpad_TokenLaunched: Array<{
+    __typename: 'Launchpad_TokenLaunched';
+    id: string;
+    address: string;
+    strategy: string;
+    auction: string;
+    creator: string;
+    name: string;
+    symbol: string;
+    description: string;
+    website?: string | null;
+    twitterUrl?: string | null;
+    discordUrl?: string | null;
+    telegramUrl?: string | null;
+    ensName?: string | null;
+    image: string;
+    auctionStartBlock: any;
+    auctionEndBlock: any;
+    auctionClaimBlock: any;
+    poolMigrationBlock: any;
+    salt: string;
+    createdAt: number;
+    createdAtBlock: any;
+    txHash: string;
+  }>;
+};
+
 export type GetTokenByAddressQueryVariables = Exact<{
   token: Scalars['String']['input'];
 }>;
@@ -1203,6 +1241,44 @@ export const GetTokenHoldersByVolumeDocument = gql`
     }
   }
 `;
+export const FilterTokensDocument = gql`
+  query FilterTokens(
+    $limit: Int!
+    $offset: Int!
+    $where: Launchpad_TokenLaunched_bool_exp
+    $order_by: [Launchpad_TokenLaunched_order_by!]
+  ) {
+    Launchpad_TokenLaunched(
+      limit: $limit
+      offset: $offset
+      where: $where
+      order_by: $order_by
+    ) {
+      id
+      address
+      strategy
+      auction
+      creator
+      name
+      symbol
+      description
+      website
+      twitterUrl
+      discordUrl
+      telegramUrl
+      ensName
+      image
+      auctionStartBlock
+      auctionEndBlock
+      auctionClaimBlock
+      poolMigrationBlock
+      salt
+      createdAt
+      createdAtBlock
+      txHash
+    }
+  }
+`;
 export const GetTokenByAddressDocument = gql`
   query GetTokenByAddress($token: String!) {
     Launchpad_TokenLaunched(where: {address: {_eq: $token}}) {
@@ -1301,6 +1377,24 @@ export function getSdk(
             signal,
           }),
         'GetTokenHoldersByVolume',
+        'query',
+        variables,
+      );
+    },
+    FilterTokens(
+      variables: FilterTokensQueryVariables,
+      requestHeaders?: GraphQLClientRequestHeaders,
+      signal?: RequestInit['signal'],
+    ): Promise<FilterTokensQuery> {
+      return withWrapper(
+        wrappedRequestHeaders =>
+          client.request<FilterTokensQuery>({
+            document: FilterTokensDocument,
+            variables,
+            requestHeaders: {...requestHeaders, ...wrappedRequestHeaders},
+            signal,
+          }),
+        'FilterTokens',
         'query',
         variables,
       );

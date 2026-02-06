@@ -171,11 +171,14 @@ function ToolResultCard({result}: {result: unknown}) {
       'success' in (result as Record<string, unknown>)
     ) {
       const r = result as {success: boolean; txHash?: string};
-      return (
-        <div className="text-green ">
-          {r.txHash ? `tx confirmed: ${r.txHash.slice(0, 10)}...` : 'done'}
-        </div>
-      );
+      if (r.txHash) {
+        return (
+          <div className="text-green ">
+            tx confirmed: {r.txHash.slice(0, 10)}...
+          </div>
+        );
+      }
+      return null;
     }
     return null;
   }

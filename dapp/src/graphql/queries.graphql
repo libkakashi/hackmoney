@@ -65,6 +65,43 @@ query GetTokenHoldersByVolume($token: String!, $limit: Int!, $offset: Int!) {
   }
 }
 
+query FilterTokens(
+  $limit: Int!
+  $offset: Int!
+  $where: Launchpad_TokenLaunched_bool_exp
+  $order_by: [Launchpad_TokenLaunched_order_by!]
+) {
+  Launchpad_TokenLaunched(
+    limit: $limit
+    offset: $offset
+    where: $where
+    order_by: $order_by
+  ) {
+    id
+    address
+    strategy
+    auction
+    creator
+    name
+    symbol
+    description
+    website
+    twitterUrl
+    discordUrl
+    telegramUrl
+    ensName
+    image
+    auctionStartBlock
+    auctionEndBlock
+    auctionClaimBlock
+    poolMigrationBlock
+    salt
+    createdAt
+    createdAtBlock
+    txHash
+  }
+}
+
 query GetTokenByAddress($token: String!) {
   Launchpad_TokenLaunched(where: {address: {_eq: $token}}) {
     id

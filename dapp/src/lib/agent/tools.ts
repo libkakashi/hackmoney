@@ -2,6 +2,10 @@ import type {Address} from 'viem';
 import {tool} from 'ai';
 import {z} from 'zod';
 import {graphqlClient} from '~/graphql/client';
+import type {
+  LaunchpadTokenLaunchedBoolExp,
+  LaunchpadTokenLaunchedOrderBy,
+} from '~/graphql/generated';
 import {launchpadLensAbi} from '~/abi/launchpad-lens';
 import {env} from '~/lib/env';
 import {publicClient} from '~/lib/wagmi-config';
@@ -47,72 +51,336 @@ function resolveCoinId(query: string): string {
   return COIN_ALIASES[q] ?? q;
 }
 
+/**
+ * Build a Hasura `where` clause from the agent's filter parameters.
+ * Phase filtering uses block-number comparisons against the current block.
+ */
+function buildTokenWhere(
+  params: {
+    search?: string;
+    phase?:
+      | 'upcoming'
+      | 'live'
+      | 'ended'
+      | 'claimable'
+      | 'not_trading'
+      | 'trading';
+    creator?: string;
+    createdAfter?: number;
+    createdBefore?: number;
+  },
+  currentBlock: number,
+): LaunchpadTokenLaunchedBoolExp {
+  const conditions: LaunchpadTokenLaunchedBoolExp[] = [];
+
+  if (params.search) {
+    const pattern = `%${params.search}%`;
+    conditions.push({
+      _or: [
+        {name: {_ilike: pattern}},
+        {symbol: {_ilike: pattern}},
+        {description: {_ilike: pattern}},
+      ],
+    });
+  }
+
+  if (params.creator) {
+    conditions.push({creator: {_eq: params.creator.toLowerCase()}});
+  }
+
+  if (params.createdAfter) {
+    conditions.push({createdAt: {_gte: params.createdAfter}});
+  }
+  if (params.createdBefore) {
+    conditions.push({createdAt: {_lte: params.createdBefore}});
+  }
+
+  // Phase filtering via block-number ranges
+  const block = String(currentBlock);
+  if (params.phase === 'upcoming') {
+    conditions.push({auctionStartBlock: {_gt: block}});
+  } else if (params.phase === 'live') {
+    conditions.push({
+      auctionStartBlock: {_lte: block},
+      auctionEndBlock: {_gt: block},
+    });
+  } else if (params.phase === 'ended') {
+    conditions.push({
+      auctionEndBlock: {_lte: block},
+      auctionClaimBlock: {_gt: block},
+    });
+  } else if (params.phase === 'claimable') {
+    conditions.push({
+      auctionClaimBlock: {_lte: block},
+      poolMigrationBlock: {_gt: block},
+    });
+  } else if (params.phase === 'not_trading') {
+    // Auction finished (endBlock passed) but not yet migrated to pool
+    conditions.push({
+      auctionEndBlock: {_lte: block},
+      poolMigrationBlock: {_gt: block},
+    });
+  } else if (params.phase === 'trading') {
+    conditions.push({poolMigrationBlock: {_lte: block}});
+  }
+
+  return conditions.length > 0 ? {_and: conditions} : {};
+}
+
+/** Map user-friendly sort keys to Hasura order_by objects. */
+function buildTokenOrderBy(sortBy?: string): LaunchpadTokenLaunchedOrderBy[] {
+  switch (sortBy) {
+    case 'newest':
+      return [{createdAt: 'desc'}];
+    case 'oldest':
+      return [{createdAt: 'asc'}];
+    case 'name_asc':
+      return [{name: 'asc'}];
+    case 'name_desc':
+      return [{name: 'desc'}];
+    case 'symbol_asc':
+      return [{symbol: 'asc'}];
+    case 'symbol_desc':
+      return [{symbol: 'desc'}];
+    case 'auction_start_soonest':
+      return [{auctionStartBlock: 'asc'}];
+    case 'auction_end_soonest':
+      return [{auctionEndBlock: 'asc'}];
+    default:
+      return [{createdAt: 'desc'}];
+  }
+}
+
+/** Fetch full details for a single token (shared by getTokenDetails and getTokenDetailsBatch). */
+async function fetchTokenDetails(address: string) {
+  const [data, currentBlock] = await Promise.all([
+    graphqlClient.GetTokenByAddress({
+      token: address.toLowerCase(),
+    }),
+    getCurrentBlock(),
+  ]);
+
+  const t = data.Launchpad_TokenLaunched[0];
+  if (!t) return {error: 'Token not found', address};
+
+  const phase = getPhase(
+    currentBlock,
+    Number(t.auctionStartBlock),
+    Number(t.auctionEndBlock),
+    Number(t.auctionClaimBlock),
+    Number(t.poolMigrationBlock),
+  );
+
+  const auctionAddr = t.auction as Address;
+  const strategyAddr = t.strategy as Address;
+  const tokenAddr = t.address as Address;
+
+  const [auctionState, strategyState] = await Promise.all([
+    getAuctionStateForAgent(auctionAddr),
+    getStrategyStateForAgent(strategyAddr),
+  ]);
+
+  let quoteCurrency: {symbol: string; decimals: number} | null = null;
+  if (strategyState?.currency) {
+    try {
+      const quoteData = await publicClient.readContract({
+        address: env.launchpadLensAddr,
+        abi: launchpadLensAbi,
+        functionName: 'getTokenData',
+        args: [strategyState.currency],
+      });
+      quoteCurrency = {
+        symbol: quoteData.symbol,
+        decimals: quoteData.decimals,
+      };
+    } catch {
+      /* ignore */
+    }
+  }
+
+  let poolPriceData = null;
+  if (strategyState?.isMigrated) {
+    poolPriceData = await getPoolPriceForAgent(strategyState, tokenAddr);
+  }
+
+  let blocksUntilNextPhase: number | null = null;
+  let nextPhaseLabel: string | null = null;
+  if (phase === 'upcoming') {
+    blocksUntilNextPhase = Number(t.auctionStartBlock) - currentBlock;
+    nextPhaseLabel = 'auction starts';
+  } else if (phase === 'live') {
+    blocksUntilNextPhase = Number(t.auctionEndBlock) - currentBlock;
+    nextPhaseLabel = 'auction ends';
+  } else if (phase === 'ended') {
+    blocksUntilNextPhase = Number(t.auctionClaimBlock) - currentBlock;
+    nextPhaseLabel = 'claiming opens';
+  } else if (phase === 'claimable') {
+    blocksUntilNextPhase = Number(t.poolMigrationBlock) - currentBlock;
+    nextPhaseLabel = 'pool migration';
+  }
+
+  return {
+    address: t.address,
+    name: t.name,
+    symbol: t.symbol,
+    description: t.description,
+    image: t.image,
+    creator: t.creator,
+    website: t.website,
+    twitterUrl: t.twitterUrl,
+    discordUrl: t.discordUrl,
+    telegramUrl: t.telegramUrl,
+    currentBlock,
+    phase,
+    blocksUntilNextPhase,
+    nextPhaseLabel,
+    auctionAddress: t.auction,
+    strategyAddress: t.strategy,
+    quoteCurrency,
+    auctionStartBlock: Number(t.auctionStartBlock),
+    auctionEndBlock: Number(t.auctionEndBlock),
+    auctionClaimBlock: Number(t.auctionClaimBlock),
+    poolMigrationBlock: Number(t.poolMigrationBlock),
+    auction: auctionState
+      ? {
+          status: auctionState.status,
+          clearingPriceUsd: auctionState.clearingPriceUsd,
+          floorPriceUsd: auctionState.floorPriceUsd,
+          currencyRaised: auctionState.currencyRaised,
+          totalBidAmount: auctionState.totalBidAmount,
+          totalSupply: auctionState.totalSupply,
+          progress: auctionState.progress,
+        }
+      : null,
+    strategy: strategyState
+      ? {
+          isMigrated: strategyState.isMigrated,
+          migrationBlock: strategyState.migrationBlock,
+        }
+      : null,
+    pool: poolPriceData
+      ? {
+          priceUsd: poolPriceData.priceUsd,
+          marketCap: poolPriceData.marketCap,
+          totalSupply: poolPriceData.totalSupply,
+          quoteSymbol: poolPriceData.quoteSymbol,
+        }
+      : null,
+  };
+}
+
 /** Server-side tools — have execute handlers that run on the server */
 export const serverTools = {
-  searchTokens: tool({
-    description:
-      'Search for tokens by name or symbol. Returns a list of matching tokens with their current phase.',
+  discoverTokens: tool({
+    description: `Search, filter, and sort tokens on the platform. This is the primary tool for finding tokens.
+
+Examples of what users might ask:
+- "show me tokens" → no filters
+- "find tokens with dog in the name" → search: "dog"
+- "which tokens are currently in auction?" → phase: "live"
+- "tokens launching soon" → phase: "upcoming"
+- "tokens I can trade right now" → phase: "trading"
+- "tokens where I can claim" → phase: "claimable"
+- "tokens created by 0xabc..." → creator: "0xabc..."
+- "newest tokens" → sortBy: "newest"
+- "tokens created in the last week" → createdAfter: (unix timestamp 7 days ago)
+- "show me live auctions sorted by name" → phase: "live", sortBy: "name_asc"
+- "tokens done with auction but not trading yet" → phase: "not_trading"`,
     inputSchema: z.object({
-      query: z
+      search: z
         .string()
-        .describe('Search query to match against token name or symbol'),
-      limit: z.number().optional().default(5).describe('Max number of results'),
-    }),
-    execute: async ({query, limit}) => {
-      const [data, currentBlock] = await Promise.all([
-        graphqlClient.GetTokens({limit: 50, offset: 0}),
-        getCurrentBlock(),
-      ]);
-
-      const tokens = data.Launchpad_TokenLaunched;
-      const q = query.toLowerCase();
-      return tokens
-        .filter(
-          t =>
-            t.name.toLowerCase().includes(q) ||
-            t.symbol.toLowerCase().includes(q),
-        )
-        .slice(0, limit)
-        .map(t => ({
-          address: t.address,
-          name: t.name,
-          symbol: t.symbol,
-          description: t.description,
-          image: t.image,
-          phase: getPhase(
-            currentBlock,
-            Number(t.auctionStartBlock),
-            Number(t.auctionEndBlock),
-            Number(t.auctionClaimBlock),
-            Number(t.poolMigrationBlock),
-          ),
-        }));
-    },
-  }),
-
-  listTokens: tool({
-    description:
-      'List recently launched tokens with their current auction phase. Use this when users want to browse or discover tokens.',
-    inputSchema: z.object({
+        .optional()
+        .describe(
+          'Search query — matches against token name, symbol, and description (case-insensitive)',
+        ),
+      phase: z
+        .enum([
+          'upcoming',
+          'live',
+          'ended',
+          'claimable',
+          'not_trading',
+          'trading',
+        ])
+        .optional()
+        .describe(
+          'Filter by auction phase. upcoming = not started, live = bidding active, ended = bidding closed, claimable = claim tokens, not_trading = auction finished but not migrated to DEX yet (ended + claimable), trading = on DEX',
+        ),
+      creator: z
+        .string()
+        .optional()
+        .describe('Filter by creator wallet address (0x...)'),
+      createdAfter: z
+        .number()
+        .optional()
+        .describe(
+          'Only tokens created after this unix timestamp (seconds). E.g. for "last 7 days" use now minus 604800',
+        ),
+      createdBefore: z
+        .number()
+        .optional()
+        .describe(
+          'Only tokens created before this unix timestamp (seconds). Use with createdAfter for date ranges',
+        ),
+      sortBy: z
+        .enum([
+          'newest',
+          'oldest',
+          'name_asc',
+          'name_desc',
+          'symbol_asc',
+          'symbol_desc',
+          'auction_start_soonest',
+          'auction_end_soonest',
+        ])
+        .optional()
+        .default('newest')
+        .describe('How to sort results. Default: newest first'),
       limit: z
         .number()
         .optional()
-        .default(6)
-        .describe('Number of tokens to return'),
-      offset: z.number().optional().default(0).describe('Pagination offset'),
+        .default(10)
+        .describe('Max number of results to return (default 10, max 50)'),
+      offset: z
+        .number()
+        .optional()
+        .default(0)
+        .describe('Pagination offset for fetching more results'),
     }),
-    execute: async ({limit, offset}) => {
-      const [data, currentBlock] = await Promise.all([
-        graphqlClient.GetTokens({limit, offset}),
-        getCurrentBlock(),
-      ]);
+    execute: async ({
+      search,
+      phase,
+      creator,
+      createdAfter,
+      createdBefore,
+      sortBy,
+      limit,
+      offset,
+    }) => {
+      const effectiveLimit = Math.min(limit, 50);
+      const currentBlock = await getCurrentBlock();
 
-      return data.Launchpad_TokenLaunched.map(t => ({
+      const where = buildTokenWhere(
+        {search, phase, creator, createdAfter, createdBefore},
+        currentBlock,
+      );
+      const order_by = buildTokenOrderBy(sortBy);
+
+      const data = await graphqlClient.FilterTokens({
+        limit: effectiveLimit,
+        offset,
+        where,
+        order_by,
+      });
+
+      const tokens = data.Launchpad_TokenLaunched.map(t => ({
         address: t.address,
         name: t.name,
         symbol: t.symbol,
         description: t.description,
         image: t.image,
+        creator: t.creator,
+        createdAt: t.createdAt,
         phase: getPhase(
           currentBlock,
           Number(t.auctionStartBlock),
@@ -121,130 +389,53 @@ export const serverTools = {
           Number(t.poolMigrationBlock),
         ),
       }));
+
+      return {
+        tokens,
+        count: tokens.length,
+        offset,
+        hasMore: tokens.length === effectiveLimit,
+        currentBlock,
+        filters: {
+          ...(search && {search}),
+          ...(phase && {phase}),
+          ...(creator && {creator}),
+          ...(createdAfter && {createdAfter}),
+          ...(createdBefore && {createdBefore}),
+          sortBy: sortBy ?? 'newest',
+        },
+      };
     },
   }),
 
   getTokenDetails: tool({
     description:
-      'Get full details for a specific token including on-chain auction state, strategy/pool status, current price, and market cap. This is the most comprehensive token info tool.',
+      'Get full details for a specific token including on-chain auction state, strategy/pool status, current price, and market cap. Use getTokenDetailsBatch when you need details for multiple tokens.',
     inputSchema: z.object({
       address: z.string().describe('The token contract address (0x...)'),
     }),
     execute: async ({address}) => {
-      const [data, currentBlock] = await Promise.all([
-        graphqlClient.GetTokenByAddress({
-          token: address.toLowerCase(),
-        }),
-        getCurrentBlock(),
-      ]);
+      return fetchTokenDetails(address);
+    },
+  }),
 
-      const t = data.Launchpad_TokenLaunched[0];
-      if (!t) return {error: 'Token not found'};
-
-      const phase = getPhase(
-        currentBlock,
-        Number(t.auctionStartBlock),
-        Number(t.auctionEndBlock),
-        Number(t.auctionClaimBlock),
-        Number(t.poolMigrationBlock),
+  getTokenDetailsBatch: tool({
+    description:
+      'Get full details for multiple tokens in one call. Returns an array of token details (same data as getTokenDetails). Use this instead of calling getTokenDetails multiple times — much faster.',
+    inputSchema: z.object({
+      addresses: z
+        .array(z.string())
+        .min(1)
+        .max(20)
+        .describe(
+          'Array of token contract addresses (0x...). Max 20 at a time.',
+        ),
+    }),
+    execute: async ({addresses}) => {
+      const results = await Promise.all(
+        addresses.map(addr => fetchTokenDetails(addr)),
       );
-
-      const auctionAddr = t.auction as Address;
-      const strategyAddr = t.strategy as Address;
-      const tokenAddr = t.address as Address;
-
-      const [auctionState, strategyState] = await Promise.all([
-        getAuctionStateForAgent(auctionAddr),
-        getStrategyStateForAgent(strategyAddr),
-      ]);
-
-      let quoteCurrency: {symbol: string; decimals: number} | null = null;
-      if (strategyState?.currency) {
-        try {
-          const quoteData = await publicClient.readContract({
-            address: env.launchpadLensAddr,
-            abi: launchpadLensAbi,
-            functionName: 'getTokenData',
-            args: [strategyState.currency],
-          });
-          quoteCurrency = {
-            symbol: quoteData.symbol,
-            decimals: quoteData.decimals,
-          };
-        } catch {
-          /* ignore */
-        }
-      }
-
-      let poolPriceData = null;
-      if (strategyState?.isMigrated) {
-        poolPriceData = await getPoolPriceForAgent(strategyState, tokenAddr);
-      }
-
-      let blocksUntilNextPhase: number | null = null;
-      let nextPhaseLabel: string | null = null;
-      if (phase === 'upcoming') {
-        blocksUntilNextPhase = Number(t.auctionStartBlock) - currentBlock;
-        nextPhaseLabel = 'auction starts';
-      } else if (phase === 'live') {
-        blocksUntilNextPhase = Number(t.auctionEndBlock) - currentBlock;
-        nextPhaseLabel = 'auction ends';
-      } else if (phase === 'ended') {
-        blocksUntilNextPhase = Number(t.auctionClaimBlock) - currentBlock;
-        nextPhaseLabel = 'claiming opens';
-      } else if (phase === 'claimable') {
-        blocksUntilNextPhase = Number(t.poolMigrationBlock) - currentBlock;
-        nextPhaseLabel = 'pool migration';
-      }
-
-      return {
-        address: t.address,
-        name: t.name,
-        symbol: t.symbol,
-        description: t.description,
-        image: t.image,
-        creator: t.creator,
-        website: t.website,
-        twitterUrl: t.twitterUrl,
-        discordUrl: t.discordUrl,
-        telegramUrl: t.telegramUrl,
-        currentBlock,
-        phase,
-        blocksUntilNextPhase,
-        nextPhaseLabel,
-        auctionAddress: t.auction,
-        strategyAddress: t.strategy,
-        quoteCurrency,
-        auctionStartBlock: Number(t.auctionStartBlock),
-        auctionEndBlock: Number(t.auctionEndBlock),
-        auctionClaimBlock: Number(t.auctionClaimBlock),
-        poolMigrationBlock: Number(t.poolMigrationBlock),
-        auction: auctionState
-          ? {
-              status: auctionState.status,
-              clearingPriceUsd: auctionState.clearingPriceUsd,
-              floorPriceUsd: auctionState.floorPriceUsd,
-              currencyRaised: auctionState.currencyRaised,
-              totalBidAmount: auctionState.totalBidAmount,
-              totalSupply: auctionState.totalSupply,
-              progress: auctionState.progress,
-            }
-          : null,
-        strategy: strategyState
-          ? {
-              isMigrated: strategyState.isMigrated,
-              migrationBlock: strategyState.migrationBlock,
-            }
-          : null,
-        pool: poolPriceData
-          ? {
-              priceUsd: poolPriceData.priceUsd,
-              marketCap: poolPriceData.marketCap,
-              totalSupply: poolPriceData.totalSupply,
-              quoteSymbol: poolPriceData.quoteSymbol,
-            }
-          : null,
-      };
+      return results;
     },
   }),
 

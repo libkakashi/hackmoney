@@ -19,130 +19,36 @@ import {
 import {useQueryClient} from '@tanstack/react-query';
 import {PERMIT2_ADDRESS, usePermit2} from '~/hooks/use-permit2';
 import {useSwap} from '~/hooks/swap/use-swap';
-import {launchpadLensAbi} from '~/abi/launchpad-lens';
-import {quoterAbi} from '~/abi/quoter';
-import {env} from '~/lib/env';
 import {
-  QUOTE_TOKENS,
   USDC_ADDRESS,
   isDirectSwap,
   getQuoteTokenBySymbol,
   buildQuotePoolKey,
   type QuoteToken,
 } from '~/lib/pools';
-import type {PathKey} from '~/hooks/swap/use-quote';
-// CCA hooks (imperative versions for agent)
+import {
+  type PathKey,
+  buildMultiHopPath,
+  getQuoteExactInput,
+  getQuoteExactOutput,
+  getQuoteExactInputMultiHop,
+  getQuoteExactOutputMultiHop,
+} from '~/hooks/swap/use-quote';
 import {useSubmitBidImperative} from '~/hooks/cca/use-submit-bid-imperative';
 import {useClaimTokensImperative} from '~/hooks/cca/use-claim-tokens-imperative';
-// ENS hooks
 import {useCommitEns} from '~/hooks/ens/use-commit-ens';
 import {useRegisterEnsImperative} from '~/hooks/ens/use-register-ens-imperative';
 import {useSetPrimaryEns} from '~/hooks/ens/use-set-primary-ens';
+import {getRegistrarAddress} from '~/hooks/ens/utils';
+import {env} from '~/lib/env';
+import {launchpadLensAbi} from '~/abi/launchpad-lens';
 import {
   ensRegistrarControllerAbi,
   ENS_DEFAULT_DURATION,
   ENS_MIN_NAME_LENGTH,
 } from '~/abi/ens-registrar';
-import {getRegistrarAddress} from '~/hooks/ens/utils';
-
-const QUOTER_ADDRESS = '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203' as const;
 const DEFAULT_SLIPPAGE_BPS = 100n; // 1%
 const DEFAULT_DEADLINE_MINUTES = 20;
-
-/**
- * Build multi-hop path for quoting/swapping through USDC.
- *
- * For exactInput:  exactCurrency = sell token, path leads toward buy token.
- * For exactOutput: exactCurrency = buy token, path leads toward sell token (reversed).
- */
-function buildMultiHopPath({
-  poolKey,
-  quoteToken,
-  tokenAddr,
-  sellingToken,
-  exactInput = true,
-}: {
-  poolKey: {fee: number; tickSpacing: number; hooks: Address};
-  quoteToken: QuoteToken;
-  tokenAddr: Address;
-  sellingToken: boolean;
-  exactInput?: boolean;
-}): {currencyIn: Address; path: PathKey[]} | undefined {
-  if (!quoteToken.intermediatePool) return undefined;
-  const ip = quoteToken.intermediatePool;
-
-  const launchpadPool = {
-    fee: poolKey.fee,
-    tickSpacing: poolKey.tickSpacing,
-    hooks: poolKey.hooks,
-    hookData: '0x' as Hex,
-  };
-  const usdcQuotePool = {
-    fee: ip.fee,
-    tickSpacing: ip.tickSpacing,
-    hooks: ip.hooks,
-    hookData: '0x' as Hex,
-  };
-
-  if (exactInput) {
-    if (sellingToken) {
-      // token -> USDC -> quoteToken
-      return {
-        currencyIn: tokenAddr,
-        path: [
-          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
-          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
-        ],
-      };
-    } else {
-      // quoteToken -> USDC -> token
-      return {
-        currencyIn: quoteToken.address,
-        path: [
-          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
-          {...launchpadPool, intermediateCurrency: tokenAddr},
-        ],
-      };
-    }
-  } else {
-    // exactOutput: exactCurrency = buy token.
-    // The V4 quoter iterates the path array in REVERSE for exact output.
-    // At each reverse step it pairs the current outputCurrency with
-    // pathKey.intermediateCurrency to form the pool, then sets
-    // outputCurrency = pathKey.intermediateCurrency for the next hop.
-    //
-    // So the path keeps the same pool order as exact input, but each
-    // hop's intermediateCurrency points backward (to the previous
-    // currency in the forward direction) instead of forward.
-    if (sellingToken) {
-      // Forward: token -[launchpad]-> USDC -[intermediate]-> quoteToken
-      // exactCurrency = quoteToken (buy token)
-      // Reverse iteration:
-      //   path[1] + quoteToken → pool(quoteToken, USDC) via usdcQuotePool ✓
-      //   path[0] + USDC       → pool(USDC, token)      via launchpadPool ✓
-      return {
-        currencyIn: quoteToken.address,
-        path: [
-          {...launchpadPool, intermediateCurrency: tokenAddr},
-          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
-        ],
-      };
-    } else {
-      // Forward: quoteToken -[intermediate]-> USDC -[launchpad]-> token
-      // exactCurrency = tokenAddr (buy token)
-      // Reverse iteration:
-      //   path[1] + token → pool(token, USDC)      via launchpadPool ✓
-      //   path[0] + USDC  → pool(USDC, quoteToken) via usdcQuotePool ✓
-      return {
-        currencyIn: tokenAddr,
-        path: [
-          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
-          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
-        ],
-      };
-    }
-  }
-}
 
 export function useAgentTools() {
   const publicClient = usePublicClient();
@@ -431,36 +337,19 @@ export function useAgentTools() {
         let quotedAmountOut: bigint;
 
         if (ctx.isDirect) {
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactInputSingle',
-            args: [
-              {
-                poolKey: ctx.poolKey,
-                zeroForOne: ctx.zeroForOne,
-                exactAmount: ctx.amountIn,
-                hookData: '0x' as Hex,
-              },
-            ],
+          quotedAmountOut = await getQuoteExactInput(publicClient, {
+            poolKey: ctx.poolKey,
+            zeroForOne: ctx.zeroForOne,
+            exactAmount: ctx.amountIn,
+            hookData: '0x' as Hex,
           });
-          quotedAmountOut = quoteResult.result[0];
         } else {
           if (!ctx.multiHopPath)
             throw new Error('Failed to build multi-hop path');
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactInput',
-            args: [
-              {
-                exactCurrency: ctx.multiHopPath.currencyIn,
-                path: ctx.multiHopPath.path,
-                exactAmount: ctx.amountIn,
-              },
-            ],
+          quotedAmountOut = await getQuoteExactInputMultiHop(publicClient, {
+            ...ctx.multiHopPath,
+            exactAmount: ctx.amountIn,
           });
-          quotedAmountOut = quoteResult.result[0];
         }
 
         // Check if approval is needed (ERC20 -> Permit2)
@@ -566,20 +455,12 @@ export function useAgentTools() {
         let quotedAmountIn: bigint;
 
         if (ctx.isDirect) {
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactOutputSingle',
-            args: [
-              {
-                poolKey: ctx.poolKey,
-                zeroForOne: ctx.zeroForOne,
-                exactAmount: amountOut,
-                hookData: '0x' as Hex,
-              },
-            ],
+          quotedAmountIn = await getQuoteExactOutput(publicClient, {
+            poolKey: ctx.poolKey,
+            zeroForOne: ctx.zeroForOne,
+            exactAmount: amountOut,
+            hookData: '0x' as Hex,
           });
-          quotedAmountIn = quoteResult.result[0];
         } else {
           const multiHopPath = buildMultiHopPath({
             poolKey: ctx.poolKey,
@@ -589,19 +470,10 @@ export function useAgentTools() {
             exactInput: false,
           });
           if (!multiHopPath) throw new Error('Failed to build multi-hop path');
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactOutput',
-            args: [
-              {
-                exactCurrency: multiHopPath.currencyIn,
-                path: multiHopPath.path,
-                exactAmount: amountOut,
-              },
-            ],
+          quotedAmountIn = await getQuoteExactOutputMultiHop(publicClient, {
+            ...multiHopPath,
+            exactAmount: amountOut,
           });
-          quotedAmountIn = quoteResult.result[0];
         }
 
         // Check if approval is needed
@@ -767,36 +639,19 @@ export function useAgentTools() {
         let quotedAmountOut: bigint;
 
         if (ctx.isDirect) {
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactInputSingle',
-            args: [
-              {
-                poolKey: ctx.poolKey,
-                zeroForOne: ctx.zeroForOne,
-                exactAmount: ctx.amountIn,
-                hookData: '0x' as Hex,
-              },
-            ],
+          quotedAmountOut = await getQuoteExactInput(publicClient, {
+            poolKey: ctx.poolKey,
+            zeroForOne: ctx.zeroForOne,
+            exactAmount: ctx.amountIn,
+            hookData: '0x' as Hex,
           });
-          quotedAmountOut = quoteResult.result[0];
         } else {
           if (!ctx.multiHopPath)
             throw new Error('Failed to build multi-hop path');
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactInput',
-            args: [
-              {
-                exactCurrency: ctx.multiHopPath.currencyIn,
-                path: ctx.multiHopPath.path,
-                exactAmount: ctx.amountIn,
-              },
-            ],
+          quotedAmountOut = await getQuoteExactInputMultiHop(publicClient, {
+            ...ctx.multiHopPath,
+            exactAmount: ctx.amountIn,
           });
-          quotedAmountOut = quoteResult.result[0];
         }
 
         const amountOutMin =
@@ -936,20 +791,12 @@ export function useAgentTools() {
         let quotedAmountIn: bigint;
 
         if (ctx.isDirect) {
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactOutputSingle',
-            args: [
-              {
-                poolKey: ctx.poolKey,
-                zeroForOne: ctx.zeroForOne,
-                exactAmount: amountOut,
-                hookData: '0x' as Hex,
-              },
-            ],
+          quotedAmountIn = await getQuoteExactOutput(publicClient, {
+            poolKey: ctx.poolKey,
+            zeroForOne: ctx.zeroForOne,
+            exactAmount: amountOut,
+            hookData: '0x' as Hex,
           });
-          quotedAmountIn = quoteResult.result[0];
         } else {
           const multiHopPath = buildMultiHopPath({
             poolKey: ctx.poolKey,
@@ -959,19 +806,10 @@ export function useAgentTools() {
             exactInput: false,
           });
           if (!multiHopPath) throw new Error('Failed to build multi-hop path');
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactOutput',
-            args: [
-              {
-                exactCurrency: multiHopPath.currencyIn,
-                path: multiHopPath.path,
-                exactAmount: amountOut,
-              },
-            ],
+          quotedAmountIn = await getQuoteExactOutputMultiHop(publicClient, {
+            ...multiHopPath,
+            exactAmount: amountOut,
           });
-          quotedAmountIn = quoteResult.result[0];
         }
 
         const maxAmountIn =
@@ -1216,35 +1054,19 @@ export function useAgentTools() {
         let quotedAmountOut: bigint;
 
         if (route.type === 'single') {
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactInputSingle',
-            args: [
-              {
-                poolKey: route.poolKey,
-                zeroForOne: route.zeroForOne,
-                exactAmount: amountIn,
-                hookData: '0x' as Hex,
-              },
-            ],
+          quotedAmountOut = await getQuoteExactInput(publicClient, {
+            poolKey: route.poolKey,
+            zeroForOne: route.zeroForOne,
+            exactAmount: amountIn,
+            hookData: '0x' as Hex,
           });
-          quotedAmountOut = quoteResult.result[0];
         } else {
           const multiHop = buildGeneralMultiHopPath(route.from, route.to, true);
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactInput',
-            args: [
-              {
-                exactCurrency: multiHop.currencyIn,
-                path: multiHop.path,
-                exactAmount: amountIn,
-              },
-            ],
+          quotedAmountOut = await getQuoteExactInputMultiHop(publicClient, {
+            exactCurrency: multiHop.currencyIn,
+            path: multiHop.path,
+            exactAmount: amountIn,
           });
-          quotedAmountOut = quoteResult.result[0];
         }
 
         const approvalNeeded = isNativeToken(route.from.address)
@@ -1315,39 +1137,23 @@ export function useAgentTools() {
         let quotedAmountIn: bigint;
 
         if (route.type === 'single') {
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactOutputSingle',
-            args: [
-              {
-                poolKey: route.poolKey,
-                zeroForOne: route.zeroForOne,
-                exactAmount: amountOut,
-                hookData: '0x' as Hex,
-              },
-            ],
+          quotedAmountIn = await getQuoteExactOutput(publicClient, {
+            poolKey: route.poolKey,
+            zeroForOne: route.zeroForOne,
+            exactAmount: amountOut,
+            hookData: '0x' as Hex,
           });
-          quotedAmountIn = quoteResult.result[0];
         } else {
           const multiHop = buildGeneralMultiHopPath(
             route.from,
             route.to,
             false,
           );
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactOutput',
-            args: [
-              {
-                exactCurrency: multiHop.currencyIn,
-                path: multiHop.path,
-                exactAmount: amountOut,
-              },
-            ],
+          quotedAmountIn = await getQuoteExactOutputMultiHop(publicClient, {
+            exactCurrency: multiHop.currencyIn,
+            path: multiHop.path,
+            exactAmount: amountOut,
           });
-          quotedAmountIn = quoteResult.result[0];
         }
 
         const approvalNeeded = isNativeToken(route.from.address)
@@ -1474,35 +1280,19 @@ export function useAgentTools() {
         let quotedAmountOut: bigint;
 
         if (route.type === 'single') {
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactInputSingle',
-            args: [
-              {
-                poolKey: route.poolKey,
-                zeroForOne: route.zeroForOne,
-                exactAmount: amountIn,
-                hookData: '0x' as Hex,
-              },
-            ],
+          quotedAmountOut = await getQuoteExactInput(publicClient, {
+            poolKey: route.poolKey,
+            zeroForOne: route.zeroForOne,
+            exactAmount: amountIn,
+            hookData: '0x' as Hex,
           });
-          quotedAmountOut = quoteResult.result[0];
         } else {
           const multiHop = buildGeneralMultiHopPath(route.from, route.to, true);
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactInput',
-            args: [
-              {
-                exactCurrency: multiHop.currencyIn,
-                path: multiHop.path,
-                exactAmount: amountIn,
-              },
-            ],
+          quotedAmountOut = await getQuoteExactInputMultiHop(publicClient, {
+            exactCurrency: multiHop.currencyIn,
+            path: multiHop.path,
+            exactAmount: amountIn,
           });
-          quotedAmountOut = quoteResult.result[0];
         }
 
         const amountOutMin =
@@ -1600,39 +1390,23 @@ export function useAgentTools() {
         let quotedAmountIn: bigint;
 
         if (route.type === 'single') {
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactOutputSingle',
-            args: [
-              {
-                poolKey: route.poolKey,
-                zeroForOne: route.zeroForOne,
-                exactAmount: amountOut,
-                hookData: '0x' as Hex,
-              },
-            ],
+          quotedAmountIn = await getQuoteExactOutput(publicClient, {
+            poolKey: route.poolKey,
+            zeroForOne: route.zeroForOne,
+            exactAmount: amountOut,
+            hookData: '0x' as Hex,
           });
-          quotedAmountIn = quoteResult.result[0];
         } else {
           const multiHop = buildGeneralMultiHopPath(
             route.from,
             route.to,
             false,
           );
-          const quoteResult = await publicClient.simulateContract({
-            address: QUOTER_ADDRESS,
-            abi: quoterAbi,
-            functionName: 'quoteExactOutput',
-            args: [
-              {
-                exactCurrency: multiHop.currencyIn,
-                path: multiHop.path,
-                exactAmount: amountOut,
-              },
-            ],
+          quotedAmountIn = await getQuoteExactOutputMultiHop(publicClient, {
+            exactCurrency: multiHop.currencyIn,
+            path: multiHop.path,
+            exactAmount: amountOut,
           });
-          quotedAmountIn = quoteResult.result[0];
         }
 
         const maxAmountIn =

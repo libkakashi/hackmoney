@@ -1,11 +1,11 @@
 import {useMemo} from 'react';
-import type {Address, Hex} from 'viem';
+import type {Address, Hex, PublicClient} from 'viem';
 import {useSimulateContract} from 'wagmi';
 import {quoterAbi} from '~/abi/quoter';
 import {PoolKey} from '~/lib/utils';
 import {type QuoteToken, USDC_ADDRESS, isDirectSwap} from '~/lib/pools';
 
-const quoterAddr = '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203' as const;
+export const quoterAddr = '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203' as const;
 
 export type QuoteExactSingleParams = {
   poolKey: PoolKey;
@@ -185,17 +185,144 @@ export const useQuote = (
   return exactInput ? inputResult : outputResult;
 };
 
+// ── Imperative quote functions (for use outside React render) ────────────────
+
+export async function getQuoteExactInput(
+  publicClient: PublicClient,
+  params: QuoteExactSingleParams,
+): Promise<bigint> {
+  const result = await publicClient.simulateContract({
+    address: quoterAddr,
+    abi: quoterAbi,
+    functionName: 'quoteExactInputSingle',
+    args: [params],
+  });
+  return result.result[0];
+}
+
+export async function getQuoteExactOutput(
+  publicClient: PublicClient,
+  params: QuoteExactSingleParams,
+): Promise<bigint> {
+  const result = await publicClient.simulateContract({
+    address: quoterAddr,
+    abi: quoterAbi,
+    functionName: 'quoteExactOutputSingle',
+    args: [params],
+  });
+  return result.result[0];
+}
+
+export async function getQuoteExactInputMultiHop(
+  publicClient: PublicClient,
+  params: QuoteExactParams,
+): Promise<bigint> {
+  const result = await publicClient.simulateContract({
+    address: quoterAddr,
+    abi: quoterAbi,
+    functionName: 'quoteExactInput',
+    args: [params],
+  });
+  return result.result[0];
+}
+
+export async function getQuoteExactOutputMultiHop(
+  publicClient: PublicClient,
+  params: QuoteExactParams,
+): Promise<bigint> {
+  const result = await publicClient.simulateContract({
+    address: quoterAddr,
+    abi: quoterAbi,
+    functionName: 'quoteExactOutput',
+    args: [params],
+  });
+  return result.result[0];
+}
+
+// ── Multi-hop path building ─────────────────────────────────────────────────
+
 /**
- * Builds multi-hop quoter params for routing through USDC.
+ * Build multi-hop path for quoting/swapping through USDC.
  *
- * The swap card has two sides: the launchpad token side and the quote token side.
- * The launchpad pool is always token/USDC. For non-USDC quote tokens, we add
- * a second hop through a USDC/quoteToken pool.
- *
- * quoteExactInput:  exactCurrency = token being sold.
- *   Path hops lead toward the token being bought.
- * quoteExactOutput: exactCurrency = token being bought.
- *   Path hops lead toward the token being sold.
+ * For exactInput:  exactCurrency = sell token, path leads toward buy token.
+ * For exactOutput: exactCurrency = buy token, path leads toward sell token (reversed).
+ */
+export function buildMultiHopPath({
+  poolKey,
+  quoteToken,
+  tokenAddr,
+  sellingToken,
+  exactInput = true,
+}: {
+  poolKey: {fee: number; tickSpacing: number; hooks: Address};
+  quoteToken: QuoteToken;
+  tokenAddr: Address;
+  sellingToken: boolean;
+  exactInput?: boolean;
+}): {exactCurrency: Address; path: PathKey[]} | undefined {
+  if (!quoteToken.intermediatePool) return undefined;
+  const ip = quoteToken.intermediatePool;
+
+  const launchpadPool = {
+    fee: poolKey.fee,
+    tickSpacing: poolKey.tickSpacing,
+    hooks: poolKey.hooks,
+    hookData: '0x' as Hex,
+  };
+  const usdcQuotePool = {
+    fee: ip.fee,
+    tickSpacing: ip.tickSpacing,
+    hooks: ip.hooks,
+    hookData: '0x' as Hex,
+  };
+
+  if (exactInput) {
+    if (sellingToken) {
+      // token -> USDC -> quoteToken
+      return {
+        exactCurrency: tokenAddr,
+        path: [
+          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
+          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+        ],
+      };
+    } else {
+      // quoteToken -> USDC -> token
+      return {
+        exactCurrency: quoteToken.address,
+        path: [
+          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
+          {...launchpadPool, intermediateCurrency: tokenAddr},
+        ],
+      };
+    }
+  } else {
+    // exactOutput: exactCurrency = buy token.
+    // The V4 quoter iterates the path in REVERSE for exact output.
+    if (sellingToken) {
+      // Forward: token -[launchpad]-> USDC -[intermediate]-> quoteToken
+      return {
+        exactCurrency: quoteToken.address,
+        path: [
+          {...launchpadPool, intermediateCurrency: tokenAddr},
+          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
+        ],
+      };
+    } else {
+      // Forward: quoteToken -[intermediate]-> USDC -[launchpad]-> token
+      return {
+        exactCurrency: tokenAddr,
+        path: [
+          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
+          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
+        ],
+      };
+    }
+  }
+}
+
+/**
+ * Builds multi-hop quoter params (with exactAmount) for the useMultiHopQuote hook.
  */
 function buildMultiHopQuoteParams({
   poolKey,
@@ -212,78 +339,15 @@ function buildMultiHopQuoteParams({
   sellingToken: boolean;
   exactInput: boolean;
 }): QuoteExactParams | undefined {
-  if (!quoteToken.intermediatePool) return undefined;
-  const ip = quoteToken.intermediatePool;
-
-  // Hop descriptors (pool params only - intermediateCurrency set per-direction)
-  const launchpadPool = {
-    fee: poolKey.fee,
-    tickSpacing: poolKey.tickSpacing,
-    hooks: poolKey.hooks,
-    hookData: '0x' as Hex,
-  };
-  const usdcQuotePool = {
-    fee: ip.fee,
-    tickSpacing: ip.tickSpacing,
-    hooks: ip.hooks,
-    hookData: '0x' as Hex,
-  };
-
-  if (exactInput) {
-    // quoteExactInput: exactCurrency = sell token, path leads to buy token
-    if (sellingToken) {
-      // Selling launchpad token, buying quoteToken
-      // token -[launchpad pool]-> USDC -[intermediate pool]-> quoteToken
-      return {
-        exactCurrency: tokenAddr,
-        path: [
-          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
-          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
-        ],
-        exactAmount,
-      };
-    } else {
-      // Selling quoteToken, buying launchpad token
-      // quoteToken -[intermediate pool]-> USDC -[launchpad pool]-> token
-      return {
-        exactCurrency: quoteToken.address,
-        path: [
-          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
-          {...launchpadPool, intermediateCurrency: tokenAddr},
-        ],
-        exactAmount,
-      };
-    }
-  } else {
-    // quoteExactOutput: exactCurrency = buy token.
-    // The V4 quoter iterates the path in REVERSE for exact output.
-    // Each hop's intermediateCurrency points backward (to the previous
-    // currency in the forward direction) so that the quoter can pair it
-    // with the current outputCurrency to form the correct pool.
-    if (sellingToken) {
-      // Forward: token -[launchpad]-> USDC -[intermediate]-> quoteToken
-      // Reverse: path[1]+quoteToken → pool(quoteToken,USDC), path[0]+USDC → pool(USDC,token)
-      return {
-        exactCurrency: quoteToken.address,
-        path: [
-          {...launchpadPool, intermediateCurrency: tokenAddr},
-          {...usdcQuotePool, intermediateCurrency: USDC_ADDRESS},
-        ],
-        exactAmount,
-      };
-    } else {
-      // Forward: quoteToken -[intermediate]-> USDC -[launchpad]-> token
-      // Reverse: path[1]+token → pool(token,USDC), path[0]+USDC → pool(USDC,quoteToken)
-      return {
-        exactCurrency: tokenAddr,
-        path: [
-          {...usdcQuotePool, intermediateCurrency: quoteToken.address},
-          {...launchpadPool, intermediateCurrency: USDC_ADDRESS},
-        ],
-        exactAmount,
-      };
-    }
-  }
+  const result = buildMultiHopPath({
+    poolKey,
+    quoteToken,
+    tokenAddr,
+    sellingToken,
+    exactInput,
+  });
+  if (!result) return undefined;
+  return {...result, exactAmount};
 }
 
 /**
