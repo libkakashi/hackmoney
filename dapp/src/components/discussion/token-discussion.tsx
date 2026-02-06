@@ -1,12 +1,15 @@
 'use client';
 
-import {useState, useEffect, useRef} from 'react';
+import {useState, useEffect, useRef, useCallback} from 'react';
 import {
   ChevronUp,
   ChevronDown,
   MessageSquare,
   Share2,
   MoreHorizontal,
+  CheckCircle,
+  XCircle,
+  Clock,
 } from 'lucide-react';
 import {useConnectModal} from '@rainbow-me/rainbowkit';
 import {useConnection} from 'wagmi';
@@ -16,6 +19,13 @@ import {Loader} from '~/components/ui/loader';
 import {cn} from '~/lib/utils';
 import {trpc} from '~/lib/trpc';
 import {useSiweAuth} from '~/hooks/use-siwe-auth';
+import {useQueryClient} from '@tanstack/react-query';
+import {useEnsReverseName} from '~/hooks/ens/use-ens-reverse-name';
+import {useCheckEnsAvailability} from '~/hooks/ens/use-check-ens-availability';
+import {useRegisterEns} from '~/hooks/ens/use-register-ens';
+import {useSetPrimaryEns} from '~/hooks/ens/use-set-primary-ens';
+import {useDebounce} from '~/hooks/utils/use-debounce';
+import {ENS_MIN_NAME_LENGTH} from '~/abi/ens-registrar';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -122,6 +132,7 @@ function CommentNode({
   const [showReplyBox, setShowReplyBox] = useState(false);
   const [replyText, setReplyText] = useState('');
   const replyTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const {data: ensName} = useEnsReverseName(comment.authorAddress);
 
   useEffect(() => {
     if (showReplyBox) {
@@ -179,8 +190,8 @@ function CommentNode({
             >
               [{collapsed ? '+' : '\u2212'}]
             </button>
-            <span className="text-green">
-              {truncateAddress(comment.authorAddress)}
+            <span className="text-green" title={comment.authorAddress}>
+              {ensName ?? truncateAddress(comment.authorAddress)}
             </span>
             <span className="text-dim">&middot;</span>
             <span className="text-dim">
@@ -294,11 +305,28 @@ function ComposeBox({
   const {openConnectModal} = useConnectModal();
   const {signIn, isSigning, needsSignIn} = useSiweAuth();
 
+  const queryClient = useQueryClient();
+  const {data: ensName, isLoading: ensLoading} = useEnsReverseName(
+    session?.address,
+  );
+
+  const [showEnsFlow, setShowEnsFlow] = useState(false);
+
   const handlePost = () => {
     if (!newComment.trim()) return;
     onPost(newComment.trim());
     setNewComment('');
   };
+
+  const handleEnsComplete = useCallback(() => {
+    // Invalidate the cached reverse lookup so the new name shows up
+    void queryClient.invalidateQueries({
+      queryKey: ['ens', 'reverse', session?.address?.toLowerCase()],
+    });
+    setShowEnsFlow(false);
+  }, [queryClient, session?.address]);
+
+  const hasEns = !!ensName;
 
   return (
     <div className="space-y-2">
@@ -314,9 +342,35 @@ function ComposeBox({
           <>
             <span className="text-xs text-dim">
               posting as{' '}
-              <span className="text-foreground">
-                {session?.address ? truncateAddress(session.address) : ''}
-              </span>
+              {ensLoading ? (
+                <Loader type="dots" className="text-[10px] inline" />
+              ) : hasEns ? (
+                <>
+                  <span className="text-green">{ensName}</span>
+                  {!showEnsFlow && (
+                    <button
+                      onClick={() => setShowEnsFlow(true)}
+                      className="text-cyan-500 hover:text-cyan-400 ml-1.5 transition-colors"
+                    >
+                      [edit]
+                    </button>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="text-foreground">
+                    {session?.address ? truncateAddress(session.address) : ''}
+                  </span>
+                  {!showEnsFlow && (
+                    <button
+                      onClick={() => setShowEnsFlow(true)}
+                      className="text-cyan-500 hover:text-cyan-400 ml-1.5 transition-colors"
+                    >
+                      [claim ens name]
+                    </button>
+                  )}
+                </>
+              )}
             </span>
             <Button
               size="xs"
@@ -353,6 +407,292 @@ function ComposeBox({
           </>
         ) : null}
       </div>
+
+      {/* Inline ENS editor / registration flow */}
+      {isAuthenticated && showEnsFlow && (
+        <InlineEnsEditor
+          currentEnsName={ensName ?? null}
+          onComplete={handleEnsComplete}
+          onCancel={() => setShowEnsFlow(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ── Inline ENS editor (switch primary name or buy new) ────────────────────────
+
+function InlineEnsEditor({
+  currentEnsName,
+  onComplete,
+  onCancel,
+}: {
+  currentEnsName: string | null;
+  onComplete: () => void;
+  onCancel: () => void;
+}) {
+  const [inputName, setInputName] = useState('');
+  const debouncedName = useDebounce(inputName, 500);
+
+  const {
+    isAvailable,
+    isOwnedByUser,
+    isCheckingAvailability,
+    rentPriceFormatted,
+    rentPrice,
+  } = useCheckEnsAvailability(debouncedName);
+
+  const {
+    registrationState,
+    timeUntilReveal,
+    canReveal,
+    commit,
+    register,
+    isPending: regPending,
+    isCommitting,
+    isRegistering,
+    error: regError,
+  } = useRegisterEns(debouncedName, rentPrice);
+
+  const setPrimary = useSetPrimaryEns();
+
+  const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '');
+    setInputName(sanitized);
+  };
+
+  const isRegistered = registrationState === 'complete';
+
+  // After registration completes, auto-close
+  useEffect(() => {
+    if (registrationState === 'complete') {
+      const timer = setTimeout(onComplete, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [registrationState, onComplete]);
+
+  // After setPrimary succeeds, close
+  useEffect(() => {
+    if (setPrimary.isSuccess) {
+      const timer = setTimeout(onComplete, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [setPrimary.isSuccess, onComplete]);
+
+  const handleSetPrimary = () => {
+    if (!debouncedName) return;
+    setPrimary.mutate(debouncedName);
+  };
+
+  const showStatus =
+    debouncedName &&
+    debouncedName.length >= ENS_MIN_NAME_LENGTH &&
+    !isCheckingAvailability;
+
+  // The name they typed is the one already set as primary
+  const isSameAsCurrent =
+    currentEnsName &&
+    debouncedName &&
+    `${debouncedName}.eth` === currentEnsName;
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${String(secs).padStart(2, '0')}`;
+  };
+
+  // Success states
+  if (isRegistered) {
+    return (
+      <div className="border border-green/30 bg-green/5 p-3 text-sm">
+        <div className="flex items-center gap-2 text-green">
+          <CheckCircle className="size-3.5" />
+          <span>{debouncedName}.eth registered!</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (setPrimary.isSuccess) {
+    return (
+      <div className="border border-green/30 bg-green/5 p-3 text-sm">
+        <div className="flex items-center gap-2 text-green">
+          <CheckCircle className="size-3.5" />
+          <span>switched to {debouncedName}.eth!</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border border-border p-3 space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-dim">
+          {currentEnsName
+            ? '// switch ens name or claim a new one'
+            : '// claim an ens name'}
+        </span>
+        <button
+          onClick={onCancel}
+          className="text-xs text-dim hover:text-foreground transition-colors"
+        >
+          [close]
+        </button>
+      </div>
+
+      {/* Name input */}
+      <div className="flex items-center border border-border bg-background">
+        <input
+          type="text"
+          placeholder="yourname"
+          value={inputName}
+          onChange={handleNameChange}
+          disabled={
+            setPrimary.isPending ||
+            registrationState === 'committing' ||
+            registrationState === 'waiting' ||
+            registrationState === 'ready' ||
+            registrationState === 'registering'
+          }
+          className="h-9 flex-1 bg-transparent px-3 text-sm outline-none placeholder:text-dim disabled:opacity-50"
+        />
+        <span className="text-dim pr-3 text-sm select-none">.eth</span>
+      </div>
+
+      {/* Status line */}
+      {debouncedName && (
+        <div className="flex items-center gap-2 text-xs">
+          {isCheckingAvailability ? (
+            <>
+              <Loader type="dots" className="text-[10px]" />
+              <span className="text-dim">checking...</span>
+            </>
+          ) : debouncedName.length < ENS_MIN_NAME_LENGTH ? (
+            <span className="text-dim">
+              minimum {ENS_MIN_NAME_LENGTH} characters
+            </span>
+          ) : isSameAsCurrent ? (
+            <span className="text-dim">already your primary name</span>
+          ) : showStatus && isOwnedByUser ? (
+            <span className="text-green">owned by you</span>
+          ) : showStatus && isAvailable ? (
+            <>
+              <CheckCircle className="size-3 text-green" />
+              <span className="text-green">available</span>
+              {rentPriceFormatted && (
+                <span className="text-dim tabular-nums">
+                  ~{Number(rentPriceFormatted).toFixed(4)} ETH/year
+                </span>
+              )}
+            </>
+          ) : showStatus && isAvailable === false ? (
+            <>
+              <XCircle className="size-3 text-red" />
+              <span className="text-red">taken by someone else</span>
+            </>
+          ) : null}
+        </div>
+      )}
+
+      {/* Action: set as primary (owned by user, not currently primary) */}
+      {showStatus &&
+        isOwnedByUser &&
+        !isSameAsCurrent &&
+        registrationState === 'idle' && (
+          <Button
+            onClick={handleSetPrimary}
+            disabled={setPrimary.isPending}
+            size="xs"
+            showPrefix
+          >
+            {setPrimary.isPending ? (
+              <>
+                <Loader type="dots" />
+                setting primary...
+              </>
+            ) : (
+              <>set {debouncedName}.eth as primary</>
+            )}
+          </Button>
+        )}
+
+      {/* Action: buy new name (available) */}
+      {showStatus && isAvailable && registrationState === 'idle' && (
+        <Button
+          onClick={commit}
+          disabled={
+            regPending ||
+            !rentPrice ||
+            !debouncedName ||
+            debouncedName.length < ENS_MIN_NAME_LENGTH
+          }
+          size="xs"
+          showPrefix
+        >
+          {isCommitting ? (
+            <>
+              <Loader type="dots" />
+              claiming...
+            </>
+          ) : (
+            <>claim {debouncedName}.eth</>
+          )}
+        </Button>
+      )}
+
+      {/* Registration steps (post-commit) */}
+      {registrationState !== 'idle' && (
+        <div className="space-y-2">
+          {registrationState === 'committing' && (
+            <div className="flex items-center gap-2 text-xs text-yellow">
+              <Loader type="dots" className="text-[10px]" />
+              submitting commitment... confirm in wallet
+            </div>
+          )}
+
+          {registrationState === 'waiting' && (
+            <div className="flex items-center gap-2 text-xs text-yellow">
+              <Clock className="size-3" />
+              waiting {formatTime(timeUntilReveal)} before registration to
+              prevent front-running...
+            </div>
+          )}
+
+          {registrationState === 'ready' && canReveal && (
+            <Button
+              onClick={register}
+              disabled={regPending}
+              size="xs"
+              showPrefix
+            >
+              {isRegistering ? (
+                <>
+                  <Loader type="dots" />
+                  registering...
+                </>
+              ) : (
+                <>register {debouncedName}.eth</>
+              )}
+            </Button>
+          )}
+
+          {registrationState === 'registering' && (
+            <div className="flex items-center gap-2 text-xs text-yellow">
+              <Loader type="dots" className="text-[10px]" />
+              registering {debouncedName}.eth... confirm in wallet
+            </div>
+          )}
+
+          {regError && (
+            <div className="text-xs text-red">{regError.message}</div>
+          )}
+        </div>
+      )}
+
+      {/* setPrimary error */}
+      {setPrimary.error && (
+        <div className="text-xs text-red">{setPrimary.error.message}</div>
+      )}
     </div>
   );
 }

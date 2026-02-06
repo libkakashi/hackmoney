@@ -102,6 +102,22 @@ export const ENS_PUBLIC_RESOLVER: Record<number, Address> = {
   11155111: '0xE99638b40E4Fff0129D56f03b55b6bbC4BBE49b5', // Sepolia
 };
 
+// Reverse Registrar addresses by chain ID (for setting primary name)
+export const ENS_REVERSE_REGISTRAR: Record<number, Address> = {
+  1: '0xa58E81fe9b61B5c3fE2AFD33CF304c454AbFc7Cb', // Mainnet
+  11155111: '0xA0a1AbcDAe1a2a4A2EF8e9113Ff0e02DD81DC0C6', // Sepolia
+};
+
+export const ensReverseRegistrarAbi = [
+  {
+    name: 'setName',
+    type: 'function',
+    stateMutability: 'nonpayable',
+    inputs: [{name: 'name', type: 'string'}],
+    outputs: [{name: '', type: 'bytes32'}],
+  },
+] as const;
+
 // Supported chain IDs for ENS
 export const ENS_SUPPORTED_CHAINS = [1, 11155111] as const;
 
