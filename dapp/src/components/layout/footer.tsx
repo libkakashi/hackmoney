@@ -9,7 +9,7 @@ export function Footer() {
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="inline-flex items-center gap-2 mb-4">
               <span className="text-green">~</span>
-              <span className="font-bold">timelock</span>
+              <span className="font-bold">nyx</span>
             </Link>
             <p className="text-dim text-sm">
               fair token launches with continuous clearing auctions
@@ -93,7 +93,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-dim">
-          <div>{new Date().getFullYear()} timelock</div>
+          <div>{new Date().getFullYear()} nyx</div>
           <div className="flex gap-6">
             <Link href="/terms" className="hover:text-foreground">
               terms

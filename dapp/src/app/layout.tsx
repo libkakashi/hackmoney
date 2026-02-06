@@ -7,6 +7,35 @@ import {FloatingAgent} from '~/components/agent/floating-agent';
 import {Footer} from '~/components/layout/footer';
 import './globals.css';
 
+// Server-side: stub localStorage/sessionStorage to prevent SSR errors
+if (typeof window === 'undefined') {
+  const noop = () => {};
+  const stub = () => null;
+  const storageStub = {
+    getItem: stub,
+    setItem: noop,
+    removeItem: noop,
+    clear: noop,
+    length: 0,
+    key: stub,
+  } as Storage;
+  if (
+    !globalThis.localStorage ||
+    typeof (globalThis.localStorage as Storage).getItem !== 'function'
+  ) {
+    (globalThis as typeof globalThis & { localStorage: Storage }).localStorage =
+      storageStub;
+  }
+  if (
+    !globalThis.sessionStorage ||
+    typeof (globalThis.sessionStorage as Storage).getItem !== 'function'
+  ) {
+    (globalThis as typeof globalThis & {
+      sessionStorage: Storage;
+    }).sessionStorage = storageStub;
+  }
+}
+
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains-mono',
@@ -18,7 +47,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'timelock',
+  title: 'nyx',
 };
 
 export default function RootLayout({

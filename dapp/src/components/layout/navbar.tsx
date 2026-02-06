@@ -26,7 +26,7 @@ export function Navbar() {
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
           <span className="text-green">~</span>
-          <span className="font-bold">timelock</span>
+          <span className="font-bold">nyx</span>
         </Link>
 
         {/* Desktop nav */}

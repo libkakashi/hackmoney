@@ -721,7 +721,7 @@ export function FloatingAgent() {
                 <div className="flex items-center gap-2">
                   <div className="crt-led" />
                   <span className=" text-dim uppercase tracking-widest">
-                    timelock agent v1.0
+                    nyx agent v1.0
                   </span>
                 </div>
                 <button

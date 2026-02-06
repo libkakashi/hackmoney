@@ -134,7 +134,7 @@ export default function DiscoverPage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="text-dim text-sm mb-2">
-                  ~/timelock <span className="text-green">$</span> ls tokens/
+                  ~/nyx <span className="text-green">$</span> ls tokens/
                 </div>
                 <h1 className="text-2xl font-bold">discover</h1>
               </div>
