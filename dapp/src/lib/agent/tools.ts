@@ -463,6 +463,83 @@ export const clientTools = {
     }),
   }),
 
+  // ── General swap tools (quote-to-quote, no launched token needed) ────────
+
+  previewGeneralSwap: tool({
+    description:
+      'Preview a swap between two well-known tokens (USDC, ETH, USDT, WBTC, DAI) — no launched token needed. Use this when both sides of the swap are standard tokens (e.g. "swap 1 ETH for USDC", "swap BTC for DAI"). Returns quote, balances, route, and whether approval is needed.',
+    inputSchema: z.object({
+      fromToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token to sell'),
+      toToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token to buy'),
+      sellAmount: z
+        .string()
+        .describe('Amount to sell (in human-readable units, e.g. "1.5")'),
+    }),
+  }),
+
+  approveGeneralSwap: tool({
+    description:
+      'Approve token spending for a general swap. Only call if previewGeneralSwap indicated approval is needed. Not needed for selling ETH.',
+    inputSchema: z.object({
+      fromToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token being sold (same as in preview)'),
+      sellAmount: z.string().describe('Amount to sell (same as in preview)'),
+    }),
+  }),
+
+  executeGeneralSwap: tool({
+    description:
+      'Execute a general swap after preview and approval. Only call AFTER previewGeneralSwap (and approveGeneralSwap if needed).',
+    inputSchema: z.object({
+      fromToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token to sell'),
+      toToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token to buy'),
+      sellAmount: z.string().describe('Amount to sell (same as in preview)'),
+    }),
+  }),
+
+  previewGeneralSwapExactOutput: tool({
+    description:
+      'Preview a general swap where the user specifies an exact output amount (e.g. "I want exactly 100 USDC"). Use when both sides are standard tokens and the desired receive amount is known.',
+    inputSchema: z.object({
+      fromToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token to sell'),
+      toToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token to receive'),
+      receiveAmount: z
+        .string()
+        .describe(
+          'Exact amount to receive (in human-readable units, e.g. "100")',
+        ),
+    }),
+  }),
+
+  executeGeneralSwapExactOutput: tool({
+    description:
+      'Execute a general exact-output swap after preview and approval. The user receives exactly the specified amount; the input may vary up to the max with slippage.',
+    inputSchema: z.object({
+      fromToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token to sell'),
+      toToken: z
+        .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
+        .describe('Token to receive'),
+      receiveAmount: z
+        .string()
+        .describe('Exact amount to receive (same as in preview)'),
+    }),
+  }),
+
   suggestReplies: tool({
     description:
       'Show 2-3 short clickable reply suggestions (max 4 words each) so the user can tap instead of typing. Use this whenever you ask the user a question or present a choice. Examples: after a swap preview use ["yes, do it", "no, cancel"]; after showing token info use ["bid on it", "show more"]; when asking which token use the token symbols as options. Each reply can be a plain string or an object with { text, timerSeconds } — use timerSeconds to show a countdown that disables the button until it expires (e.g. for the 60-second ENS commitment wait).',

@@ -383,6 +383,11 @@ export function FloatingAgent() {
     executeSwapExactInput,
     previewSwapExactOutput,
     executeSwapExactOutput,
+    previewGeneralSwap,
+    approveGeneralSwap,
+    executeGeneralSwap,
+    previewGeneralSwapExactOutput,
+    executeGeneralSwapExactOutput,
     getMyEnsName,
     checkEnsName,
     commitEnsName,
@@ -483,6 +488,50 @@ export function FloatingAgent() {
           input.receiveAmount,
           input.buyToken as 'token' | 'quote',
           input.quoteToken ?? 'USDC',
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'previewGeneralSwap') {
+        const result = await previewGeneralSwap(
+          input.fromToken,
+          input.toToken,
+          input.sellAmount,
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'approveGeneralSwap') {
+        const result = await approveGeneralSwap(
+          input.fromToken,
+          input.sellAmount,
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'executeGeneralSwap') {
+        const result = await executeGeneralSwap(
+          input.fromToken,
+          input.toToken,
+          input.sellAmount,
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'previewGeneralSwapExactOutput') {
+        const result = await previewGeneralSwapExactOutput(
+          input.fromToken,
+          input.toToken,
+          input.receiveAmount,
+        );
+        void addToolOutput({tool: toolName, toolCallId, output: result});
+        return;
+      }
+      if (toolName === 'executeGeneralSwapExactOutput') {
+        const result = await executeGeneralSwapExactOutput(
+          input.fromToken,
+          input.toToken,
+          input.receiveAmount,
         );
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;

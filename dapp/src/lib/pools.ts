@@ -82,5 +82,43 @@ export const QUOTE_TOKENS: QuoteToken[] = [
 export const getQuoteToken = (address: Address): QuoteToken | undefined =>
   QUOTE_TOKENS.find(t => t.address.toLowerCase() === address.toLowerCase());
 
+export const getQuoteTokenBySymbol = (symbol: string): QuoteToken => {
+  const qt = QUOTE_TOKENS.find(
+    t => t.symbol.toLowerCase() === symbol.toLowerCase(),
+  );
+  if (!qt) throw new Error(`Unknown quote token: ${symbol}`);
+  return qt;
+};
+
 export const isDirectSwap = (quoteToken: QuoteToken): boolean =>
   !quoteToken.intermediatePool;
+
+/**
+ * Build a Uniswap V4 PoolKey for a quote token's USDC-paired pool.
+ * Sorts currency0 < currency1 as required by V4.
+ */
+export function buildQuotePoolKey(quoteToken: QuoteToken): {
+  currency0: Address;
+  currency1: Address;
+  fee: number;
+  tickSpacing: number;
+  hooks: Address;
+} {
+  if (!quoteToken.intermediatePool) {
+    throw new Error(`${quoteToken.symbol} is USDC — no intermediate pool`);
+  }
+  const ip = quoteToken.intermediatePool;
+  const a = USDC_ADDRESS.toLowerCase();
+  const b = quoteToken.address.toLowerCase();
+  const [currency0, currency1] =
+    a < b
+      ? [USDC_ADDRESS, quoteToken.address]
+      : [quoteToken.address, USDC_ADDRESS];
+  return {
+    currency0,
+    currency1,
+    fee: ip.fee,
+    tickSpacing: ip.tickSpacing,
+    hooks: ip.hooks,
+  };
+}

@@ -815,11 +815,108 @@ export const useSwap = () => {
     ],
   );
 
+  /** Generic multi-hop exact input — takes raw currency + path, no launchpad context needed */
+  const swapExactInGeneric = useCallback(
+    async (
+      currencyIn: Address,
+      path: PathKey[],
+      amountIn: bigint,
+      minAmountOut: bigint,
+      deadline: bigint,
+    ) => {
+      if (!address) throw new Error('Not connected');
+      setIsPending(true);
+
+      try {
+        const native = isNativeCurrency(currencyIn);
+
+        let permitData: PermitData | undefined;
+        if (!native) {
+          await ensureErc20Approval(currencyIn, amountIn);
+          permitData = await getPermitSignatureIfNeeded(currencyIn, amountIn);
+        }
+
+        const {commands, inputs} = encodeSwapExactIn(
+          currencyIn,
+          path,
+          amountIn,
+          minAmountOut,
+          permitData,
+        );
+
+        const value = native ? amountIn : undefined;
+        await simulateSwap(commands, inputs, deadline, value);
+        return await executeSwap(commands, inputs, deadline, value);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [
+      address,
+      publicClient,
+      signPermitSingle,
+      needsErc20Approval,
+      needsPermit2Signature,
+    ],
+  );
+
+  /** Generic multi-hop exact output — takes raw currencies + path, no launchpad context needed */
+  const swapExactOutGeneric = useCallback(
+    async (
+      currencyOut: Address,
+      currencyIn: Address,
+      path: PathKey[],
+      amountOut: bigint,
+      maxAmountIn: bigint,
+      deadline: bigint,
+    ) => {
+      if (!address) throw new Error('Not connected');
+      setIsPending(true);
+
+      try {
+        const native = isNativeCurrency(currencyIn);
+
+        let permitData: PermitData | undefined;
+        if (!native) {
+          await ensureErc20Approval(currencyIn, maxAmountIn);
+          permitData = await getPermitSignatureIfNeeded(
+            currencyIn,
+            maxAmountIn,
+          );
+        }
+
+        const {commands, inputs} = encodeSwapExactOut(
+          currencyOut,
+          currencyIn,
+          path,
+          amountOut,
+          maxAmountIn,
+          permitData,
+        );
+
+        const value = native ? maxAmountIn : undefined;
+        await simulateSwap(commands, inputs, deadline, value);
+        return await executeSwap(commands, inputs, deadline, value);
+      } finally {
+        setIsPending(false);
+      }
+    },
+    [
+      address,
+      publicClient,
+      signPermitSingle,
+      needsErc20Approval,
+      needsPermit2Signature,
+    ],
+  );
+
   return {
     swapExactInSingle,
     swapExactOutSingle,
     swapExactIn,
     swapExactOut,
+    swapExactInGeneric,
+    swapExactOutGeneric,
     isPending,
   };
 };

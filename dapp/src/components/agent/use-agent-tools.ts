@@ -8,6 +8,7 @@ import {
   formatUnits,
   erc20Abi,
   namehash,
+  zeroAddress,
 } from 'viem';
 import {
   usePublicClient,
@@ -25,6 +26,8 @@ import {
   QUOTE_TOKENS,
   USDC_ADDRESS,
   isDirectSwap,
+  getQuoteTokenBySymbol,
+  buildQuotePoolKey,
   type QuoteToken,
 } from '~/lib/pools';
 import type {PathKey} from '~/hooks/swap/use-quote';
@@ -45,15 +48,6 @@ import {getRegistrarAddress} from '~/hooks/ens/utils';
 const QUOTER_ADDRESS = '0x52f0e24d1c21c8a0cb1e5a5dd6198556bd9e1203' as const;
 const DEFAULT_SLIPPAGE_BPS = 100n; // 1%
 const DEFAULT_DEADLINE_MINUTES = 20;
-
-/** Look up a QuoteToken by symbol */
-const getQuoteTokenBySymbol = (symbol: string): QuoteToken => {
-  const qt = QUOTE_TOKENS.find(
-    t => t.symbol.toLowerCase() === symbol.toLowerCase(),
-  );
-  if (!qt) throw new Error(`Unknown quote token: ${symbol}`);
-  return qt;
-};
 
 /**
  * Build multi-hop path for quoting/swapping through USDC.
@@ -157,8 +151,14 @@ export function useAgentTools() {
   const {mutateAsync: writeContractAsync} = useWriteContract();
   const queryClient = useQueryClient();
   const {needsErc20Approval} = usePermit2();
-  const {swapExactInSingle, swapExactIn, swapExactOutSingle, swapExactOut} =
-    useSwap();
+  const {
+    swapExactInSingle,
+    swapExactIn,
+    swapExactOutSingle,
+    swapExactOut,
+    swapExactInGeneric,
+    swapExactOutGeneric,
+  } = useSwap();
 
   // CCA hooks (imperative)
   const submitBidMutation = useSubmitBidImperative();
@@ -1068,6 +1068,653 @@ export function useAgentTools() {
     ],
   );
 
+  // ── General swap tools (quote-to-quote) ─────────────────────────────────────
+
+  const isNativeToken = (addr: Address) => addr.toLowerCase() === zeroAddress;
+
+  /** Get balance for a quote token, handling native ETH */
+  const getQuoteBalance = useCallback(
+    async (addr: Address): Promise<bigint> => {
+      if (!publicClient || !userAddress) return 0n;
+      if (isNativeToken(addr)) {
+        return publicClient.getBalance({address: userAddress});
+      }
+      return publicClient.readContract({
+        address: addr,
+        abi: erc20Abi,
+        functionName: 'balanceOf',
+        args: [userAddress],
+      });
+    },
+    [publicClient, userAddress],
+  );
+
+  /**
+   * Build quoting/swap path for a general quote-to-quote swap.
+   *
+   * - If one side is USDC: single-hop through the other token's USDC pool.
+   * - If neither is USDC: 2-hop through USDC (fromToken -> USDC -> toToken).
+   *
+   * Returns pool key + zeroForOne for single-hop, or path array for multi-hop.
+   */
+  const resolveGeneralSwapRoute = useCallback(
+    (fromSymbol: string, toSymbol: string) => {
+      const from = getQuoteTokenBySymbol(fromSymbol);
+      const to = getQuoteTokenBySymbol(toSymbol);
+
+      if (from.address.toLowerCase() === to.address.toLowerCase()) {
+        throw new Error('Cannot swap a token for itself');
+      }
+
+      const fromIsUsdc = !from.intermediatePool;
+      const toIsUsdc = !to.intermediatePool;
+
+      if (fromIsUsdc) {
+        // USDC -> otherToken: single-hop through otherToken's USDC pool
+        const poolKey = buildQuotePoolKey(to);
+        const zeroForOne =
+          poolKey.currency0.toLowerCase() === USDC_ADDRESS.toLowerCase();
+        return {
+          type: 'single' as const,
+          from,
+          to,
+          poolKey,
+          zeroForOne,
+        };
+      }
+
+      if (toIsUsdc) {
+        // otherToken -> USDC: single-hop through fromToken's USDC pool
+        const poolKey = buildQuotePoolKey(from);
+        const zeroForOne =
+          poolKey.currency0.toLowerCase() === from.address.toLowerCase();
+        return {
+          type: 'single' as const,
+          from,
+          to,
+          poolKey,
+          zeroForOne,
+        };
+      }
+
+      // Neither is USDC: 2-hop fromToken -> USDC -> toToken
+      const fromPool = from.intermediatePool!;
+      const toPool = to.intermediatePool!;
+      return {
+        type: 'multi' as const,
+        from,
+        to,
+        fromPool,
+        toPool,
+      };
+    },
+    [],
+  );
+
+  /** Build PathKey[] for multi-hop general swaps */
+  const buildGeneralMultiHopPath = (
+    from: QuoteToken,
+    to: QuoteToken,
+    exactInput: boolean,
+  ): {currencyIn: Address; currencyOut: Address; path: PathKey[]} => {
+    const fromPool = from.intermediatePool!;
+    const toPool = to.intermediatePool!;
+
+    const fromPoolKey = {
+      fee: fromPool.fee,
+      tickSpacing: fromPool.tickSpacing,
+      hooks: fromPool.hooks,
+      hookData: '0x' as Hex,
+    };
+    const toPoolKey = {
+      fee: toPool.fee,
+      tickSpacing: toPool.tickSpacing,
+      hooks: toPool.hooks,
+      hookData: '0x' as Hex,
+    };
+
+    if (exactInput) {
+      // fromToken -> USDC -> toToken
+      return {
+        currencyIn: from.address,
+        currencyOut: to.address,
+        path: [
+          {...fromPoolKey, intermediateCurrency: USDC_ADDRESS},
+          {...toPoolKey, intermediateCurrency: to.address},
+        ],
+      };
+    } else {
+      // exactOutput: V4 quoter iterates path in REVERSE
+      // Buy token is toToken. Reverse: path[1]+toToken → pool(toToken, USDC), path[0]+USDC → pool(USDC, fromToken)
+      return {
+        currencyIn: to.address,
+        currencyOut: from.address,
+        path: [
+          {...fromPoolKey, intermediateCurrency: from.address},
+          {...toPoolKey, intermediateCurrency: USDC_ADDRESS},
+        ],
+      };
+    }
+  };
+
+  const previewGeneralSwap = useCallback(
+    async (fromSymbol: string, toSymbol: string, sellAmount: string) => {
+      if (!publicClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+      try {
+        const route = resolveGeneralSwapRoute(fromSymbol, toSymbol);
+        const amountIn = parseUnits(sellAmount, route.from.decimals);
+
+        const [balanceIn, balanceOut] = await Promise.all([
+          getQuoteBalance(route.from.address),
+          getQuoteBalance(route.to.address),
+        ]);
+
+        let quotedAmountOut: bigint;
+
+        if (route.type === 'single') {
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInputSingle',
+            args: [
+              {
+                poolKey: route.poolKey,
+                zeroForOne: route.zeroForOne,
+                exactAmount: amountIn,
+                hookData: '0x' as Hex,
+              },
+            ],
+          });
+          quotedAmountOut = quoteResult.result[0];
+        } else {
+          const multiHop = buildGeneralMultiHopPath(route.from, route.to, true);
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInput',
+            args: [
+              {
+                exactCurrency: multiHop.currencyIn,
+                path: multiHop.path,
+                exactAmount: amountIn,
+              },
+            ],
+          });
+          quotedAmountOut = quoteResult.result[0];
+        }
+
+        const approvalNeeded = isNativeToken(route.from.address)
+          ? false
+          : await needsErc20Approval(route.from.address, amountIn);
+
+        const amountOutMin =
+          quotedAmountOut - (quotedAmountOut * DEFAULT_SLIPPAGE_BPS) / 10000n;
+
+        const balInFmt = formatUnits(balanceIn, route.from.decimals);
+        const balOutFmt = formatUnits(balanceOut, route.to.decimals);
+        const quotedOutFmt = formatUnits(quotedAmountOut, route.to.decimals);
+        const minOutFmt = formatUnits(amountOutMin, route.to.decimals);
+
+        return {
+          success: true,
+          selling: `${sellAmount} ${route.from.symbol}`,
+          receiving: `~${Number(quotedOutFmt).toFixed(6)} ${route.to.symbol}`,
+          minimumReceived: `${Number(minOutFmt).toFixed(6)} ${route.to.symbol}`,
+          slippage: '1%',
+          route:
+            route.type === 'single'
+              ? `${route.from.symbol} -> ${route.to.symbol}`
+              : `${route.from.symbol} -> USDC -> ${route.to.symbol}`,
+          balanceBefore: {
+            [route.from.symbol]: `${Number(balInFmt).toFixed(6)}`,
+            [route.to.symbol]: `${Number(balOutFmt).toFixed(6)}`,
+          },
+          balanceAfter: {
+            [route.from.symbol]:
+              `${Number(Number(balInFmt) - Number(sellAmount)).toFixed(6)}`,
+            [route.to.symbol]:
+              `${Number(Number(balOutFmt) + Number(quotedOutFmt)).toFixed(6)}`,
+          },
+          needsApproval: approvalNeeded,
+          approvalToken: approvalNeeded ? route.from.symbol : null,
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Preview failed';
+        return {error: msg};
+      }
+    },
+    [
+      publicClient,
+      userAddress,
+      resolveGeneralSwapRoute,
+      getQuoteBalance,
+      needsErc20Approval,
+    ],
+  );
+
+  const previewGeneralSwapExactOutput = useCallback(
+    async (fromSymbol: string, toSymbol: string, receiveAmount: string) => {
+      if (!publicClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+      try {
+        const route = resolveGeneralSwapRoute(fromSymbol, toSymbol);
+        const amountOut = parseUnits(receiveAmount, route.to.decimals);
+
+        const [balanceIn, balanceOut] = await Promise.all([
+          getQuoteBalance(route.from.address),
+          getQuoteBalance(route.to.address),
+        ]);
+
+        let quotedAmountIn: bigint;
+
+        if (route.type === 'single') {
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactOutputSingle',
+            args: [
+              {
+                poolKey: route.poolKey,
+                zeroForOne: route.zeroForOne,
+                exactAmount: amountOut,
+                hookData: '0x' as Hex,
+              },
+            ],
+          });
+          quotedAmountIn = quoteResult.result[0];
+        } else {
+          const multiHop = buildGeneralMultiHopPath(
+            route.from,
+            route.to,
+            false,
+          );
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactOutput',
+            args: [
+              {
+                exactCurrency: multiHop.currencyIn,
+                path: multiHop.path,
+                exactAmount: amountOut,
+              },
+            ],
+          });
+          quotedAmountIn = quoteResult.result[0];
+        }
+
+        const approvalNeeded = isNativeToken(route.from.address)
+          ? false
+          : await needsErc20Approval(route.from.address, quotedAmountIn);
+
+        const maxAmountIn =
+          quotedAmountIn + (quotedAmountIn * DEFAULT_SLIPPAGE_BPS) / 10000n;
+
+        const balInFmt = formatUnits(balanceIn, route.from.decimals);
+        const balOutFmt = formatUnits(balanceOut, route.to.decimals);
+        const quotedInFmt = formatUnits(quotedAmountIn, route.from.decimals);
+        const maxInFmt = formatUnits(maxAmountIn, route.from.decimals);
+
+        return {
+          success: true,
+          exactOutput: true,
+          selling: `~${Number(quotedInFmt).toFixed(6)} ${route.from.symbol}`,
+          receiving: `${receiveAmount} ${route.to.symbol}`,
+          maximumSold: `${Number(maxInFmt).toFixed(6)} ${route.from.symbol}`,
+          slippage: '1%',
+          route:
+            route.type === 'single'
+              ? `${route.from.symbol} -> ${route.to.symbol}`
+              : `${route.from.symbol} -> USDC -> ${route.to.symbol}`,
+          balanceBefore: {
+            [route.from.symbol]: `${Number(balInFmt).toFixed(6)}`,
+            [route.to.symbol]: `${Number(balOutFmt).toFixed(6)}`,
+          },
+          balanceAfter: {
+            [route.from.symbol]:
+              `${Number(Number(balInFmt) - Number(quotedInFmt)).toFixed(6)}`,
+            [route.to.symbol]:
+              `${Number(Number(balOutFmt) + Number(receiveAmount)).toFixed(6)}`,
+          },
+          needsApproval: approvalNeeded,
+          approvalToken: approvalNeeded ? route.from.symbol : null,
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Preview failed';
+        return {error: msg};
+      }
+    },
+    [
+      publicClient,
+      userAddress,
+      resolveGeneralSwapRoute,
+      getQuoteBalance,
+      needsErc20Approval,
+    ],
+  );
+
+  const approveGeneralSwap = useCallback(
+    async (fromSymbol: string, sellAmount: string) => {
+      if (!publicClient || !walletClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+      try {
+        const from = getQuoteTokenBySymbol(fromSymbol);
+        if (isNativeToken(from.address)) {
+          return {
+            success: true,
+            message: 'ETH does not need approval',
+            alreadyApproved: true,
+          };
+        }
+
+        const amountIn = parseUnits(sellAmount, from.decimals);
+        const needs = await needsErc20Approval(from.address, amountIn);
+        if (!needs) {
+          return {
+            success: true,
+            message: `${from.symbol} already approved`,
+            alreadyApproved: true,
+          };
+        }
+
+        const approvalHash = await writeContractAsync({
+          address: from.address,
+          abi: erc20Abi,
+          functionName: 'approve',
+          args: [PERMIT2_ADDRESS, 2n ** 256n - 1n],
+        });
+        await publicClient.waitForTransactionReceipt({hash: approvalHash});
+
+        return {
+          success: true,
+          message: `${from.symbol} approved for trading`,
+          txHash: approvalHash,
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Approval failed';
+        return {error: msg};
+      }
+    },
+    [
+      publicClient,
+      walletClient,
+      userAddress,
+      writeContractAsync,
+      needsErc20Approval,
+    ],
+  );
+
+  const executeGeneralSwap = useCallback(
+    async (fromSymbol: string, toSymbol: string, sellAmount: string) => {
+      if (!publicClient || !walletClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+      try {
+        const route = resolveGeneralSwapRoute(fromSymbol, toSymbol);
+        const amountIn = parseUnits(sellAmount, route.from.decimals);
+
+        const [balanceInBefore, balanceOutBefore] = await Promise.all([
+          getQuoteBalance(route.from.address),
+          getQuoteBalance(route.to.address),
+        ]);
+
+        // Fresh quote
+        let quotedAmountOut: bigint;
+
+        if (route.type === 'single') {
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInputSingle',
+            args: [
+              {
+                poolKey: route.poolKey,
+                zeroForOne: route.zeroForOne,
+                exactAmount: amountIn,
+                hookData: '0x' as Hex,
+              },
+            ],
+          });
+          quotedAmountOut = quoteResult.result[0];
+        } else {
+          const multiHop = buildGeneralMultiHopPath(route.from, route.to, true);
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactInput',
+            args: [
+              {
+                exactCurrency: multiHop.currencyIn,
+                path: multiHop.path,
+                exactAmount: amountIn,
+              },
+            ],
+          });
+          quotedAmountOut = quoteResult.result[0];
+        }
+
+        const amountOutMin =
+          quotedAmountOut - (quotedAmountOut * DEFAULT_SLIPPAGE_BPS) / 10000n;
+        const deadline = BigInt(
+          Math.floor(Date.now() / 1000) + DEFAULT_DEADLINE_MINUTES * 60,
+        );
+
+        let receipt;
+
+        if (route.type === 'single') {
+          receipt = await swapExactInSingle(
+            route.poolKey,
+            amountIn,
+            amountOutMin,
+            route.zeroForOne,
+            deadline,
+          );
+        } else {
+          const multiHop = buildGeneralMultiHopPath(route.from, route.to, true);
+          receipt = await swapExactInGeneric(
+            multiHop.currencyIn,
+            multiHop.path,
+            amountIn,
+            amountOutMin,
+            deadline,
+          );
+        }
+
+        if (receipt.status !== 'success') {
+          return {error: 'Swap transaction reverted'};
+        }
+
+        const [balanceInAfter, balanceOutAfter] = await Promise.all([
+          getQuoteBalance(route.from.address),
+          getQuoteBalance(route.to.address),
+        ]);
+
+        await queryClient.invalidateQueries();
+
+        return {
+          success: true,
+          txHash: receipt.transactionHash,
+          sold: `${formatUnits(balanceInBefore - balanceInAfter, route.from.decimals)} ${route.from.symbol}`,
+          received: `${formatUnits(balanceOutAfter - balanceOutBefore, route.to.decimals)} ${route.to.symbol}`,
+          balanceBefore: {
+            [route.from.symbol]: formatUnits(
+              balanceInBefore,
+              route.from.decimals,
+            ),
+            [route.to.symbol]: formatUnits(balanceOutBefore, route.to.decimals),
+          },
+          balanceAfter: {
+            [route.from.symbol]: formatUnits(
+              balanceInAfter,
+              route.from.decimals,
+            ),
+            [route.to.symbol]: formatUnits(balanceOutAfter, route.to.decimals),
+          },
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Swap failed';
+        return {error: msg};
+      }
+    },
+    [
+      publicClient,
+      walletClient,
+      userAddress,
+      swapExactInSingle,
+      swapExactInGeneric,
+      queryClient,
+      resolveGeneralSwapRoute,
+      getQuoteBalance,
+    ],
+  );
+
+  const executeGeneralSwapExactOutput = useCallback(
+    async (fromSymbol: string, toSymbol: string, receiveAmount: string) => {
+      if (!publicClient || !walletClient || !userAddress) {
+        return {
+          error: 'Wallet not connected. Please connect your wallet first.',
+        };
+      }
+      try {
+        const route = resolveGeneralSwapRoute(fromSymbol, toSymbol);
+        const amountOut = parseUnits(receiveAmount, route.to.decimals);
+
+        const [balanceInBefore, balanceOutBefore] = await Promise.all([
+          getQuoteBalance(route.from.address),
+          getQuoteBalance(route.to.address),
+        ]);
+
+        // Fresh quote
+        let quotedAmountIn: bigint;
+
+        if (route.type === 'single') {
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactOutputSingle',
+            args: [
+              {
+                poolKey: route.poolKey,
+                zeroForOne: route.zeroForOne,
+                exactAmount: amountOut,
+                hookData: '0x' as Hex,
+              },
+            ],
+          });
+          quotedAmountIn = quoteResult.result[0];
+        } else {
+          const multiHop = buildGeneralMultiHopPath(
+            route.from,
+            route.to,
+            false,
+          );
+          const quoteResult = await publicClient.simulateContract({
+            address: QUOTER_ADDRESS,
+            abi: quoterAbi,
+            functionName: 'quoteExactOutput',
+            args: [
+              {
+                exactCurrency: multiHop.currencyIn,
+                path: multiHop.path,
+                exactAmount: amountOut,
+              },
+            ],
+          });
+          quotedAmountIn = quoteResult.result[0];
+        }
+
+        const maxAmountIn =
+          quotedAmountIn + (quotedAmountIn * DEFAULT_SLIPPAGE_BPS) / 10000n;
+        const deadline = BigInt(
+          Math.floor(Date.now() / 1000) + DEFAULT_DEADLINE_MINUTES * 60,
+        );
+
+        let receipt;
+
+        if (route.type === 'single') {
+          receipt = await swapExactOutSingle(
+            route.poolKey,
+            amountOut,
+            maxAmountIn,
+            route.zeroForOne,
+            deadline,
+          );
+        } else {
+          const multiHop = buildGeneralMultiHopPath(
+            route.from,
+            route.to,
+            false,
+          );
+          receipt = await swapExactOutGeneric(
+            multiHop.currencyIn,
+            multiHop.currencyOut,
+            multiHop.path,
+            amountOut,
+            maxAmountIn,
+            deadline,
+          );
+        }
+
+        if (receipt.status !== 'success') {
+          return {error: 'Swap transaction reverted'};
+        }
+
+        const [balanceInAfter, balanceOutAfter] = await Promise.all([
+          getQuoteBalance(route.from.address),
+          getQuoteBalance(route.to.address),
+        ]);
+
+        await queryClient.invalidateQueries();
+
+        return {
+          success: true,
+          txHash: receipt.transactionHash,
+          sold: `${formatUnits(balanceInBefore - balanceInAfter, route.from.decimals)} ${route.from.symbol}`,
+          received: `${formatUnits(balanceOutAfter - balanceOutBefore, route.to.decimals)} ${route.to.symbol}`,
+          balanceBefore: {
+            [route.from.symbol]: formatUnits(
+              balanceInBefore,
+              route.from.decimals,
+            ),
+            [route.to.symbol]: formatUnits(balanceOutBefore, route.to.decimals),
+          },
+          balanceAfter: {
+            [route.from.symbol]: formatUnits(
+              balanceInAfter,
+              route.from.decimals,
+            ),
+            [route.to.symbol]: formatUnits(balanceOutAfter, route.to.decimals),
+          },
+        };
+      } catch (err: unknown) {
+        const msg = err instanceof Error ? err.message : 'Swap failed';
+        return {error: msg};
+      }
+    },
+    [
+      publicClient,
+      walletClient,
+      userAddress,
+      swapExactOutSingle,
+      swapExactOutGeneric,
+      queryClient,
+      resolveGeneralSwapRoute,
+      getQuoteBalance,
+    ],
+  );
+
   // ── ENS tools ──────────────────────────────────────────────────────────────
 
   const ENS_REGISTRY = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e' as const;
@@ -1273,12 +1920,17 @@ export function useAgentTools() {
     previewSwap,
     approveIfNeeded,
     executeSwapExactInput,
+    previewSwapExactOutput,
+    executeSwapExactOutput,
+    previewGeneralSwap,
+    approveGeneralSwap,
+    executeGeneralSwap,
+    previewGeneralSwapExactOutput,
+    executeGeneralSwapExactOutput,
     getMyEnsName,
     checkEnsName,
     commitEnsName,
     registerEnsName,
     setPrimaryEnsName,
-    previewSwapExactOutput,
-    executeSwapExactOutput,
   };
 }

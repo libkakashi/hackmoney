@@ -9,8 +9,10 @@ import {
 } from 'wagmi';
 import {
   ensRegistrarControllerAbi,
+  ensReverseRegistrarAbi,
   ENS_DEFAULT_DURATION,
   ENS_MIN_COMMITMENT_AGE,
+  ENS_REVERSE_REGISTRAR,
 } from '~/abi/ens-registrar';
 import {
   getRegistrarAddress,
@@ -34,6 +36,8 @@ export const useRegisterEnsImperative = () => {
 
   const registrarAddress = getRegistrarAddress(chainId);
   const resolverAddress = getResolverAddress(chainId);
+  const reverseRegistrar =
+    ENS_REVERSE_REGISTRAR[chainId] ?? ENS_REVERSE_REGISTRAR[1];
 
   return useMutation({
     mutationFn: async (name: string) => {
@@ -86,6 +90,16 @@ export const useRegisterEnsImperative = () => {
 
       await publicClient.waitForTransactionReceipt({hash});
       clearStoredCommitment(name);
+
+      // Explicitly set as primary name via ReverseRegistrar.setName()
+      // The register call's reverseRecord flag doesn't always work reliably
+      const setPrimaryHash = await writeContractAsync({
+        address: reverseRegistrar,
+        abi: ensReverseRegistrarAbi,
+        functionName: 'setName',
+        args: [`${name}.eth`],
+      });
+      await publicClient.waitForTransactionReceipt({hash: setPrimaryHash});
 
       // Invalidate ENS reverse lookup cache
       await queryClient.invalidateQueries({queryKey: ['ens', 'reverse']});
