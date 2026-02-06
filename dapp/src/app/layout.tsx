@@ -5,6 +5,7 @@ import {Navbar} from '~/components/layout/navbar';
 import {AgentProvider} from '~/components/agent/agent-context';
 import {FloatingAgent} from '~/components/agent/floating-agent';
 import {Footer} from '~/components/layout/footer';
+import {TestnetBanner} from '~/components/layout/testnet-banner';
 import './globals.css';
 
 // Server-side: stub localStorage/sessionStorage to prevent SSR errors
@@ -66,6 +67,7 @@ export default function RootLayout({
           <AgentProvider>
             <div className="flex h-screen flex-col overflow-hidden">
               <Navbar />
+              <TestnetBanner />
               <main className="flex-1 overflow-y-auto">
                 {children}
                 <Footer />
