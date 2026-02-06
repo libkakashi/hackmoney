@@ -14,7 +14,7 @@ export function Container({
   const sizeClasses = {
     sm: 'max-w-2xl',
     md: 'max-w-3xl',
-    lg: 'max-w-6xl',
+    lg: 'max-w-5xl',
     xl: 'max-w-7xl',
     full: 'max-w-full',
   };

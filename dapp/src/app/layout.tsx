@@ -23,16 +23,18 @@ if (typeof window === 'undefined') {
     !globalThis.localStorage ||
     typeof (globalThis.localStorage as Storage).getItem !== 'function'
   ) {
-    (globalThis as typeof globalThis & { localStorage: Storage }).localStorage =
+    (globalThis as typeof globalThis & {localStorage: Storage}).localStorage =
       storageStub;
   }
   if (
     !globalThis.sessionStorage ||
     typeof (globalThis.sessionStorage as Storage).getItem !== 'function'
   ) {
-    (globalThis as typeof globalThis & {
-      sessionStorage: Storage;
-    }).sessionStorage = storageStub;
+    (
+      globalThis as typeof globalThis & {
+        sessionStorage: Storage;
+      }
+    ).sessionStorage = storageStub;
   }
 }
 
