@@ -1,11 +1,106 @@
 'use client';
 
 import {useState} from 'react';
-import {Users, Rocket, ChevronRight, Terminal, Zap} from 'lucide-react';
+import {Users, Rocket, HelpCircle, ChevronRight, Terminal, Zap} from 'lucide-react';
 import {Container} from '~/components/layout/container';
 import {HelpSection} from './help-section';
 
 const traderFAQs = [
+  {
+    q: 'how do i place a bid?',
+    a: `Connect your wallet, navigate to the token you want to bid on, and enter the amount of USDC you wish to commit.
+
+The platform uses Permit2 for gasless approvals, so you'll sign a message and then submit your bid transaction.
+
+You can view your active bids and their status on the token page at any time. There's no minimum bid amount.`,
+    tag: 'guide',
+  },
+  {
+    q: 'why is bidding early beneficial?',
+    a: `CCA splits bids evenly over every block in auction duration. When you bid early, your bid gets split over more blocks.
+
+    This means early bidders receive slightly better token allocations.
+
+The mechanism discourages sniping and front-running, createing a more stable auction environment. Early bidding also gives you more time to add additional bids if needed.`,
+    tag: 'core',
+  },
+  {
+    q: 'can i cancel or modify my bid?',
+    a: `No, bids are irrevocable once submitted. This is a deliberate design choice to prevent manipulation.
+
+If participants could cancel freely, bad actors could artificially inflate demand to drive up the clearing price, then withdraw at the last moment to harm other bidders.
+
+You can, however, place additional bids on the same auction. Each new bid is treated independently and adds to your total commitment.`,
+    tag: 'guide',
+  },
+  {
+    q: 'when and how do i receive my tokens?',
+    a: `Once an auction concludes, several things happen automatically:
+
+First, the final clearing price is calculated and locked in.
+
+Then, the raised USDC and tokens are migrated to create a Uniswap V4 liquidity pool at the clearing price.
+
+This typically takes around 10-20 blocks.
+
+Once claims are enabled, visit the token page and click the claim button to receive your allocated tokens or refunds.
+
+The entire process is trustless, immutable and on-chain.`,
+    tag: 'guide',
+  },
+  {
+    q: 'is this protected from MEV and front-running?',
+    a: `Yes, CCAs are inherently MEV-resistant by design.
+
+Since every bid is split over the entire auction duration, there's very little for bots or validators to extract through front-running or sandwich attacks.
+
+In traditional token sales or bonding curves, front-running is profitable since it allows a bot to corner large supply at cheaper prices.
+
+In CCA, everyone essentially receives a TWAP(time weighted average price) since they enter the auction.`,
+    tag: 'security',
+  },
+  {
+    q: 'what currencies can i bid with?',
+    a: `All auctions on Nyx are denominated in USDC (USD Coin).
+
+You'll need USDC in your wallet on the same network as the auction. If you have ETH or other tokens, swap for USDC first using any DEX.
+
+We chose USDC because it provides stable, predictable pricing and eliminates volatility risk.
+
+The Nyx Agent can help you swap any token to USDC and participate in the auction in 1 click.`,
+    tag: 'guide',
+  },
+];
+
+const generalFAQs = [
+  {
+    q: 'what is Nyx?',
+    a: `Nyx is a permissionless token launchpad powered by Uniswap's Continuous Clearing Auction (CCA) on Uniswap V4.
+
+It enables fair token launches with transparent price discovery, immediate liquidity, and MEV-resistant auctions. Whether you're bidding on tokens or launching your own, Nyx provides the infrastructure for decentralized, trustless token distribution.`,
+    tag: 'core',
+  },
+  {
+    q: 'what is the nyx agent?',
+    a: `The Nyx Agent is your personal on-chain assistant built into the platform.
+
+It provides real-time market intelligence and helps you find the best opportunities by finding:
+• Top 24-hour price performers
+• Fastest-filling auctions (strongest early demand)
+• Highest volume auctions right now
+• Other momentum and discovery filters
+
+You can ask it anything about CCA mechanics, token launches, bidding strategy, or Nyx features & it answers in plain English.
+
+For power users, it can also:
+
+• bid in auctions on your behalf
+• buy/sell any token
+• multi hop swaps (ask it to participate in an auction by swapping eth to usdc!)
+
+only after you review and sign!`,
+    tag: 'tools',
+  },
   {
     q: 'what is a continuous clearing auction?',
     a: `Continuous Clearing Auction or CCA is a novel onchain auction mechanism developed by Uniswap for fair token distributions and liquidity bootstrapping in DeFi.
@@ -38,110 +133,51 @@ Ecosystem: Deeper, more stable markets reduce volatility and attract long-term l
     tag: 'core',
   },
   {
-    q: 'why is bidding early beneficial?',
-    a: `CCA splits bids evenly over every block in auction duration. When you bid early, your bid gets split over more blocks.
-
-    This means early bidders receive slightly better token allocations.
-
-The mechanism discourages sniping and front-running, createing a more stable auction environment. Early bidding also gives you more time to add additional bids if needed.`,
-    tag: 'core',
-  },
-  {
     q: 'how does price discovery work in CCA?',
     a: `Price discovery is continuous and market-driven:
 
-Bids are spread proportionally across the remaining auction based on the release schedule $ Q(t) $.
-For each period, aggregate demand forms a curve; the clearing price $ p^* $ is the highest where demand ≥ supply.
-Winners pay $ p^* $ uniformly, with partial fills if needed.
+Bids are spread proportionally across all blocks remaining in the auction.
+For each block, a clearing price is calculated by fairly distributing all tokens proportionally to each bidder.
+
 This minimizes timing attacks and promotes stable pricing, unlike one-shot auctions.`,
     tag: 'core',
   },
   {
-    q: 'how do i place a bid?',
-    a: `Connect your wallet, navigate to the token you want to bid on, and enter the amount of USDC you wish to commit.
+    q: 'benefits of ens names for launches?',
+    a: `Nyx offers a one-click step to purchase an ENS domain that matches your token (e.g. YOURTOKEN.eth)
 
-The platform uses Permit2 for gasless approvals, so you'll sign a message and then submit your bid transaction.
+Benefits include:
+• Replaces ugly 0x... addresses with a clean, readable name
+• Builds instant trust and brand recognition
+• Makes it much harder for impersonators to create fake versions
+• Easier for users to find, share, verify, and remember your project
 
-You can view your active bids and their status on the token page at any time. There's no minimum bid amount.`,
-    tag: 'guide',
-  },
-  {
-    q: 'can i cancel or modify my bid?',
-    a: `No, bids are irrevocable once submitted. This is a deliberate design choice to prevent manipulation.
-
-If participants could cancel freely, bad actors could artificially inflate demand to drive up the clearing price, then withdraw at the last moment to harm other bidders.
-
-You can, however, place additional bids on the same auction. Each new bid is treated independently and adds to your total commitment.`,
-    tag: 'guide',
-  },
-  {
-    q: 'when and how do i receive my tokens?',
-    a: `After the auction ends, the protocol finalizes the clearing price and migrates liquidity to Uniswap V4.
-
-This typically takes around 10-20 blocks and you can claim your tokens post that. Once claims are enabled, visit the token page and click the claim button to receive your allocated tokens.
-`,
-    tag: 'guide',
-  },
-  {
-    q: 'is this protected from MEV and front-running?',
-    a: `Yes, CCAs are inherently MEV-resistant by design.
-
-Since every bid is split over the entire auction duration, there's very little for bots or validators to extract through front-running or sandwich attacks.
-
-In traditional token sales or bonding curves, front-running is profitable since it allows a bot to corner large supply at cheaper prices.
-
-In CCA, everyone essentially receives a TWAP(time weighted average price) since they enter the auction.`,
+The process is fully on-chain, transparent, and optional — but strongly recommended for serious projects.`,
     tag: 'security',
-  },
-  {
-    q: 'what currencies can i bid with?',
-    a: `All auctions on Nyx are denominated in USDC (USD Coin).
-
-You'll need USDC in your wallet on the same network as the auction.  If you have ETH or other tokens, swap for USDC first using any DEX.
-
-We chose USDC because it provides stable, predictable pricing and eliminates volatility risk.`,
-    tag: 'guide',
-  },
-  {
-    q: 'what happens after the auction ends?',
-    a: `Once an auction concludes, several things happen automatically:
-
-First, the final clearing price is calculated and locked in. Then, the raised USDC and tokens are migrated to create a Uniswap V4 liquidity pool at the clearing price.
-
-After migration completes (~20 blocks), claims open for bidders to collect their tokens or refunds. The entire process is trustless, immutable and on-chain.`,
-    tag: 'guide',
   },
 ];
 
 const creatorFAQs = [
   {
     q: 'how do i launch a token?',
-    a: `Navigate to the /launch page, fill in your token details (name, symbol, description, and optional social links), then deploy with a single transaction.
+    a: `Launching on Nyx is simple and 100% permissionless:
+1. Go to /launch
+2. Fill in: Token Name, Symbol (ticker), Short description, social links(optional)
+3. Hit deploy and sign one transaction
 
-Behind the scenes, the platform performs "salt mining" in your browser to generate a deterministic deployment address, then creates your token contract and initializes the auction.
+What happens behind the curtain:
+• Your browser does "salt mining" to find a clean deterministic deploy address (no extra gas waste)
+• Deploys your ERC-20 token contract
+• Automatically sets up the Continuous Clearing Auction with all the fair-launch rules
 
-You can start the auction immediately or schedule it for a future date. The entire process is permissionless and requires no approval from anyone.`,
-    tag: 'guide',
-  },
-  {
-    q: 'what parameters are fixed vs configurable?',
-    a: `Nyx uses standardized parameters to ensure fairness. Fixed parameters include:
+You can choose to: Start auction right now, or schedule it for a future date/time
+
+Fixed rules (same for every launch. Keeps it fair & comparable):
 • Total supply: 1,000,000 tokens
-• Auction duration: ~30 minutes
-• Floor price: $0.10 per token
-• Split: 10% auction, 90% LP
-
-You can configure: token name, symbol, description, social links, and auction start time. This standardization helps bidders easily compare opportunities.`,
-    tag: 'config',
-  },
-  {
-    q: 'what does the 10/90 split mean?',
-    a: `Of your 1,000,000 token supply, 10% (100,000 tokens) are sold through the auction to establish the initial price and raise USDC.
-
-The remaining 90% (900,000 tokens) are automatically paired with the raised USDC to create deep Uniswap V4 liquidity.
-
-This ensures most tokens are available for trading immediately, creating a healthy liquid market rather than locking supply in team wallets.`,
-    tag: 'config',
+• Auction length: ~30 minutes
+• Floor price: $0.10 / token
+• Allocation split: 10% sold in auction → 90% paired into Uniswap v4 LP.`,
+    tag: 'guide',
   },
   {
     q: 'what are the fees for launching?',
@@ -199,22 +235,9 @@ Currently, the graduation threshold is zero, meaning auctions always graduate re
 You can always launch again with a new token if you want to try different timing.`,
     tag: 'rules',
   },
-  {
-    q: 'which networks are supported?',
-    a: `Nyx supports multiple networks:
-• Ethereum mainnet
-• Base
-• Arbitrum
-• Unichain
-
-Each network has its own deployed contracts. Your auction runs entirely on the chosen chain, and bidders need assets on that same network.
-
-L2 networks offer significantly lower gas costs for both creators and bidders.`,
-    tag: 'guide',
-  },
 ];
 
-type Tab = 'traders' | 'creators';
+type Tab = 'general' | 'traders' | 'creators';
 
 const ASCII_FAQ_LINES = [
   {
@@ -266,10 +289,12 @@ const tagColors: Record<string, string> = {
 
 export default function FAQPage() {
   const [tab, setTab] = useState<Tab>('traders');
-  const [collapsedIndex, setCollapsedIndex] = useState<number | null>(null);
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
 
   const getFaqs = () => {
     switch (tab) {
+      case 'general':
+        return generalFAQs;
       case 'traders':
         return traderFAQs;
       case 'creators':
@@ -279,6 +304,8 @@ export default function FAQPage() {
 
   const getAccentColor = () => {
     switch (tab) {
+      case 'general':
+        return 'yellow';
       case 'traders':
         return 'green';
       case 'creators':
@@ -335,8 +362,23 @@ export default function FAQPage() {
             <div className="flex">
               <button
                 onClick={() => {
+                  setTab('general');
+                  setExpandedIndex(null);
+                }}
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm transition-colors border-r border-border ${
+                  tab === 'general'
+                    ? 'bg-yellow/10 text-yellow'
+                    : 'text-dim hover:text-foreground hover:bg-card'
+                }`}
+              >
+                <HelpCircle className="size-4" />
+                <span>general</span>
+                {tab === 'general' && <span className="text-xs">●</span>}
+              </button>
+              <button
+                onClick={() => {
                   setTab('traders');
-                  setCollapsedIndex(null);
+                  setExpandedIndex(null);
                 }}
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm transition-colors border-r border-border ${
                   tab === 'traders'
@@ -351,9 +393,9 @@ export default function FAQPage() {
               <button
                 onClick={() => {
                   setTab('creators');
-                  setCollapsedIndex(null);
+                  setExpandedIndex(null);
                 }}
-                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm transition-colors border-r border-border ${
+                className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm transition-colors ${
                   tab === 'creators'
                     ? 'bg-purple/10 text-purple'
                     : 'text-dim hover:text-foreground hover:bg-card'
@@ -387,7 +429,7 @@ export default function FAQPage() {
           {/* FAQ list */}
           <div className="space-y-3">
             {faqs.map((faq, i) => {
-              const isExpanded = collapsedIndex !== i;
+              const isExpanded = expandedIndex === i;
 
               return (
                 <div
@@ -403,7 +445,7 @@ export default function FAQPage() {
                   }`}
                 >
                   <button
-                    onClick={() => setCollapsedIndex(isExpanded ? i : null)}
+                    onClick={() => setExpandedIndex(isExpanded ? null : i)}
                     className="w-full text-left p-4 flex items-start gap-3"
                   >
                     {/* Line number */}
