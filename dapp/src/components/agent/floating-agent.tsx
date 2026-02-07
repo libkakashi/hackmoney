@@ -103,7 +103,7 @@ function CRTMessage({message}: {message: UIMessage}) {
           isUser ? 'text-cyan-400' : 'text-green'
         }`}
       >
-        {isUser ? '> you' : '> agent'}
+        {isUser ? '> you' : '> ramen'}
       </div>
 
       {/* Content */}
@@ -623,7 +623,7 @@ export function FloatingAgent() {
                   {messages.length === 0 && (
                     <div className="px-3 py-3 crt-glow">
                       <div className="text-green  uppercase tracking-wider mb-1.5">
-                        &gt; agent
+                        &gt; ramen
                       </div>
                       <div className="text-purple  leading-relaxed">
                         hey. i can place bids, execute trades, and answer
@@ -712,7 +712,7 @@ export function FloatingAgent() {
                     <Input
                       ref={inputRef}
                       type="text"
-                      placeholder="ask agent..."
+                      placeholder="ask ramen..."
                       disabled={isStreaming}
                       className="flex-1 border-0 bg-transparent  h-7 px-1 focus:ring-0 focus-visible:ring-0"
                     />
