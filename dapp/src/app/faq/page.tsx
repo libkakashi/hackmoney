@@ -1,7 +1,14 @@
 'use client';
 
 import {useState} from 'react';
-import {Users, Rocket, HelpCircle, ChevronRight, Terminal, Zap} from 'lucide-react';
+import {
+  Users,
+  Rocket,
+  HelpCircle,
+  ChevronRight,
+  Terminal,
+  Zap,
+} from 'lucide-react';
 import {Container} from '~/components/layout/container';
 import {HelpSection} from './help-section';
 
