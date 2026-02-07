@@ -547,7 +547,7 @@ export function FloatingAgent() {
     >
       <div
         ref={nodeRef}
-        className="text-sm fixed bottom-6 right-6 z-50 flex items-end gap-3"
+        className="text-sm fixed bottom-6 right-6 z-50 flex items-end"
       >
         {/* ── CRT Monitor ─────────────────────────────────────────── */}
         {chatOpen && (
@@ -742,15 +742,15 @@ export function FloatingAgent() {
 
         {/* ── Mascot ──────────────────────────────────────────────── */}
         <div
-          className="drag-handle group relative shrink-0 self-end cursor-grab active:cursor-grabbing"
+          className="drag-handle group relative shrink-0 cursor-grab active:cursor-grabbing"
           onClick={handleMascotClick}
         >
           <div
             className="
-              relative w-[280px] h-[280px]
+              relative w-[240px] h-[240px]
               flex items-center justify-center select-none cursor-pointer
-              transition-transform duration-200 hover:scale-105 active:scale-95
-              -mb-10 -mr-10
+              transition-transform duration-100 hover:scale-102 active:scale-98
+              -mb-10
             "
             title="Click to chat"
           >
