@@ -8,6 +8,19 @@ export function Footer() {
           {/* Brand */}
           <div className="col-span-2 md:col-span-1">
             <Link href="/" className="inline-flex items-center gap-2 mb-4">
+              <div
+                className="w-6 h-6 bg-green"
+                style={{
+                  maskImage: 'url("/logo.png")',
+                  maskSize: 'contain',
+                  maskRepeat: 'no-repeat',
+                  maskPosition: 'center',
+                  WebkitMaskImage: 'url("/logo.png")',
+                  WebkitMaskSize: 'contain',
+                  WebkitMaskRepeat: 'no-repeat',
+                  WebkitMaskPosition: 'center',
+                }}
+              />
               <span className="text-green">~</span>
               <span className="font-bold">nyx</span>
             </Link>

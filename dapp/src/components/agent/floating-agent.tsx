@@ -8,7 +8,7 @@ import {
   useCallback,
   type SubmitEventHandler,
 } from 'react';
-import {useChat} from '@ai-sdk/react';
+import { useChat } from '@ai-sdk/react';
 import {
   type UIMessage,
   isToolUIPart,
@@ -16,143 +16,19 @@ import {
   DefaultChatTransport,
 } from 'ai';
 import Link from 'next/link';
-import {Send, Loader2, Power, Clock} from 'lucide-react';
+import { Send, Loader2, Power, Clock } from 'lucide-react';
 import Draggable from 'react-draggable';
-import {Resizable} from 're-resizable';
-import {Button} from '~/components/ui/button';
-import {Input} from '~/components/ui/input';
-import {usePageContext} from './agent-context';
-import {useAgentTools} from './use-agent-tools';
-import {MarkdownRenderer} from './markdown-renderer';
+import { Resizable } from 're-resizable';
+import { Button } from '~/components/ui/button';
+import { Input } from '~/components/ui/input';
+import { usePageContext } from './agent-context';
+import { useAgentTools } from './use-agent-tools';
+import { MarkdownRenderer } from './markdown-renderer';
 
-/* ── Mascot SVG ─────────────────────────────────────────────────────────── */
-function Mascot({className}: {className?: string}) {
-  return (
-    <svg
-      viewBox="0 0 64 64"
-      fill="none"
-      className={className}
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <rect
-        x="16"
-        y="20"
-        width="32"
-        height="28"
-        fill="var(--card)"
-        stroke="var(--terminal-green)"
-        strokeWidth="2"
-      />
-      <rect
-        x="20"
-        y="8"
-        width="24"
-        height="16"
-        fill="var(--card)"
-        stroke="var(--terminal-green)"
-        strokeWidth="2"
-      />
-      <line
-        x1="32"
-        y1="2"
-        x2="32"
-        y2="8"
-        stroke="var(--terminal-green)"
-        strokeWidth="2"
-      />
-      <rect x="30" y="0" width="4" height="4" fill="var(--terminal-green)" />
-      <rect
-        x="25"
-        y="13"
-        width="4"
-        height="4"
-        fill="var(--terminal-green)"
-        className="pulse-soft"
-      />
-      <rect
-        x="35"
-        y="13"
-        width="4"
-        height="4"
-        fill="var(--terminal-green)"
-        className="pulse-soft"
-      />
-      <rect x="27" y="19" width="10" height="2" fill="var(--terminal-purple)" />
-      <rect
-        x="22"
-        y="26"
-        width="20"
-        height="12"
-        fill="var(--background)"
-        stroke="var(--terminal-dim)"
-        strokeWidth="1"
-      />
-      <rect
-        x="24"
-        y="29"
-        width="8"
-        height="1"
-        fill="var(--terminal-green)"
-        opacity="0.8"
-      />
-      <rect
-        x="24"
-        y="32"
-        width="12"
-        height="1"
-        fill="var(--terminal-green)"
-        opacity="0.5"
-      />
-      <rect
-        x="24"
-        y="35"
-        width="6"
-        height="1"
-        fill="var(--terminal-green)"
-        opacity="0.3"
-      />
-      <rect
-        x="20"
-        y="48"
-        width="8"
-        height="8"
-        fill="var(--card)"
-        stroke="var(--terminal-green)"
-        strokeWidth="2"
-      />
-      <rect
-        x="36"
-        y="48"
-        width="8"
-        height="8"
-        fill="var(--card)"
-        stroke="var(--terminal-green)"
-        strokeWidth="2"
-      />
-      <rect
-        x="8"
-        y="24"
-        width="8"
-        height="4"
-        fill="var(--card)"
-        stroke="var(--terminal-green)"
-        strokeWidth="2"
-      />
-      <rect
-        x="48"
-        y="24"
-        width="8"
-        height="4"
-        fill="var(--card)"
-        stroke="var(--terminal-green)"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-}
+
 
 /* ── Tool result display ────────────────────────────────────────────────── */
-function ToolResultCard({result}: {result: unknown}) {
+function ToolResultCard({ result }: { result: unknown }) {
   if (!Array.isArray(result)) {
     if (
       result &&
@@ -161,7 +37,7 @@ function ToolResultCard({result}: {result: unknown}) {
     ) {
       return (
         <div className="text-red ">
-          err: {(result as {error: string}).error}
+          err: {(result as { error: string }).error}
         </div>
       );
     }
@@ -170,7 +46,7 @@ function ToolResultCard({result}: {result: unknown}) {
       typeof result === 'object' &&
       'success' in (result as Record<string, unknown>)
     ) {
-      const r = result as {success: boolean; txHash?: string};
+      const r = result as { success: boolean; txHash?: string };
       if (r.txHash) {
         return (
           <div className="text-green ">
@@ -218,16 +94,15 @@ function ToolResultCard({result}: {result: unknown}) {
 }
 
 /* ── Message row inside the CRT screen ──────────────────────────────────── */
-function CRTMessage({message}: {message: UIMessage}) {
+function CRTMessage({ message }: { message: UIMessage }) {
   const isUser = message.role === 'user';
 
   return (
     <div className={`px-3 py-1.5 ${isUser ? '' : 'crt-glow'}`}>
       {/* Role label */}
       <div
-        className={`tracking-wider mb-0.5 ${
-          isUser ? 'text-cyan-400' : 'text-green'
-        }`}
+        className={`tracking-wider mb-0.5 ${isUser ? 'text-cyan-400' : 'text-green'
+          }`}
       >
         {isUser ? '> you' : '> agent'}
       </div>
@@ -284,7 +159,7 @@ function CRTMessage({message}: {message: UIMessage}) {
  * Like lastAssistantMessageIsCompleteWithToolCalls, but excludes
  * suggestReplies so it doesn't trigger another model round.
  */
-function shouldAutoSend({messages}: {messages: UIMessage[]}) {
+function shouldAutoSend({ messages }: { messages: UIMessage[] }) {
   const message = messages[messages.length - 1];
   if (!message || message.role !== 'assistant') return false;
 
@@ -310,7 +185,7 @@ function shouldAutoSend({messages}: {messages: UIMessage[]}) {
 }
 
 /* ── Reply type from suggestReplies ──────────────────────────────────── */
-type SuggestReply = string | {text: string; timerSeconds?: number};
+type SuggestReply = string | { text: string; timerSeconds?: number };
 
 function getReplyText(reply: SuggestReply): string {
   return typeof reply === 'string' ? reply : reply.text;
@@ -403,7 +278,7 @@ export function FloatingAgent() {
   const nodeRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
   const isResizing = useRef(false);
-  const [monitorSize, setMonitorSize] = useState({width: 400, height: 540});
+  const [monitorSize, setMonitorSize] = useState({ width: 400, height: 540 });
 
   const pageContextRef = useRef(pageContext);
   const prevPageRef = useRef<string | undefined>(undefined);
@@ -416,33 +291,33 @@ export function FloatingAgent() {
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
-        body: () => ({pageContext: pageContextRef.current}),
+        body: () => ({ pageContext: pageContextRef.current }),
       }),
     // Stable transport — body function reads from ref so it always gets latest context
     [],
   );
 
-  const {messages, sendMessage, addToolOutput, status} = useChat({
+  const { messages, sendMessage, addToolOutput, status } = useChat({
     transport,
     sendAutomaticallyWhen: shouldAutoSend,
-    onToolCall: async ({toolCall}) => {
-      const {toolName, toolCallId} = toolCall;
+    onToolCall: async ({ toolCall }) => {
+      const { toolName, toolCallId } = toolCall;
       const input = toolCall.input as Record<string, string> | undefined;
       if (!input) return;
 
       if (toolName === 'getBalances') {
         const result = await getBalances(input.tokenAddress);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'placeBid') {
         const result = await placeBid(input.auctionAddress, input.amount);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'claimTokens') {
         const result = await claimTokens(input.auctionAddress);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'previewSwap') {
@@ -452,7 +327,7 @@ export function FloatingAgent() {
           input.buyToken as 'token' | 'quote',
           input.quoteToken ?? 'USDC',
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'approveIfNeeded') {
@@ -462,7 +337,7 @@ export function FloatingAgent() {
           input.buyToken as 'token' | 'quote',
           input.quoteToken ?? 'USDC',
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'executeSwapExactInput') {
@@ -472,7 +347,7 @@ export function FloatingAgent() {
           input.buyToken as 'token' | 'quote',
           input.quoteToken ?? 'USDC',
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'previewSwapExactOutput') {
@@ -482,7 +357,7 @@ export function FloatingAgent() {
           input.buyToken as 'token' | 'quote',
           input.quoteToken ?? 'USDC',
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'executeSwapExactOutput') {
@@ -492,7 +367,7 @@ export function FloatingAgent() {
           input.buyToken as 'token' | 'quote',
           input.quoteToken ?? 'USDC',
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'previewGeneralSwap') {
@@ -501,7 +376,7 @@ export function FloatingAgent() {
           input.toToken,
           input.sellAmount,
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'approveGeneralSwap') {
@@ -509,7 +384,7 @@ export function FloatingAgent() {
           input.fromToken,
           input.sellAmount,
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'executeGeneralSwap') {
@@ -518,7 +393,7 @@ export function FloatingAgent() {
           input.toToken,
           input.sellAmount,
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'previewGeneralSwapExactOutput') {
@@ -527,7 +402,7 @@ export function FloatingAgent() {
           input.toToken,
           input.receiveAmount,
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'executeGeneralSwapExactOutput') {
@@ -536,32 +411,32 @@ export function FloatingAgent() {
           input.toToken,
           input.receiveAmount,
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'getMyEnsName') {
         const result = await getMyEnsName();
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'checkEnsName') {
         const result = await checkEnsName(input.name);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'commitEnsName') {
         const result = await commitEnsName(input.name);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'registerEnsName') {
         const result = await registerEnsName(input.name);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'setPrimaryEnsName') {
         const result = await setPrimaryEnsName(input.name);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
+        void addToolOutput({ tool: toolName, toolCallId, output: result });
         return;
       }
       if (toolName === 'suggestReplies') {
@@ -571,7 +446,7 @@ export function FloatingAgent() {
         void addToolOutput({
           tool: toolName,
           toolCallId,
-          output: {replies: input.replies},
+          output: { replies: input.replies },
         });
         return;
       }
@@ -609,7 +484,7 @@ export function FloatingAgent() {
       } else {
         navText = '[I just navigated to a different page]';
       }
-      void sendMessage({text: navText});
+      void sendMessage({ text: navText });
     } else {
       prevPageRef.current = pageKey;
     }
@@ -635,7 +510,7 @@ export function FloatingAgent() {
     if (!input || !input.value.trim() || isStreaming) return;
     const text = input.value.trim();
     input.value = '';
-    void sendMessage({text});
+    void sendMessage({ text });
   };
 
   const handlePowerToggle = useCallback(() => {
@@ -656,7 +531,7 @@ export function FloatingAgent() {
     <Draggable
       nodeRef={nodeRef as React.RefObject<HTMLElement>}
       handle=".drag-handle"
-      defaultPosition={{x: 0, y: 0}}
+      defaultPosition={{ x: 0, y: 0 }}
       onStart={() => {
         if (isResizing.current) return false;
         isDragging.current = false;
@@ -708,14 +583,14 @@ export function FloatingAgent() {
                 bottomLeft: true,
               }}
               handleStyles={{
-                top: {cursor: 'n-resize'},
-                right: {cursor: 'e-resize'},
-                bottom: {cursor: 's-resize'},
-                left: {cursor: 'w-resize'},
-                topRight: {cursor: 'ne-resize'},
-                topLeft: {cursor: 'nw-resize'},
-                bottomRight: {cursor: 'se-resize'},
-                bottomLeft: {cursor: 'sw-resize'},
+                top: { cursor: 'n-resize' },
+                right: { cursor: 'e-resize' },
+                bottom: { cursor: 's-resize' },
+                left: { cursor: 'w-resize' },
+                topRight: { cursor: 'ne-resize' },
+                topLeft: { cursor: 'nw-resize' },
+                bottomRight: { cursor: 'se-resize' },
+                bottomLeft: { cursor: 'sw-resize' },
               }}
               className="crt-bezel relative flex! flex-col!"
             >
@@ -738,7 +613,7 @@ export function FloatingAgent() {
               {/* Screen area */}
               <div
                 className="relative crt-screen crt-scanlines crt-vignette crt-glitch-line crt-flicker flex-1"
-                style={{height: 'calc(100% - 70px)'}}
+                style={{ height: 'calc(100% - 70px)' }}
               >
                 {/* Scrollable messages */}
                 <div
@@ -793,7 +668,7 @@ export function FloatingAgent() {
                           variant="outline"
                           size="xs"
                           className="text-dim hover:text-green hover:border-green "
-                          onClick={() => void sendMessage({text: s})}
+                          onClick={() => void sendMessage({ text: s })}
                         >
                           {s}
                         </Button>
@@ -826,7 +701,7 @@ export function FloatingAgent() {
                           <TimerReplyButton
                             key={getReplyText(reply) + idx}
                             reply={reply}
-                            onSend={text => void sendMessage({text})}
+                            onSend={text => void sendMessage({ text })}
                           />
                         ))}
                       </div>
@@ -872,17 +747,23 @@ export function FloatingAgent() {
           onClick={handleMascotClick}
         >
           <div
-            className={`
-              w-14 h-14 border-2 border-terminal-green bg-card
-              hover:bg-terminal-green/10 transition-all duration-200
+            className="
+              relative w-[280px] h-[280px]
               flex items-center justify-center select-none cursor-pointer
-            `}
+              transition-transform duration-200 hover:scale-105 active:scale-95
+              -mb-10 -mr-10
+            "
             title="Click to chat"
           >
-            <Mascot className="w-10 h-10 pointer-events-none" />
-            <div
-              className="absolute inset-0 border-2 border-terminal-green opacity-0 group-hover:opacity-40 transition-opacity pointer-events-none"
-              style={{boxShadow: '0 0 12px var(--terminal-green)'}}
+            <img
+              src="/mascot/mascot.gif"
+              alt="Mascot"
+              className="
+                w-full h-full object-contain pointer-events-none
+                drop-shadow-[0_0_2px_#4ade80]
+                group-hover:drop-shadow-[0_0_4px_#4ade80]
+                transition-all duration-300
+              "
             />
           </div>
         </div>

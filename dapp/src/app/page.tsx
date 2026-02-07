@@ -1,6 +1,7 @@
 import Link from 'next/link';
-import {Droplets, Scale, TrendingUp} from 'lucide-react';
-import {Container} from '~/components/layout/container';
+import { Droplets, Scale, TrendingUp } from 'lucide-react';
+import { Container } from '~/components/layout/container';
+
 
 export default function Home() {
   return (
@@ -8,49 +9,51 @@ export default function Home() {
       {/* Hero - Terminal style */}
       <section className="py-24 md:py-32">
         <Container size="lg">
-          <div className="max-w-2xl">
-            {/* Command prompt style */}
-            <div className="text-dim text-sm mb-6">
-              ~/nyx <span className="text-green">$</span> cat readme.md
-            </div>
+          <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+            <div className="max-w-2xl">
+              {/* Command prompt style */}
+              <div className="text-dim text-sm mb-6">
+                ~/nyx <span className="text-green">$</span> cat readme.md
+              </div>
 
-            <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-8">
-              fair launches
-              <br />
-              <span className="text-green">done right</span>
-            </h1>
+              <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-8">
+                fair launches
+                <br />
+                <span className="text-green">done right</span>
+              </h1>
 
-            <div className="text-dim leading-relaxed mb-12 max-w-lg">
-              <p className="mb-4">
-                continuous clearing auctions eliminate front-running and
-                sniping. everyone pays the same price. simple.
-              </p>
-              <p>powered by uniswap v4.</p>
-            </div>
+              <div className="text-dim leading-relaxed mb-12 max-w-lg">
+                <p className="mb-4">
+                  continuous clearing auctions eliminate front-running and
+                  sniping. everyone pays the same price. simple.
+                </p>
+                <p>powered by uniswap v4.</p>
+              </div>
 
-            {/* Actions as terminal commands */}
-            <div className="space-y-3">
-              <Link
-                href="/launch"
-                className="flex items-center gap-3 p-4 border border-border hover:border-green hover:bg-green/5 transition-colors group"
-              >
-                <span className="text-green">$</span>
-                <span className="group-hover:text-green transition-colors">
-                  nyx launch --new-token
-                </span>
-                <span className="text-dim ml-auto">create auction →</span>
-              </Link>
+              {/* Actions as terminal commands */}
+              <div className="space-y-3">
+                <Link
+                  href="/launch"
+                  className="flex items-center gap-3 p-4 border border-border hover:border-green hover:bg-green/5 transition-colors group"
+                >
+                  <span className="text-green">$</span>
+                  <span className="group-hover:text-green transition-colors">
+                    nyx launch --new-token
+                  </span>
+                  <span className="text-dim ml-auto">create auction →</span>
+                </Link>
 
-              <Link
-                href="/discover"
-                className="flex items-center gap-3 p-4 border border-border hover:border-purple hover:bg-purple/5 transition-colors group"
-              >
-                <span className="text-purple">$</span>
-                <span className="group-hover:text-purple transition-colors">
-                  nyx list --active
-                </span>
-                <span className="text-dim ml-auto">browse tokens →</span>
-              </Link>
+                <Link
+                  href="/discover"
+                  className="flex items-center gap-3 p-4 border border-border hover:border-purple hover:bg-purple/5 transition-colors group"
+                >
+                  <span className="text-purple">$</span>
+                  <span className="group-hover:text-purple transition-colors">
+                    nyx list --active
+                  </span>
+                  <span className="text-dim ml-auto">browse tokens →</span>
+                </Link>
+              </div>
             </div>
           </div>
         </Container>
@@ -268,7 +271,7 @@ export default function Home() {
           <div className="border border-border bg-card overflow-hidden">
             {/* Chat header */}
             <div className="border-b border-border px-4 py-2 flex items-center gap-2">
-              <div className="w-2 h-2 bg-green pulse-soft" />
+              <img src="/mascot/mascot.gif" alt="System" className="w-8 h-8 object-contain" />
               <span className="text-sm font-medium">glitch v1.0</span>
               <span className="text-dim text-xs ml-auto">on-chain</span>
             </div>
@@ -400,7 +403,7 @@ export default function Home() {
               </div>
 
               <div className="h-1 bg-border mb-4">
-                <div className="h-full bg-green" style={{width: '25%'}} />
+                <div className="h-full bg-green" style={{ width: '25%' }} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -429,7 +432,7 @@ export default function Home() {
               </div>
 
               <div className="h-1 bg-border mb-4">
-                <div className="h-full bg-green" style={{width: '25%'}} />
+                <div className="h-full bg-green" style={{ width: '25%' }} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -458,7 +461,7 @@ export default function Home() {
               </div>
 
               <div className="h-1 bg-border mb-4">
-                <div className="h-full bg-green" style={{width: '25%'}} />
+                <div className="h-full bg-green" style={{ width: '25%' }} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -488,7 +491,7 @@ export default function Home() {
               </div>
 
               <div className="h-1 bg-border mb-4">
-                <div className="h-full bg-green" style={{width: '67%'}} />
+                <div className="h-full bg-green" style={{ width: '67%' }} />
               </div>
 
               <div className="flex justify-between text-sm">

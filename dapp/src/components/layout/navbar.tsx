@@ -1,17 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import {usePathname} from 'next/navigation';
-import {Menu, X} from 'lucide-react';
-import {useState} from 'react';
-import {ConnectWallet} from '~/components/connect-wallet';
-import {FaucetModal} from '~/components/faucet-modal';
-import {Sheet, SheetContent, SheetTrigger} from '~/components/ui/sheet';
+import { usePathname } from 'next/navigation';
+import { Menu, X } from 'lucide-react';
+import { useState } from 'react';
+import { ConnectWallet } from '~/components/connect-wallet';
+import { FaucetModal } from '~/components/faucet-modal';
+import { Sheet, SheetContent, SheetTrigger } from '~/components/ui/sheet';
 
 const NAV_LINKS = [
-  {href: '/discover', label: 'discover'},
-  {href: '/launch', label: 'launch'},
-  {href: '/faq', label: 'faq'},
+  { href: '/discover', label: 'discover' },
+  { href: '/launch', label: 'launch' },
+  { href: '/faq', label: 'faq' },
 ];
 
 export function Navbar() {
@@ -25,6 +25,19 @@ export function Navbar() {
           href="/"
           className="flex items-center gap-2 hover:opacity-80 transition-opacity"
         >
+          <div
+            className="w-12 h-12 bg-green"
+            style={{
+              maskImage: 'url("/logo.png")',
+              maskSize: 'contain',
+              maskRepeat: 'no-repeat',
+              maskPosition: 'center',
+              WebkitMaskImage: 'url("/logo.png")',
+              WebkitMaskSize: 'contain',
+              WebkitMaskRepeat: 'no-repeat',
+              WebkitMaskPosition: 'center',
+            }}
+          />
           <span className="text-green">~</span>
           <span className="font-bold">nyx</span>
         </Link>
@@ -86,9 +99,8 @@ export function Navbar() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setMobileOpen(false)}
-                      className={`block py-3 border-b border-border ${
-                        pathname === link.href ? 'text-green' : 'text-dim'
-                      }`}
+                      className={`block py-3 border-b border-border ${pathname === link.href ? 'text-green' : 'text-dim'
+                        }`}
                     >
                       {pathname === link.href && (
                         <span className="mr-2">→</span>
