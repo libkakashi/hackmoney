@@ -1,17 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
-import { useState } from 'react';
-import { ConnectWallet } from '~/components/connect-wallet';
-import { FaucetModal } from '~/components/faucet-modal';
-import { Sheet, SheetContent, SheetTrigger } from '~/components/ui/sheet';
+import {usePathname} from 'next/navigation';
+import {Menu, X} from 'lucide-react';
+import {useState} from 'react';
+import {ConnectWallet} from '~/components/connect-wallet';
+import {FaucetModal} from '~/components/faucet-modal';
+import {Sheet, SheetContent, SheetTrigger} from '~/components/ui/sheet';
 
 const NAV_LINKS = [
-  { href: '/discover', label: 'discover' },
-  { href: '/launch', label: 'launch' },
-  { href: '/faq', label: 'faq' },
+  {href: '/discover', label: 'discover'},
+  {href: '/launch', label: 'launch'},
+  {href: '/faq', label: 'faq'},
 ];
 
 export function Navbar() {
@@ -99,8 +99,9 @@ export function Navbar() {
                       key={link.href}
                       href={link.href}
                       onClick={() => setMobileOpen(false)}
-                      className={`block py-3 border-b border-border ${pathname === link.href ? 'text-green' : 'text-dim'
-                        }`}
+                      className={`block py-3 border-b border-border ${
+                        pathname === link.href ? 'text-green' : 'text-dim'
+                      }`}
                     >
                       {pathname === link.href && (
                         <span className="mr-2">→</span>
