@@ -129,8 +129,8 @@ export default function DiscoverPage() {
     <div className="min-h-screen">
       {/* Header */}
       <div className="border-b border-border">
-        <Container>
-          <div className="py-8">
+        <Container size="xl">
+          <div className="py-12">
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="text-dim text-sm mb-2">
@@ -175,7 +175,7 @@ export default function DiscoverPage() {
         </Container>
       </div>
 
-      <Container>
+      <Container size="xl">
         <div className="py-8">
           {/* Search & sort */}
           <div className="flex flex-col sm:flex-row gap-3 mb-6">

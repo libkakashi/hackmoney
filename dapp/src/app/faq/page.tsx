@@ -248,37 +248,271 @@ You can always launch again with a new token if you want to try different timing
 
 type Tab = 'general' | 'traders' | 'creators';
 
-const ASCII_FAQ_LINES = [
-  {
-    text: '+----------------------------------------------+',
-    color: 'text-purple',
-  },
-  {
-    text: '|  ███████╗     █████╗      ██████╗           |',
-    color: 'text-green',
-  },
-  {text: '|  ██╔════╝    ██╔══██╗   ██╔═══██╗          |', color: 'text-green'},
-  {
-    text: '|  █████╗       ███████║   ██║     ██║          |',
-    color: 'text-yellow',
-  },
-  {
-    text: '|  ██╔══╝       ██╔══██║   ██║▄▄  ██║          |',
-    color: 'text-yellow',
-  },
-  {
-    text: '|  ██║            ██║   ██║   ╚██████╔╝          |',
-    color: 'text-green',
-  },
-  {
-    text: '|  ╚═╝            ╚═╝   ╚═╝     ╚══▀▀═╝           |',
-    color: 'text-green',
-  },
-  {
-    text: '+----------------------------------------------+',
-    color: 'text-purple',
-  },
-];
+function FAQBanner() {
+  const scanlines = Array.from({length: 20}, (_, i) => 30 + i * 10);
+  const gridLines = Array.from({length: 12}, (_, i) => 50 + i * 60);
+
+  return (
+    <svg
+      viewBox="0 0 700 230"
+      className="block w-full max-w-2xl mb-6"
+      aria-label="FAQ"
+    >
+      <defs>
+        <linearGradient id="faq-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#5fffb0" />
+          <stop offset="50%" stopColor="#ffe080" />
+          <stop offset="100%" stopColor="#d4c0f0" />
+        </linearGradient>
+        <linearGradient id="faq-grad-v" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#5fffb0" stopOpacity="0" />
+          <stop offset="50%" stopColor="#5fffb0" stopOpacity="0.15" />
+          <stop offset="100%" stopColor="#5fffb0" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="faq-glow" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#5fffb0" stopOpacity="0.4" />
+          <stop offset="50%" stopColor="#ffe080" stopOpacity="0.3" />
+          <stop offset="100%" stopColor="#d4c0f0" stopOpacity="0.4" />
+        </linearGradient>
+        <filter id="faq-blur">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="14" />
+        </filter>
+        <filter id="faq-blur-sm">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="4" />
+        </filter>
+      </defs>
+
+      {/* Background grid */}
+      {gridLines.map(x => (
+        <line
+          key={`gv-${x}`}
+          x1={x}
+          y1="15"
+          x2={x}
+          y2="215"
+          stroke="#5fffb0"
+          strokeOpacity="0.04"
+          strokeWidth="1"
+        />
+      ))}
+
+      {/* Scanlines */}
+      {scanlines.map(y => (
+        <line
+          key={`s-${y}`}
+          x1="15"
+          y1={y}
+          x2="685"
+          y2={y}
+          stroke="#5fffb0"
+          strokeOpacity="0.04"
+          strokeWidth="1"
+        />
+      ))}
+
+      {/* Large diffuse glow behind text */}
+      <text
+        x="40"
+        y="170"
+        textAnchor="start"
+        style={{
+          fontSize: '160px',
+          fontFamily: 'var(--font-jetbrains-mono), monospace',
+          fontWeight: 800,
+          fill: 'url(#faq-glow)',
+          filter: 'url(#faq-blur)',
+        }}
+      >
+        FAQ
+      </text>
+
+      {/* Tighter inner glow */}
+      <text
+        x="40"
+        y="170"
+        textAnchor="start"
+        style={{
+          fontSize: '160px',
+          fontFamily: 'var(--font-jetbrains-mono), monospace',
+          fontWeight: 800,
+          fill: 'url(#faq-glow)',
+          filter: 'url(#faq-blur-sm)',
+        }}
+      >
+        FAQ
+      </text>
+
+      {/* Main text with gradient */}
+      <text
+        x="40"
+        y="170"
+        textAnchor="start"
+        style={{
+          fontSize: '160px',
+          fontFamily: 'var(--font-jetbrains-mono), monospace',
+          fontWeight: 800,
+          fill: 'url(#faq-grad)',
+        }}
+      >
+        FAQ
+      </text>
+
+      {/* Blinking cursor */}
+      <rect
+        x="340"
+        y="70"
+        width="6"
+        height="100"
+        rx="1"
+        fill="#5fffb0"
+        opacity="0.9"
+      >
+        <animate
+          attributeName="opacity"
+          values="0.9;0;0.9"
+          dur="1.2s"
+          repeatCount="indefinite"
+        />
+      </rect>
+
+      {/* Top dashed line */}
+      <line
+        x1="40"
+        y1="12"
+        x2="660"
+        y2="12"
+        stroke="url(#faq-grad)"
+        strokeWidth="1.5"
+        strokeDasharray="8 5"
+      />
+
+      {/* Bottom dashed line */}
+      <line
+        x1="40"
+        y1="218"
+        x2="660"
+        y2="218"
+        stroke="url(#faq-grad)"
+        strokeWidth="1.5"
+        strokeDasharray="8 5"
+      />
+
+      {/* Corner brackets — top left */}
+      <path
+        d="M12 32 L12 12 L32 12"
+        stroke="#5fffb0"
+        strokeWidth="2.5"
+        fill="none"
+      />
+      {/* Corner brackets — top right */}
+      <path
+        d="M688 32 L688 12 L668 12"
+        stroke="#d4c0f0"
+        strokeWidth="2.5"
+        fill="none"
+      />
+      {/* Corner brackets — bottom left */}
+      <path
+        d="M12 198 L12 218 L32 218"
+        stroke="#ffe080"
+        strokeWidth="2.5"
+        fill="none"
+      />
+      {/* Corner brackets — bottom right */}
+      <path
+        d="M688 198 L688 218 L668 218"
+        stroke="#5fffb0"
+        strokeWidth="2.5"
+        fill="none"
+      />
+
+      {/* Decorative side ticks — left */}
+      {[60, 115, 170].map(y => (
+        <line
+          key={`tl-${y}`}
+          x1="12"
+          y1={y}
+          x2="22"
+          y2={y}
+          stroke="#5fffb0"
+          strokeOpacity="0.3"
+          strokeWidth="1.5"
+        />
+      ))}
+      {/* Decorative side ticks — right */}
+      {[60, 115, 170].map(y => (
+        <line
+          key={`tr-${y}`}
+          x1="678"
+          y1={y}
+          x2="688"
+          y2={y}
+          stroke="#d4c0f0"
+          strokeOpacity="0.3"
+          strokeWidth="1.5"
+        />
+      ))}
+
+      {/* Top left label */}
+      <text
+        x="42"
+        y="30"
+        style={{
+          fontSize: '10px',
+          fontFamily: 'var(--font-jetbrains-mono), monospace',
+          fill: '#5fffb0',
+          opacity: 0.5,
+        }}
+      >
+        nyx://help
+      </text>
+
+      {/* Top right label */}
+      <text
+        x="658"
+        y="30"
+        textAnchor="end"
+        style={{
+          fontSize: '10px',
+          fontFamily: 'var(--font-jetbrains-mono), monospace',
+          fill: '#d4c0f0',
+          opacity: 0.5,
+        }}
+      >
+        v1.0.0
+      </text>
+
+      {/* Bottom status line */}
+      <text
+        x="42"
+        y="210"
+        style={{
+          fontSize: '10px',
+          fontFamily: 'var(--font-jetbrains-mono), monospace',
+          fill: '#ffe080',
+          opacity: 0.4,
+        }}
+      >
+        man faq | grep --help
+      </text>
+
+      {/* Bottom right status */}
+      <text
+        x="658"
+        y="210"
+        textAnchor="end"
+        style={{
+          fontSize: '10px',
+          fontFamily: 'var(--font-jetbrains-mono), monospace',
+          fill: '#5fffb0',
+          opacity: 0.4,
+        }}
+      >
+        [READY]
+      </text>
+    </svg>
+  );
+}
 
 const tagColors: Record<string, string> = {
   core: 'text-yellow border-yellow/30 bg-yellow/5',
@@ -335,20 +569,7 @@ export default function FAQPage() {
               ~/nyx <span className="text-green">$</span> man faq
             </div>
 
-            <link
-              href="https://fonts.googleapis.com/css2?family=JetBrains+Mono&display=swap"
-              rel="stylesheet"
-            />
-
-            {/* ASCII header */}
-            <pre className="mb-4">
-              {ASCII_FAQ_LINES.map((line, i) => (
-                <span key={i} className={line.color}>
-                  {line.text}
-                  {'\n'}
-                </span>
-              ))}
-            </pre>
+            <FAQBanner />
             <h1 className="text-2xl font-bold sm:hidden">FAQ</h1>
 
             <div className="text-dim text-xs mt-2">
