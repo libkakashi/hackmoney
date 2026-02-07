@@ -67,7 +67,7 @@ You'll need USDC in your wallet on the same network as the auction. If you have 
 
 We chose USDC because it provides stable, predictable pricing and eliminates volatility risk.
 
-The Nyx Agent can help you swap any token to USDC and participate in the auction in 1 click.`,
+Ramen can help you swap any token to USDC and participate in the auction in 1 click.`,
     tag: 'guide',
   },
 ];
@@ -81,8 +81,8 @@ It enables fair token launches with transparent price discovery, immediate liqui
     tag: 'core',
   },
   {
-    q: 'what is the nyx agent?',
-    a: `The Nyx Agent is your personal on-chain assistant built into the platform.
+    q: 'who is ramen?',
+    a: `Ramen is your personal on-chain assistant built into the platform.
 
 It provides real-time market intelligence and helps you find the best opportunities by finding:
 • Top 24-hour price performers

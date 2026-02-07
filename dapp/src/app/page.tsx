@@ -1,7 +1,6 @@
 import Link from 'next/link';
-import { Droplets, Scale, TrendingUp } from 'lucide-react';
-import { Container } from '~/components/layout/container';
-
+import {Droplets, Scale, TrendingUp} from 'lucide-react';
+import {Container} from '~/components/layout/container';
 
 export default function Home() {
   return (
@@ -255,14 +254,14 @@ export default function Home() {
         </Container>
       </section>
 
-      {/* Glitch - Mock chat interface */}
+      {/* Ramen - Mock chat interface */}
       <section className="py-20 border-t border-border">
         <Container size="lg">
           <div className="text-dim text-sm mb-4">
-            ~/nyx <span className="text-green">$</span> nyx glitch --on-chain
+            ~/nyx <span className="text-green">$</span> nyx ramen --on-chain
           </div>
 
-          <h2 className="text-xl md:text-2xl font-bold mb-2">Meet Glitch</h2>
+          <h2 className="text-xl md:text-2xl font-bold mb-2">Meet Ramen</h2>
           <p className="text-dim text-sm mb-8 max-w-xl">
             he can help you discover tokens, place bids, trade for you, or just
             answer your questions.
@@ -271,8 +270,12 @@ export default function Home() {
           <div className="border border-border bg-card overflow-hidden">
             {/* Chat header */}
             <div className="border-b border-border px-4 py-2 flex items-center gap-2">
-              <img src="/mascot/mascot.gif" alt="System" className="w-8 h-8 object-contain" />
-              <span className="text-sm font-medium">glitch v1.0</span>
+              <img
+                src="/mascot/mascot.gif"
+                alt="System"
+                className="w-8 h-8 object-contain"
+              />
+              <span className="text-sm font-medium">ramen v1.0</span>
               <span className="text-dim text-xs ml-auto">on-chain</span>
             </div>
 
@@ -288,10 +291,10 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Glitch 1 */}
+              {/* Ramen 1 */}
               <div className="flex justify-start">
                 <div className="max-w-[85%]">
-                  <div className="text-green text-xs mb-1">&gt; glitch</div>
+                  <div className="text-green text-xs mb-1">&gt; ramen</div>
                   <div className="bg-green/5 border border-green/30 px-3 py-1.5 text-sm text-green">
                     <div className="mb-1">
                       you&apos;ve got 2,400 DAI. $PRISE auction takes USDC, so
@@ -318,10 +321,10 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* Glitch 2 */}
+              {/* Ramen 2 */}
               <div className="flex justify-start">
                 <div className="max-w-[85%]">
-                  <div className="text-green text-xs mb-1">&gt; glitch</div>
+                  <div className="text-green text-xs mb-1">&gt; ramen</div>
                   <div className="bg-green/5 border border-green/30 px-3 py-1.5 text-sm text-green">
                     <div className="space-y-1 text-xs text-dim">
                       <div>
@@ -348,7 +351,7 @@ export default function Home() {
             {/* Input area with blinking cursor */}
             <div className="border-t border-border px-4 py-2 flex items-center gap-2">
               <span className="text-dim text-sm">$</span>
-              <span className="text-green text-sm">ask glitch...</span>
+              <span className="text-green text-sm">ask ramen...</span>
               <span className="w-2 h-4 bg-green blink ml-1" />
             </div>
           </div>
@@ -403,7 +406,7 @@ export default function Home() {
               </div>
 
               <div className="h-1 bg-border mb-4">
-                <div className="h-full bg-green" style={{ width: '25%' }} />
+                <div className="h-full bg-green" style={{width: '25%'}} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -432,7 +435,7 @@ export default function Home() {
               </div>
 
               <div className="h-1 bg-border mb-4">
-                <div className="h-full bg-green" style={{ width: '25%' }} />
+                <div className="h-full bg-green" style={{width: '25%'}} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -461,7 +464,7 @@ export default function Home() {
               </div>
 
               <div className="h-1 bg-border mb-4">
-                <div className="h-full bg-green" style={{ width: '25%' }} />
+                <div className="h-full bg-green" style={{width: '25%'}} />
               </div>
 
               <div className="flex justify-between text-sm">
@@ -491,7 +494,7 @@ export default function Home() {
               </div>
 
               <div className="h-1 bg-border mb-4">
-                <div className="h-full bg-green" style={{ width: '67%' }} />
+                <div className="h-full bg-green" style={{width: '67%'}} />
               </div>
 
               <div className="flex justify-between text-sm">
