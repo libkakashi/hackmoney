@@ -96,15 +96,15 @@ export const useSubmitBid = (auctionAddr: Address) => {
       console.log('[bid] Rounded max price Q96:', maxPriceQ96.toString());
 
       console.log('[bid] Simulating bid transaction...');
-      await publicClient.simulateContract({
-        address: auctionAddr,
-        abi: ccaAbi,
-        functionName: 'submitBid',
-        args: [maxPriceQ96, amount, userAddress, hookData],
-        account: userAddress,
-        value: isNative ? amount : 0n,
-      });
-      console.log('[bid] Simulation successful');
+      // await publicClient.simulateContract({
+      //   address: auctionAddr,
+      //   abi: ccaAbi,
+      //   functionName: 'submitBid',
+      //   args: [maxPriceQ96, amount, userAddress, hookData],
+      //   account: userAddress,
+      //   value: isNative ? amount : 0n,
+      // });
+      // console.log('[bid] Simulation successful');
 
       const hash = await writeContractAsync({
         address: auctionAddr,

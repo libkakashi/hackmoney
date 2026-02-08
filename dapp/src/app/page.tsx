@@ -24,7 +24,7 @@ export default function Home() {
               <div className="text-dim leading-relaxed mb-12 max-w-lg">
                 <p className="mb-4">
                   continuous clearing auctions eliminate front-running and
-                  sniping. everyone pays the same price. simple.
+                  sniping.
                 </p>
                 <p>powered by uniswap v4.</p>
               </div>
