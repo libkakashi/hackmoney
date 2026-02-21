@@ -134,12 +134,12 @@ export default function DiscoverPage() {
             <div className="flex items-center justify-between mb-6">
               <div>
                 <div className="text-dim text-sm mb-2">
-                  ~/nyx <span className="text-green">$</span> ls tokens/
+                  ~/nyx <span className="text-green">$</span> ls projects/
                 </div>
-                <h1 className="text-2xl font-bold">discover</h1>
+                <h1 className="text-2xl font-bold">discover projects</h1>
               </div>
               <Button asChild>
-                <Link href="/launch">launch token</Link>
+                <Link href="/launch">launch project</Link>
               </Button>
             </div>
 
@@ -205,7 +205,7 @@ export default function DiscoverPage() {
 
           {/* Results count */}
           <div className="text-dim text-sm mb-4">
-            {filteredTokens.length} results
+            {filteredTokens.length} projects
             {filters.search && (
               <Button
                 variant="link"
@@ -222,7 +222,7 @@ export default function DiscoverPage() {
           {isError && (
             <div className="border border-border bg-card p-6 text-center mb-6">
               <div className="text-red mb-2">
-                error: {error?.message || 'failed to load tokens'}
+                error: {error?.message || 'failed to load projects'}
               </div>
               <Button
                 variant="secondary"
@@ -275,17 +275,17 @@ export default function DiscoverPage() {
             <div className="border border-border bg-card p-12 text-center">
               {tokens.length === 0 ? (
                 <>
-                  <div className="text-dim mb-2">no tokens launched yet</div>
+                  <div className="text-dim mb-2">no projects launched yet</div>
                   <div className="text-dim text-sm mb-4">
-                    be the first to launch a token
+                    be the first to launch an open source project token
                   </div>
                   <Button asChild>
-                    <Link href="/launch">launch token</Link>
+                    <Link href="/launch">launch project</Link>
                   </Button>
                 </>
               ) : (
                 <>
-                  <div className="text-dim mb-2">no tokens found</div>
+                  <div className="text-dim mb-2">no projects found</div>
                   <div className="text-dim text-sm">
                     try adjusting your filters
                   </div>

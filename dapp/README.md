@@ -1,36 +1,112 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Nyx - Crowdfund Bounties for Open Source Issues
+
+Nyx is a platform for open source projects to launch tokens and crowdfund bounties for issue resolution.
+
+## What is Nyx?
+
+Nyx enables:
+
+- **Launch project tokens** in one transaction with instant liquidity
+- **Crowdfund issue bounties** - anyone can add rewards to issues they care about
+- **Automatic reward splitting** - contributors who help resolve issues split the bounty
+- **Tradable rewards** - tokens are liquid immediately, contributors can hold or sell
+- **Community-powered development** - users incentivize the fixes and features they need
+
+## Why Token Bounties?
+
+Traditional bounty platforms are broken:
+- **Project-only funding**: Only maintainers can set bounties
+- **Fiat payments**: Slow, manual payouts with no upside for contributors
+- **No collaboration**: Hard to split rewards across multiple helpers
+
+Nyx provides a better way:
+- **Crowdfunded**: Anyone - projects, users, community - can add bounties
+- **Instant liquid rewards**: Contributors get tradable tokens immediately
+- **Automatic splitting**: Multiple contributors automatically split bounties
+- **Aligned incentives**: Token value grows with project success
+- **Faster resolution**: Critical issues get resolved quickly with community funding
+
+## How It Works
+
+1. **Launch Project Token**: Deploy a token with name, symbol, and description in one transaction
+2. **Initial Distribution**: 30-minute launch window where supporters and contributors participate fairly
+3. **Crowdfund Bounties**: Projects, users, or anyone can add token bounties to issues
+4. **Contributors Earn**: Resolve issues and automatically split bounties with collaborators
+
+## Key Features
+
+- **Crowdfunded Bounties**: Anyone can add rewards to issues they care about
+- **Automatic Splitting**: Bounties split across all contributors who helped
+- **Instant Liquidity**: Tokens are tradable immediately after launch
+- **Fair Access**: No whales, no bots, no insider advantages during launches
+- **Permissionless**: Anyone can launch, add bounties, or contribute
+- **Transparent**: All bounties and rewards on-chain and immutable
+- **Zero Platform Fees**: Only pay gas costs for deployment
 
 ## Getting Started
 
-First, run the development server:
+### Development
+
+First, install dependencies:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
+bun install
+```
+
+Then run the development server:
+
+```bash
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Project Structure
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `src/app/` - Next.js app router pages
+- `src/components/` - React components
+- `src/hooks/` - Custom React hooks
+- `src/lib/` - Utility functions and configurations
+- `src/graphql/` - GraphQL queries and generated types
+- `src/abi/` - Smart contract ABIs
+
+## Technology Stack
+
+- **Next.js 15** - React framework
+- **Uniswap V4** - Liquidity and token launches
+- **Wagmi** - Ethereum interactions
+- **GraphQL** - Data fetching
+- **TailwindCSS** - Styling
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
+- [Uniswap V4 Documentation](https://docs.uniswap.org/contracts/v4/overview)
+- [Next.js Documentation](https://nextjs.org/docs)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Use Cases
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### For Open Source Projects
+- Launch a project token to create sustainable funding
+- Set bounties on critical bugs or features
+- Let community crowdfund additional bounties for issues they care about
+- Reward multiple contributors automatically when issues are resolved
 
-## Deploy on Vercel
+### For Contributors
+- Browse projects and find high-value bounties
+- Collaborate with others and automatically split rewards
+- Earn tradable tokens that appreciate with project success
+- Get paid instantly in liquid tokens, not slow fiat payments
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### For Users & Community
+- Crowdfund bounties for bugs that affect you
+- Add rewards to feature requests you want prioritized
+- Speed up issue resolution by incentivizing developers
+- Become a stakeholder in projects you use
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Contributing
+
+We welcome contributions! Whether it's bug fixes, feature additions, documentation improvements, or design updates, your help makes Nyx better for the open source community.
+
+## License
+
+[Add your license here]

@@ -25,7 +25,7 @@ export function Footer() {
               <span className="font-bold">nyx</span>
             </Link>
             <p className="text-dim text-sm">
-              fair token launches with continuous clearing auctions
+              crowdfund bounties. back projects early.
             </p>
           </div>
 

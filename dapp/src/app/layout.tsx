@@ -50,7 +50,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'nyx',
+  title: 'nyx - crowdfund bounties for open source issues',
+  description:
+    'Launch project tokens and crowdfund bounties for issue resolution. Anyone can add rewards. Contributors automatically split payouts. Back the projects you believe in early.',
 };
 
 export default function RootLayout({

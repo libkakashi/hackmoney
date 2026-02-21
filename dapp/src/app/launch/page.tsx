@@ -99,10 +99,11 @@ export default function LaunchPage() {
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-2xl mb-2">
-            <span className="text-green">&gt;</span> launch token
+            <span className="text-green">&gt;</span> launch project token
           </h1>
           <p className="text-dim text-sm">
-            continuous clearing auction for fair price discovery
+            crowdfund bounties for issues. reward contributors. let early
+            believers back your project.
           </p>
         </div>
 

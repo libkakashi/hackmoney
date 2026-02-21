@@ -1,6 +1,8 @@
 # nyx
 
-Nyx is a token launchpad built on Uniswap V4 that uses Continuous Clearing Auctions (CCA) for price discovery. No snipers, no front-running, no MEV.
+Nyx is a platform for open source projects to launch tokens and crowdfund bounties for issue resolution.
+
+Anyone—projects, users, or community members—can add token bounties to issues. Contributors who help resolve issues automatically split the rewards. Tokens are tradable immediately, creating sustainable incentives for open source development.
 
 ## Architecture
 
@@ -16,11 +18,11 @@ The `Launchpad` factory contract handles the full lifecycle: deploying a UERC20 
 
 Key dependencies: Uniswap V4 (core + periphery), Liquidity Launcher, Continuous Clearing Auction, UERC20 Factory, OpenZeppelin.
 
-We've hardcoded most CCA parameters to abstract out the complexity for more retail focused audience with primary focus on memecoin launches.
+We've standardized launch parameters to provide a consistent, fair experience for open source projects and their communities.
 
 ### Indexer
 
-Envio-based indexer tracking `TokenLaunched` events and `Transfer` events for all launched tokens. Serves a GraphQL API consumed by the dapp for token discovery, holder analytics, and leaderboards.
+Envio-based indexer tracking `TokenLaunched` events and `Transfer` events for all launched tokens. Serves a GraphQL API consumed by the dapp for project discovery, contributor analytics, and community leaderboards.
 
 ### Dapp
 
@@ -31,14 +33,15 @@ Envio-based indexer tracking `TokenLaunched` events and `Transfer` events for al
 - **AI Agent** — Vercel AI SDK + Claude for conversational interface
 - **Storage** — PostgreSQL with Kysely for type-safe SQL queries, Atlas for schema definitions, IPFS (Pinata) for decentralized storage
 
-The app ships with an AI agent ("Glitch") that can discover tokens, place bids, execute multi-hop swaps, manage ENS names, and answer questions — all through a conversational interface.
+The app ships with an AI agent ("Ramen") that can discover projects, participate in launches, execute multi-hop swaps, manage ENS names, and answer questions — all through a conversational interface.
 
 ## Design
 
 - **Terminal aesthetic** — monospace fonts, green/purple accents, `$` command prompts, `//` comment annotations. The whole UI feels like a terminal.
-- **Single-transaction launches** — salt mining for deterministic CREATE2 addresses means token + auction + strategy deploy in one tx.
+- **Single-transaction launches** — token + launch + liquidity deploy in one tx. Perfect for open source projects without deep web3 expertise.
 - **Agent-first UX** — complex flows like multi-hop swaps and ENS registration are abstracted behind natural language. The agent handles approvals, routing, and execution.
-- **Automatic liquidity** — no manual LP provisioning. The strategy contract handles pool creation and full-range position management after auction settlement.
+- **Automatic liquidity** — no manual LP provisioning. Liquidity is created automatically with instant token trading. Contributors and supporters get instant token liquidity.
+- **Fair distribution** — everyone gets equal access without being crowded out by whales, VCs, or bots.
 
 ## Development
 
@@ -86,3 +89,24 @@ pnpm dev
 | `ENVIO_API_TOKEN` | Envio API token ([create one here](https://envio.dev/app/api-tokens)) |
 
 The dapp, at the moment, is designed to run against a mainnet Anvil fork with a built-in faucet for minting test ETH and USDC.
+
+## Use Cases
+
+### For Open Source Projects
+- Launch a project token to create sustainable funding
+- Set bounties on critical bugs or features
+- Let community crowdfund additional bounties for issues they care about
+- Reward multiple contributors automatically when issues are resolved
+- No need to rely on unpredictable donations or give up control to VCs
+
+### For Contributors
+- Browse projects and find high-value bounties
+- Collaborate with others and automatically split rewards
+- Earn tradable tokens that appreciate with project success
+- Get paid instantly in liquid tokens, not slow fiat payments
+
+### For Users & Community
+- Crowdfund bounties for bugs that affect you
+- Add rewards to feature requests you want prioritized
+- Speed up issue resolution by incentivizing developers
+- Become a stakeholder in projects you use
