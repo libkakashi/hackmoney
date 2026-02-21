@@ -16,17 +16,20 @@ export default function Home() {
               </div>
 
               <h1 className="text-4xl md:text-5xl font-bold leading-tight mb-8">
-                fair launches
+                incentivize open-source
                 <br />
-                <span className="text-green">done right</span>
+                <span className="text-green">with tokens</span>
               </h1>
 
               <div className="text-dim leading-relaxed mb-12 max-w-lg">
                 <p className="mb-4">
-                  continuous clearing auctions eliminate front-running and
-                  sniping.
+                  crowdfund bounties for issues. reward contributors with liquid
+                  tokens.
                 </p>
-                <p>powered by uniswap v4.</p>
+                <p>
+                  anyone can add rewards. contributors split the payout. back
+                  projects you believe in early.
+                </p>
               </div>
 
               {/* Actions as terminal commands */}
@@ -37,20 +40,20 @@ export default function Home() {
                 >
                   <span className="text-green">$</span>
                   <span className="group-hover:text-green transition-colors">
-                    nyx launch --new-token
+                    nyx launch --project-token
                   </span>
-                  <span className="text-dim ml-auto">create auction →</span>
+                  <span className="text-dim ml-auto">launch project →</span>
                 </Link>
 
                 <Link
                   href="/discover"
-                  className="flex items-center gap-3 p-4 border border-border hover:border-purple hover:bg-purple/5 transition-colors group"
+                  className="flex items-center gap-3 p-4 border border-border hover:border-yellow hover:bg-yellow/5 transition-colors group"
                 >
-                  <span className="text-purple">$</span>
-                  <span className="group-hover:text-purple transition-colors">
-                    nyx list --active
+                  <span className="text-yellow">$</span>
+                  <span className="group-hover:text-yellow transition-colors">
+                    nyx list --projects
                   </span>
-                  <span className="text-dim ml-auto">browse tokens →</span>
+                  <span className="text-dim ml-auto">browse projects →</span>
                 </Link>
               </div>
             </div>
@@ -66,17 +69,19 @@ export default function Home() {
               <div className="text-3xl font-bold text-green tabular-nums">
                 1,247
               </div>
-              <div className="text-dim text-sm mt-1">tokens launched</div>
+              <div className="text-dim text-sm mt-1">projects launched</div>
             </div>
             <div className="py-8 text-center">
-              <div className="text-3xl font-bold text-purple tabular-nums">
+              <div className="text-3xl font-bold text-yellow tabular-nums">
                 $42.5M
               </div>
-              <div className="text-dim text-sm mt-1">total raised</div>
+              <div className="text-dim text-sm mt-1">
+                in rewards distributed
+              </div>
             </div>
             <div className="py-8 text-center">
               <div className="text-3xl font-bold tabular-nums">89,421</div>
-              <div className="text-dim text-sm mt-1">participants</div>
+              <div className="text-dim text-sm mt-1">contributors</div>
             </div>
           </div>
         </Container>
@@ -90,12 +95,13 @@ export default function Home() {
               <Scale className="h-4 w-4 text-green shrink-0 mt-0.5" />
               <div>
                 <div className="text-green font-medium mb-1">
-                  Real Fair Launches
+                  Crowdfunded Bounties
                 </div>
                 <p className="text-dim text-sm leading-relaxed">
-                  Continuous Clearing Auctions
+                  Anyone can add rewards to issues. Contributors who help
+                  resolve them split the bounty.
                   <br />
-                  No snipers • No front-running • No MEV
+                  Faster fixes • Better incentives
                 </p>
               </div>
             </div>
@@ -103,22 +109,23 @@ export default function Home() {
               <Droplets className="h-4 w-4 text-cyan-500 shrink-0 mt-0.5" />
               <div>
                 <div className="text-cyan-500 font-medium mb-1">
-                  Instant Liquidity Bootstrapping
+                  Instant Liquidity
                 </div>
                 <p className="text-dim text-sm leading-relaxed">
-                  Uniswap V4 pool created automatically at the final clearing
-                  price.
+                  Tokens are tradable immediately. Contributors can hold or sell
+                  their rewards as they choose.
                 </p>
               </div>
             </div>
             <div className="flex items-start gap-3">
-              <TrendingUp className="h-4 w-4 text-purple shrink-0 mt-0.5" />
+              <TrendingUp className="h-4 w-4 text-yellow shrink-0 mt-0.5" />
               <div>
-                <div className="text-purple font-medium mb-1">
-                  Market driven price discovery
+                <div className="text-yellow font-medium mb-1">
+                  Bet On Open Source
                 </div>
                 <p className="text-dim text-sm leading-relaxed">
-                  No fixed launch price, no VC allocation, pure market demand.
+                  Back projects early and own a stake in their growth. If the
+                  project takes off, so does your position.
                 </p>
               </div>
             </div>
@@ -130,14 +137,16 @@ export default function Home() {
       <section className="py-20 border-t border-border">
         <Container size="lg">
           <div className="text-dim text-sm mb-4">
-            ~/nyx <span className="text-green">$</span> nyx compare --launchpads
+            ~/nyx <span className="text-green">$</span> nyx compare
+            --incentive-models
           </div>
 
           <h2 className="text-xl md:text-2xl font-bold mb-2">
-            How Nyx compares
+            Why token bounties work better
           </h2>
           <p className="text-dim text-sm mb-8 max-w-xl">
-            traditional launch methods are broken. here&apos;s why.
+            traditional bounty platforms are broken. token-based bounties align
+            incentives and create sustainable value.
           </p>
 
           <div className="overflow-x-auto border border-border bg-card">
@@ -146,53 +155,55 @@ export default function Home() {
                 <tr className="border-b border-border">
                   <th className="text-left p-4 font-medium"> </th>
                   <th className="text-left p-4 font-medium text-dim whitespace-nowrap">
-                    Fixed-Price Sales (ICO)
+                    Traditional Bounties
                   </th>
                   <th className="text-left p-4 font-medium text-dim whitespace-nowrap">
-                    Bonding Curves (pump.fun)
+                    GitHub Sponsors
                   </th>
                   <th className="text-left p-4 font-medium text-green bg-green/5 whitespace-nowrap">
-                    Nyx (CCA)
+                    Nyx (Token Bounties)
                   </th>
                 </tr>
               </thead>
               <tbody>
                 <tr className="border-b border-border">
-                  <td className="p-4 font-medium">Sniper & Bot Protection</td>
-                  <td className="p-4 text-dim">Weak - FCFS races, gas wars</td>
-                  <td className="p-4 text-dim">Weak — filled with snipers</td>
+                  <td className="p-4 font-medium">Who Can Fund</td>
+                  <td className="p-4 text-dim">Project owners only</td>
+                  <td className="p-4 text-dim">Individual sponsors only</td>
                   <td className="p-4 text-green font-medium bg-green/5">
-                    Strong - bids spread over entire duration
+                    Anyone - crowdfunded bounties
                   </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="p-4 font-medium">Price Discovery</td>
-                  <td className="p-4 text-dim">None (price fixed by VCs)</td>
-                  <td className="p-4 text-dim">Path-dependent curve</td>
+                  <td className="p-4 font-medium">Reward Splitting</td>
+                  <td className="p-4 text-dim">Manual, complex payouts</td>
+                  <td className="p-4 text-dim">Not designed for bounties</td>
                   <td className="p-4 text-green font-medium bg-green/5">
-                    Continuous & market-driven
+                    Automatic split across helpers
                   </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="p-4 font-medium">Manipulation Risk</td>
-                  <td className="p-4 text-dim">
-                    Moderate — whale oversubscription
-                  </td>
-                  <td className="p-4 text-dim">
-                    High - MEV, frontrunning bots
-                  </td>
+                  <td className="p-4 font-medium">Reward Liquidity</td>
+                  <td className="p-4 text-dim">Fiat only - slow payouts</td>
+                  <td className="p-4 text-dim">Fiat only - monthly payouts</td>
                   <td className="p-4 text-green font-medium bg-green/5">
-                    Negligible
+                    Instant - tradable tokens
                   </td>
                 </tr>
                 <tr className="border-b border-border">
-                  <td className="p-4 font-medium">Liquidity After Launch</td>
-                  <td className="p-4 text-dim">Delayed / manual LP</td>
-                  <td className="p-4 text-dim">
-                    only graduated tokens move to AMM
-                  </td>
+                  <td className="p-4 font-medium">Contributor Upside</td>
+                  <td className="p-4 text-dim">None - fixed payment</td>
+                  <td className="p-4 text-dim">None - fixed payment</td>
                   <td className="p-4 text-green font-medium bg-green/5">
-                    Instant liquidity bootstrapping to UniV4
+                    Token value grows with project
+                  </td>
+                </tr>
+                <tr className="border-b border-border">
+                  <td className="p-4 font-medium">Supporter Upside</td>
+                  <td className="p-4 text-dim">None - donation only</td>
+                  <td className="p-4 text-dim">None - donation only</td>
+                  <td className="p-4 text-green font-medium bg-green/5">
+                    Back early, own a stake in growth
                   </td>
                 </tr>
               </tbody>
@@ -210,7 +221,7 @@ export default function Home() {
 
           <h2 className="text-xl md:text-2xl font-bold mb-2">How it works</h2>
           <p className="text-dim text-sm mb-8 max-w-xl">
-            three steps from token creation to live trading.
+            three steps from project launch to contributor rewards.
           </p>
 
           <div className="border border-border bg-card p-6">
@@ -220,10 +231,10 @@ export default function Home() {
               <div className="flex gap-4">
                 <div className="text-green w-8 shrink-0">01.</div>
                 <div>
-                  <div className="font-bold mb-1">create token</div>
+                  <div className="font-bold mb-1">launch project token</div>
                   <div className="text-dim text-sm">
-                    creators set name, symbol, and auction parameters.
-                    everything deploys in one transaction.
+                    deploy a token in one transaction. set name, symbol, and
+                    description. no coding required.
                   </div>
                 </div>
               </div>
@@ -231,10 +242,11 @@ export default function Home() {
               <div className="flex gap-4">
                 <div className="text-green w-8 shrink-0">02.</div>
                 <div>
-                  <div className="font-bold mb-1">run auction</div>
+                  <div className="font-bold mb-1">initial distribution</div>
                   <div className="text-dim text-sm pr-16">
-                    bidders commit funds for the first 24 hours. clearing price
-                    updates every block. no one gets front-run or sniped.
+                    supporters and contributors participate in a 30-minute fair
+                    launch. everyone gets equal access. no whales, no VCs, no
+                    bots.
                   </div>
                 </div>
               </div>
@@ -242,10 +254,12 @@ export default function Home() {
               <div className="flex gap-4">
                 <div className="text-green w-8 shrink-0">03.</div>
                 <div>
-                  <div className="font-bold mb-1">create pool</div>
+                  <div className="font-bold mb-1">crowdfund issue bounties</div>
                   <div className="text-dim text-sm">
-                    the auction ends. a uniswap v4 pool initializes at the final
-                    clearing price. trading begins.
+                    tokens become instantly tradable with built-in liquidity.
+                    projects, users, or anyone can add token bounties to issues.
+                    contributors split rewards for resolving them. early
+                    believers get to own a piece of what they helped build.
                   </div>
                 </div>
               </div>
@@ -284,8 +298,10 @@ export default function Home() {
               {/* User 1 */}
               <div className="flex justify-end">
                 <div className="max-w-[85%] text-right">
-                  <div className="text-purple text-xs mb-1">&gt; you</div>
-                  <div className="bg-purple/10 border border-purple/30 px-3 py-1.5 text-sm">
+                  <div className="text-foreground/60 text-xs mb-1">
+                    &gt; you
+                  </div>
+                  <div className="bg-foreground/5 border border-foreground/15 px-3 py-1.5 text-sm">
                     I have some DAI, can you get me into $PRISE?
                   </div>
                 </div>
@@ -314,8 +330,10 @@ export default function Home() {
               {/* User 2 */}
               <div className="flex justify-end">
                 <div className="max-w-[85%] text-right">
-                  <div className="text-purple text-xs mb-1">&gt; you</div>
-                  <div className="bg-purple/10 border border-purple/30 px-3 py-1.5 text-sm">
+                  <div className="text-foreground/60 text-xs mb-1">
+                    &gt; you
+                  </div>
+                  <div className="bg-foreground/5 border border-foreground/15 px-3 py-1.5 text-sm">
                     do it
                   </div>
                 </div>
@@ -391,7 +409,7 @@ export default function Home() {
             <div className="border border-border bg-card p-5 hover:border-green/50 transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 border border-border flex items-center justify-center text-purple font-bold">
+                  <div className="w-10 h-10 border border-border flex items-center justify-center text-yellow font-bold">
                     PR
                   </div>
                   <div>
@@ -420,7 +438,7 @@ export default function Home() {
             <div className="border border-border bg-card p-5 hover:border-green/50 transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 border border-border flex items-center justify-center text-purple font-bold">
+                  <div className="w-10 h-10 border border-border flex items-center justify-center text-yellow font-bold">
                     PR
                   </div>
                   <div>
@@ -449,7 +467,7 @@ export default function Home() {
             <div className="border border-border bg-card p-5 hover:border-green/50 transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 border border-border flex items-center justify-center text-purple font-bold">
+                  <div className="w-10 h-10 border border-border flex items-center justify-center text-yellow font-bold">
                     PR
                   </div>
                   <div>
@@ -479,7 +497,7 @@ export default function Home() {
             <div className="border border-border bg-card p-5 hover:border-green/50 transition-colors">
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 border border-border flex items-center justify-center text-purple font-bold">
+                  <div className="w-10 h-10 border border-border flex items-center justify-center text-yellow font-bold">
                     MM
                   </div>
                   <div>
@@ -516,7 +534,7 @@ export default function Home() {
               ~/nyx <span className="text-green">$</span> nyx init
             </div>
 
-            <h2 className="text-3xl md:text-4xl font-bold mb-3">
+            <h2 className="text-3xl md:text-4xl font-bold mb-8">
               ready to launch?
             </h2>
             <p className="text-dim mb-10 max-w-lg">
@@ -535,7 +553,7 @@ export default function Home() {
 
               <Link
                 href="/discover"
-                className="inline-flex items-center gap-2 px-6 py-3 border border-border hover:border-purple hover:text-purple transition-colors"
+                className="inline-flex items-center gap-2 px-6 py-3 border border-border hover:border-yellow hover:text-yellow transition-colors"
               >
                 browse active auctions →
               </Link>

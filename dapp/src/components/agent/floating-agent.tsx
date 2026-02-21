@@ -100,7 +100,7 @@ function CRTMessage({message}: {message: UIMessage}) {
       {/* Role label */}
       <div
         className={`tracking-wider mb-0.5 ${
-          isUser ? 'text-cyan-400' : 'text-green'
+          isUser ? 'text-foreground/60' : 'text-green'
         }`}
       >
         {isUser ? '> you' : '> ramen'}
@@ -108,7 +108,7 @@ function CRTMessage({message}: {message: UIMessage}) {
 
       {/* Content */}
       <div
-        className={`leading-relaxed ${isUser ? 'text-foreground' : 'text-purple'}`}
+        className={`leading-relaxed ${isUser ? 'text-foreground' : 'text-foreground/80'}`}
       >
         {message.parts.map((part, i) => {
           if (part.type === 'text') {
@@ -625,7 +625,7 @@ export function FloatingAgent() {
                       <div className="text-green  uppercase tracking-wider mb-1.5">
                         &gt; ramen
                       </div>
-                      <div className="text-purple  leading-relaxed">
+                      <div className="text-foreground/80  leading-relaxed">
                         hey. i can place bids, execute trades, and answer
                         anything about the platform. <br /> <br />
                         P.S. you can move this window around or resize it by
@@ -759,8 +759,8 @@ export function FloatingAgent() {
               alt="Mascot"
               className="
                 w-full h-full object-contain pointer-events-none
-                drop-shadow-[0_0_2px_#4ade80]
-                group-hover:drop-shadow-[0_0_4px_#4ade80]
+                drop-shadow-[0_0_2px_#6ee7a8]
+                group-hover:drop-shadow-[0_0_4px_#6ee7a8]
                 transition-all duration-300
               "
             />
