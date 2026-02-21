@@ -265,11 +265,6 @@ export function FloatingAgent() {
     executeGeneralSwap,
     previewGeneralSwapExactOutput,
     executeGeneralSwapExactOutput,
-    getMyEnsName,
-    checkEnsName,
-    commitEnsName,
-    registerEnsName,
-    setPrimaryEnsName,
   } = useAgentTools();
   const pageContext = usePageContext();
   const [chatOpen, setChatOpen] = useState(false);
@@ -410,31 +405,6 @@ export function FloatingAgent() {
           input.toToken,
           input.receiveAmount,
         );
-        void addToolOutput({tool: toolName, toolCallId, output: result});
-        return;
-      }
-      if (toolName === 'getMyEnsName') {
-        const result = await getMyEnsName();
-        void addToolOutput({tool: toolName, toolCallId, output: result});
-        return;
-      }
-      if (toolName === 'checkEnsName') {
-        const result = await checkEnsName(input.name);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
-        return;
-      }
-      if (toolName === 'commitEnsName') {
-        const result = await commitEnsName(input.name);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
-        return;
-      }
-      if (toolName === 'registerEnsName') {
-        const result = await registerEnsName(input.name);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
-        return;
-      }
-      if (toolName === 'setPrimaryEnsName') {
-        const result = await setPrimaryEnsName(input.name);
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }

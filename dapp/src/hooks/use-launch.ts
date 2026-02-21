@@ -18,7 +18,6 @@ export interface LaunchParams {
   startBlock: bigint;
   description?: string;
   image?: string;
-  ensName?: string;
   websiteUrl?: string;
   twitterUrl?: string;
   discordUrl?: string;
@@ -35,7 +34,6 @@ export interface LaunchResult {
 interface TokenMetadataInput {
   description?: string;
   image?: string;
-  ensName?: string;
   websiteUrl?: string | null;
   twitterUrl?: string | null;
   discordUrl?: string | null;
@@ -56,7 +54,6 @@ const encodeMetadata = (
       input.twitterUrl,
       input.discordUrl,
       input.telegramUrl,
-      input.ensName,
     ]);
 
   return {
@@ -104,7 +101,6 @@ export const useLaunch = () => {
         metadata: encodeMetadata({
           description: params.description,
           image: params.image,
-          ensName: params.ensName,
           websiteUrl: params.websiteUrl,
           twitterUrl: params.twitterUrl,
           discordUrl: params.discordUrl,

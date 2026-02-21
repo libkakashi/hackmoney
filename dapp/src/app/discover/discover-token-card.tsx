@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import {Address, formatEther} from 'viem';
-import {VerifiedBadge} from '~/components/verified-badge';
 import {useAuctionState} from '~/hooks/cca/use-auction-state';
 import {useTokenByAddress} from '~/hooks/use-tokens';
 
@@ -73,11 +72,7 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
         {/* Terminal header bar */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-border bg-background/50 terminal-header-hover">
           <div className="flex items-center gap-2">
-            {token.ensName ? (
-              <VerifiedBadge ensName={token.ensName} />
-            ) : (
-              <span className="text-green">&gt;</span>
-            )}
+            <span className="text-green">&gt;</span>
 
             <span className="text-sm terminal-cursor-hover">
               ${token.symbol}
@@ -132,9 +127,6 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
             <div className="mb-1">
               <div className="flex items-center gap-1.5 font-bold group-hover:text-green transition-colors justify-between">
                 <span className="truncate">{token.name}</span>
-                {token.ensName && (
-                  <VerifiedBadge ensName={token.ensName} showName />
-                )}
               </div>
             </div>
 

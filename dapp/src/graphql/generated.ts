@@ -67,7 +67,6 @@ export type LaunchpadTokenLaunched = {
   creator: Scalars['String']['output'];
   description: Scalars['String']['output'];
   discordUrl?: Maybe<Scalars['String']['output']>;
-  ensName?: Maybe<Scalars['String']['output']>;
   id: Scalars['String']['output'];
   image: Scalars['String']['output'];
   name: Scalars['String']['output'];
@@ -96,7 +95,6 @@ export type LaunchpadTokenLaunchedBoolExp = {
   creator?: InputMaybe<StringComparisonExp>;
   description?: InputMaybe<StringComparisonExp>;
   discordUrl?: InputMaybe<StringComparisonExp>;
-  ensName?: InputMaybe<StringComparisonExp>;
   id?: InputMaybe<StringComparisonExp>;
   image?: InputMaybe<StringComparisonExp>;
   name?: InputMaybe<StringComparisonExp>;
@@ -122,7 +120,6 @@ export type LaunchpadTokenLaunchedOrderBy = {
   creator?: InputMaybe<OrderBy>;
   description?: InputMaybe<OrderBy>;
   discordUrl?: InputMaybe<OrderBy>;
-  ensName?: InputMaybe<OrderBy>;
   id?: InputMaybe<OrderBy>;
   image?: InputMaybe<OrderBy>;
   name?: InputMaybe<OrderBy>;
@@ -158,8 +155,6 @@ export type LaunchpadTokenLaunchedSelectColumn =
   | 'description'
   /** column name */
   | 'discordUrl'
-  /** column name */
-  | 'ensName'
   /** column name */
   | 'id'
   /** column name */
@@ -203,7 +198,6 @@ export type LaunchpadTokenLaunchedStreamCursorValueInput = {
   creator?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   discordUrl?: InputMaybe<Scalars['String']['input']>;
-  ensName?: InputMaybe<Scalars['String']['input']>;
   id?: InputMaybe<Scalars['String']['input']>;
   image?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
@@ -1045,7 +1039,7 @@ export type GetTokensQuery = {
     twitterUrl?: string | null;
     discordUrl?: string | null;
     telegramUrl?: string | null;
-    ensName?: string | null;
+
     image: string;
     auctionStartBlock: any;
     auctionEndBlock: any;
@@ -1125,7 +1119,7 @@ export type FilterTokensQuery = {
     twitterUrl?: string | null;
     discordUrl?: string | null;
     telegramUrl?: string | null;
-    ensName?: string | null;
+
     image: string;
     auctionStartBlock: any;
     auctionEndBlock: any;
@@ -1158,7 +1152,7 @@ export type GetTokenByAddressQuery = {
     twitterUrl?: string | null;
     discordUrl?: string | null;
     telegramUrl?: string | null;
-    ensName?: string | null;
+
     image: string;
     auctionStartBlock: any;
     auctionEndBlock: any;
@@ -1190,7 +1184,7 @@ export const GetTokensDocument = gql`
       twitterUrl
       discordUrl
       telegramUrl
-      ensName
+
       image
       auctionStartBlock
       auctionEndBlock
@@ -1266,7 +1260,7 @@ export const FilterTokensDocument = gql`
       twitterUrl
       discordUrl
       telegramUrl
-      ensName
+
       image
       auctionStartBlock
       auctionEndBlock
@@ -1294,7 +1288,7 @@ export const GetTokenByAddressDocument = gql`
       twitterUrl
       discordUrl
       telegramUrl
-      ensName
+
       image
       auctionStartBlock
       auctionEndBlock

@@ -3,12 +3,10 @@
 import {Globe, MessageCircle, Send} from 'lucide-react';
 import {Button} from '~/components/ui/button';
 import {Loader} from '~/components/ui/loader';
-import {VerifiedBadge} from '~/components/verified-badge';
 import type {FormData} from './config-step';
 
 interface DeployStepProps {
   form: FormData;
-  ensName: string;
   isConnected: boolean;
   isDeploying: boolean;
   saltReady: boolean;
@@ -24,7 +22,6 @@ const AUCTION_AMOUNT = 100_000;
 
 export const DeployStep = ({
   form,
-  ensName,
   isConnected,
   isDeploying,
   saltReady,
@@ -79,12 +76,8 @@ export const DeployStep = ({
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
               <span className="text-lg">{form.name}</span>
-              {ensName && <VerifiedBadge ensName={ensName} />}
             </div>
             <div className="text-dim mb-1">${form.symbol}</div>
-            {ensName && (
-              <VerifiedBadge ensName={ensName} showName className="mb-2" />
-            )}
             {form.description && (
               <p className="text-dim text-sm leading-relaxed">
                 {form.description}

@@ -12,7 +12,6 @@ import {
 import {usePoolPrice} from '~/hooks/use-pool-price';
 import {usePoolKey} from '~/hooks/swap/use-pool-key';
 import {useTokenData} from '~/hooks/tokens/use-token-data';
-import {useEnsReverseName} from '~/hooks/ens/use-ens-reverse-name';
 
 type SortMode = 'holders' | 'volume';
 
@@ -61,7 +60,6 @@ const LeaderboardRow = ({
   priceUsd: number | undefined;
 }) => {
   const volume = BigInt(totalSent) + BigInt(totalReceived);
-  const {data: ensName} = useEnsReverseName(wallet);
 
   return (
     <div className="flex items-center gap-2 py-2 px-2 border-b border-border last:border-b-0 text-sm">
@@ -79,7 +77,7 @@ const LeaderboardRow = ({
 
       <div className="flex-1 min-w-0">
         <span className="text-green truncate" title={wallet}>
-          {ensName ?? truncateAddress(wallet)}
+          {truncateAddress(wallet)}
         </span>
       </div>
 

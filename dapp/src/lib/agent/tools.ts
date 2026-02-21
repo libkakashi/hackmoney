@@ -758,55 +758,6 @@ export const clientTools = {
     }),
   }),
 
-  // ── ENS tools ─────────────────────────────────────────────────────────────
-
-  getMyEnsName: tool({
-    description:
-      "Look up the connected wallet's primary ENS name (reverse resolution). Returns the name that the user's address currently resolves to, or null if none is set. Use this when the user asks about their ENS name, identity, or username.",
-    inputSchema: z.object({}),
-  }),
-
-  checkEnsName: tool({
-    description:
-      'Check if an ENS name is available, already owned by the user, or taken by someone else. Also returns the yearly rent price if available. Use this when the user wants to check a name before buying.',
-    inputSchema: z.object({
-      name: z
-        .string()
-        .describe('The ENS name to check (without .eth suffix, e.g. "myname")'),
-    }),
-  }),
-
-  commitEnsName: tool({
-    description:
-      'Step 1 of ENS registration: submit a commitment for a name. This is required before registering. After committing, the user must wait ~60 seconds before they can call registerEnsName. Prompts wallet for a transaction. Only call this after checkEnsName confirms the name is available.',
-    inputSchema: z.object({
-      name: z
-        .string()
-        .describe('The ENS name to commit to (without .eth suffix)'),
-    }),
-  }),
-
-  registerEnsName: tool({
-    description:
-      'Step 2 of ENS registration: register the name after the commitment has matured (~60 seconds after commitEnsName). Prompts wallet for a transaction with ETH payment. Only call this after commitEnsName succeeded AND at least 60 seconds have passed. This also sets the name as the primary reverse record.',
-    inputSchema: z.object({
-      name: z
-        .string()
-        .describe('The ENS name to register (without .eth suffix)'),
-    }),
-  }),
-
-  setPrimaryEnsName: tool({
-    description:
-      'Change which ENS name the connected wallet resolves to (set primary/reverse record). The user must already own the name. Use this when the user wants to switch their display name to a different ENS name they own.',
-    inputSchema: z.object({
-      name: z
-        .string()
-        .describe(
-          'The ENS name to set as primary (without .eth suffix, e.g. "myname")',
-        ),
-    }),
-  }),
 };
 
 export const allTools = {...serverTools, ...clientTools};

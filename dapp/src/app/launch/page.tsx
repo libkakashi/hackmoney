@@ -8,12 +8,10 @@ import {useLaunch} from '~/hooks/use-launch';
 import {useMineSalt} from '~/hooks/use-mine-salt';
 import {ConfigStep, type FormData, type LaunchMode} from './config-step';
 import {DeployStep} from './deploy-step';
-import {ENSStep} from './ens-step';
 
 const STEPS = [
   {num: '01', label: 'config'},
-  {num: '02', label: 'identity'},
-  {num: '03', label: 'deploy'},
+  {num: '02', label: 'deploy'},
 ] as const;
 
 export default function LaunchPage() {
@@ -23,7 +21,6 @@ export default function LaunchPage() {
   const [step, setStep] = useState(1);
   const [mode, setMode] = useState<LaunchMode>('now');
   const [scheduledTime, setScheduledTime] = useState<string>('');
-  const [ensName, setEnsName] = useState<string>('');
   const [form, setForm] = useState<FormData>({
     name: '',
     symbol: '',
@@ -41,7 +38,7 @@ export default function LaunchPage() {
   const {launch, launchResult, isPending, isConfirming, isConfirmed} =
     useLaunch();
 
-  // Mine salt when moving to identity step
+  // Mine salt when moving to deploy step
   useEffect(() => {
     if (step === 2 && !saltResult && !isMining) {
       void mineSalt({
@@ -80,7 +77,6 @@ export default function LaunchPage() {
         startBlock: saltResult.startBlock,
         description: form.description || undefined,
         image: form.image || undefined,
-        ensName: ensName || undefined,
         websiteUrl: form.website || undefined,
         twitterUrl: form.twitter || undefined,
         discordUrl: form.discord || undefined,
@@ -95,7 +91,7 @@ export default function LaunchPage() {
 
   return (
     <div className="min-h-screen py-12">
-      <Container size={step === 2 ? 'md' : 'sm'}>
+      <Container size="sm">
         {/* Header */}
         <div className="text-center mb-10">
           <h1 className="text-2xl mb-2">
@@ -155,32 +151,16 @@ export default function LaunchPage() {
           />
         )}
 
-        {/* Step 2: Identity (ENS) */}
+        {/* Step 2: Deploy */}
         {step === 2 && (
-          <ENSStep
-            form={form}
-            ensName={ensName}
-            setEnsName={setEnsName}
-            saltReady={!!saltResult}
-            isMining={isMining}
-            miningProgress={miningProgress}
-            onBack={() => setStep(1)}
-            onContinue={() => setStep(3)}
-            onRegistered={() => setStep(3)}
-          />
-        )}
-
-        {/* Step 3: Deploy */}
-        {step === 3 && (
           <DeployStep
             form={form}
-            ensName={ensName}
             isConnected={isConnected}
             isDeploying={isDeploying}
             saltReady={!!saltResult}
             isMining={isMining}
             miningProgress={miningProgress}
-            onBack={() => setStep(2)}
+            onBack={() => setStep(1)}
             onDeploy={handleDeploy}
           />
         )}

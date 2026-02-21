@@ -10,15 +10,14 @@ import {
 } from 'generated';
 
 /**
- * Parses the description to extract social URLs and ENS name.
- * Expected format: "Description text \n\n ["twitterUrl", "discordUrl", "telegramUrl", "ensName"]"
+ * Parses the description to extract social URLs.
+ * Expected format: "Description text \n\n ["twitterUrl", "discordUrl", "telegramUrl"]"
  */
 function parseMetadata(description: string): {
   cleanDescription: string;
   twitterUrl: string | undefined;
   discordUrl: string | undefined;
   telegramUrl: string | undefined;
-  ensName: string | undefined;
 } {
   const parts = description.split('\n\n');
 
@@ -28,7 +27,6 @@ function parseMetadata(description: string): {
       twitterUrl: undefined,
       discordUrl: undefined,
       telegramUrl: undefined,
-      ensName: undefined,
     };
   }
 
@@ -43,7 +41,6 @@ function parseMetadata(description: string): {
         twitterUrl: parsed[0] || undefined,
         discordUrl: parsed[1] || undefined,
         telegramUrl: parsed[2] || undefined,
-        ensName: parsed[3] || undefined,
       };
     }
   } catch {
@@ -55,7 +52,6 @@ function parseMetadata(description: string): {
     twitterUrl: undefined,
     discordUrl: undefined,
     telegramUrl: undefined,
-    ensName: undefined,
   };
 }
 
@@ -66,7 +62,7 @@ Launchpad.TokenLaunched.contractRegister(
 );
 
 Launchpad.TokenLaunched.handler(async ({event, context}) => {
-  const {cleanDescription, twitterUrl, discordUrl, telegramUrl, ensName} =
+  const {cleanDescription, twitterUrl, discordUrl, telegramUrl} =
     parseMetadata(event.params.description);
 
   const entity: Launchpad_TokenLaunched = {
@@ -82,7 +78,6 @@ Launchpad.TokenLaunched.handler(async ({event, context}) => {
     twitterUrl,
     discordUrl,
     telegramUrl,
-    ensName,
     image: event.params.image,
     auctionStartBlock: event.params.auctionStartBlock,
     auctionEndBlock: event.params.auctionEndBlock,

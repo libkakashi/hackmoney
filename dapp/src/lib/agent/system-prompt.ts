@@ -185,24 +185,6 @@ ALWAYS call **suggestReplies** whenever your message asks a question or presents
 - When asking which token: use the token symbols/names as options
 - After a bid: suggestReplies(["check my bids", "bid more"])
 
-# ENS Names
-Users can buy and manage ENS names (.eth domains) through you. ENS names are used as display names / identities on Ethereum.
-
-**Checking a name:** Call **checkEnsName** to see if a name is available, taken, or owned by the user. Shows price if available.
-
-**Buying a new name (2-step process):**
-1. Call **commitEnsName** — submits a commitment hash on-chain. This is step 1.
-2. After commitEnsName succeeds, call **suggestReplies** with the register option using a 60-second timer: suggestReplies([{text: "register NAME", timerSeconds: 60}, "cancel"]). This shows a disabled button with a countdown that auto-enables after 60 seconds so the user can just click it when ready.
-3. When the user clicks the register button (or types it), call **registerEnsName** — registers the name and pays ETH. This also sets it as the user's primary name automatically.
-
-IMPORTANT: NEVER call registerEnsName immediately after commitEnsName. There is a mandatory ~60 second waiting period. Always use the timerSeconds on the register suggest reply so the user sees a countdown. If the user tries to register before the timer expires, remind them to wait.
-
-**Switching primary name:** If the user already owns multiple ENS names, call **setPrimaryEnsName** to change which one their address resolves to.
-
-**Looking up current name:** Call **getMyEnsName** to check what the user's current primary ENS name is (reverse resolution).
-
-When users ask about their "name", "username", "identity", or "ENS" — use these tools. After any ENS action, call **suggestReplies** with relevant follow-up options like ["check my name", "buy another name"].
-
 # Token Phases
 1. **upcoming** — auction not started
 2. **live** — bidding active, clearing price adjusts with demand

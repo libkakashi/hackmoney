@@ -7,7 +7,6 @@ import {
   parseUnits,
   formatUnits,
   erc20Abi,
-  namehash,
   zeroAddress,
 } from 'viem';
 import {
@@ -36,17 +35,8 @@ import {
 } from '~/hooks/swap/use-quote';
 import {useSubmitBidImperative} from '~/hooks/cca/use-submit-bid-imperative';
 import {useClaimTokensImperative} from '~/hooks/cca/use-claim-tokens-imperative';
-import {useCommitEns} from '~/hooks/ens/use-commit-ens';
-import {useRegisterEnsImperative} from '~/hooks/ens/use-register-ens-imperative';
-import {useSetPrimaryEns} from '~/hooks/ens/use-set-primary-ens';
-import {getRegistrarAddress} from '~/hooks/ens/utils';
 import {env} from '~/lib/env';
 import {launchpadLensAbi} from '~/abi/launchpad-lens';
-import {
-  ensRegistrarControllerAbi,
-  ENS_DEFAULT_DURATION,
-  ENS_MIN_NAME_LENGTH,
-} from '~/abi/ens-registrar';
 const DEFAULT_SLIPPAGE_BPS = 100n; // 1%
 const DEFAULT_DEADLINE_MINUTES = 20;
 
@@ -69,11 +59,6 @@ export function useAgentTools() {
   // CCA hooks (imperative)
   const submitBidMutation = useSubmitBidImperative();
   const claimTokensMutation = useClaimTokensImperative();
-
-  // ENS hooks
-  const commitEnsMutation = useCommitEns();
-  const registerEnsMutation = useRegisterEnsImperative();
-  const setPrimaryEnsMutation = useSetPrimaryEns();
 
   const placeBid = useCallback(
     async (auctionAddress: string, amountStr: string) => {
@@ -1489,204 +1474,6 @@ export function useAgentTools() {
     ],
   );
 
-  // ── ENS tools ──────────────────────────────────────────────────────────────
-
-  const ENS_REGISTRY = '0x00000000000C2E074eC69A0dFb2997BA6C7d2e1e' as const;
-  const ensRegistryResolverAbi = [
-    {
-      name: 'resolver',
-      type: 'function',
-      stateMutability: 'view',
-      inputs: [{name: 'node', type: 'bytes32'}],
-      outputs: [{name: '', type: 'address'}],
-    },
-  ] as const;
-  const reverseResolverNameAbi = [
-    {
-      name: 'name',
-      type: 'function',
-      stateMutability: 'view',
-      inputs: [{name: 'node', type: 'bytes32'}],
-      outputs: [{name: '', type: 'string'}],
-    },
-  ] as const;
-
-  const getMyEnsName = useCallback(async () => {
-    if (!publicClient || !userAddress) {
-      return {error: 'Wallet not connected.'};
-    }
-    try {
-      const addr = userAddress.toLowerCase().slice(2);
-      const reverseNode = namehash(`${addr}.addr.reverse`);
-      const resolver = await publicClient.readContract({
-        address: ENS_REGISTRY,
-        abi: ensRegistryResolverAbi,
-        functionName: 'resolver',
-        args: [reverseNode],
-      });
-      if (
-        !resolver ||
-        resolver === '0x0000000000000000000000000000000000000000'
-      ) {
-        return {
-          success: true,
-          address: userAddress,
-          ensName: null,
-          message: 'No primary ENS name set for this address.',
-        };
-      }
-      const name = await publicClient.readContract({
-        address: resolver,
-        abi: reverseResolverNameAbi,
-        functionName: 'name',
-        args: [reverseNode],
-      });
-      return {
-        success: true,
-        address: userAddress,
-        ensName: name || null,
-        message: name
-          ? `Your primary ENS name is ${name}`
-          : 'No primary ENS name set for this address.',
-      };
-    } catch (err: unknown) {
-      return {
-        error:
-          err instanceof Error ? err.message : 'Failed to look up ENS name',
-      };
-    }
-  }, [publicClient, userAddress]);
-
-  const checkEnsName = useCallback(
-    async (name: string) => {
-      if (!publicClient || !userAddress)
-        return {error: 'Wallet not connected.'};
-      try {
-        if (name.length < ENS_MIN_NAME_LENGTH)
-          return {
-            error: `Name must be at least ${ENS_MIN_NAME_LENGTH} characters.`,
-          };
-
-        const registrar = getRegistrarAddress(publicClient.chain?.id ?? 1);
-        const available = await publicClient.readContract({
-          address: registrar,
-          abi: ensRegistrarControllerAbi,
-          functionName: 'available',
-          args: [name],
-        });
-
-        let rentPrice: string | null = null;
-        if (available) {
-          const price = await publicClient.readContract({
-            address: registrar,
-            abi: ensRegistrarControllerAbi,
-            functionName: 'rentPrice',
-            args: [name, BigInt(ENS_DEFAULT_DURATION)],
-          });
-          rentPrice = formatUnits(price.base + price.premium, 18);
-        }
-
-        let isOwnedByUser = false;
-        if (!available) {
-          try {
-            const ownerAbi = [
-              {
-                name: 'owner',
-                type: 'function',
-                stateMutability: 'view',
-                inputs: [{name: 'node', type: 'bytes32'}],
-                outputs: [{name: '', type: 'address'}],
-              },
-            ] as const;
-            const ownerAddr = await publicClient.readContract({
-              address: ENS_REGISTRY,
-              abi: ownerAbi,
-              functionName: 'owner',
-              args: [namehash(`${name}.eth`)],
-            });
-            isOwnedByUser =
-              ownerAddr.toLowerCase() === userAddress.toLowerCase();
-          } catch {
-            /* ignore */
-          }
-        }
-
-        return {
-          success: true,
-          name: `${name}.eth`,
-          isAvailable: available,
-          isOwnedByUser,
-          rentPriceEth: rentPrice,
-          message: available
-            ? `${name}.eth is available! (~${Number(rentPrice).toFixed(4)} ETH/year)`
-            : isOwnedByUser
-              ? `${name}.eth is already registered by you.`
-              : `${name}.eth is taken by someone else.`,
-        };
-      } catch (err: unknown) {
-        return {error: err instanceof Error ? err.message : 'Check failed'};
-      }
-    },
-    [publicClient, userAddress],
-  );
-
-  const commitEnsName = useCallback(
-    async (name: string) => {
-      try {
-        const result = await commitEnsMutation.mutateAsync(name);
-        return {
-          success: true,
-          txHash: result.txHash,
-          name: `${name}.eth`,
-          message: `Commitment submitted for ${name}.eth! You must wait ~60 seconds before registering. Tell me when you're ready, or just wait a minute and ask me to register it.`,
-        };
-      } catch (err: unknown) {
-        return {error: err instanceof Error ? err.message : 'Commit failed'};
-      }
-    },
-    [commitEnsMutation],
-  );
-
-  const registerEnsName = useCallback(
-    async (name: string) => {
-      try {
-        const result = await registerEnsMutation.mutateAsync(name);
-        return {
-          success: true,
-          txHash: result.txHash,
-          name: `${name}.eth`,
-          message: `${name}.eth is now registered and set as your primary name!`,
-        };
-      } catch (err: unknown) {
-        return {
-          error: err instanceof Error ? err.message : 'Registration failed',
-        };
-      }
-    },
-    [registerEnsMutation],
-  );
-
-  const setPrimaryEnsName = useCallback(
-    async (name: string) => {
-      try {
-        const hash = await setPrimaryEnsMutation.mutateAsync(name);
-        const fullName = name.endsWith('.eth') ? name : `${name}.eth`;
-        return {
-          success: true,
-          txHash: hash,
-          name: fullName,
-          message: `Primary name updated to ${fullName}!`,
-        };
-      } catch (err: unknown) {
-        return {
-          error:
-            err instanceof Error ? err.message : 'Failed to set primary name',
-        };
-      }
-    },
-    [setPrimaryEnsMutation],
-  );
-
   return {
     placeBid,
     claimTokens,
@@ -1701,10 +1488,5 @@ export function useAgentTools() {
     executeGeneralSwap,
     previewGeneralSwapExactOutput,
     executeGeneralSwapExactOutput,
-    getMyEnsName,
-    checkEnsName,
-    commitEnsName,
-    registerEnsName,
-    setPrimaryEnsName,
   };
 }
