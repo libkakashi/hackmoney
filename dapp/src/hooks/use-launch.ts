@@ -17,11 +17,7 @@ export interface LaunchParams {
   salt: Hex;
   startBlock: bigint;
   description?: string;
-  image?: string;
   websiteUrl?: string;
-  twitterUrl?: string;
-  discordUrl?: string;
-  telegramUrl?: string;
 }
 
 export interface LaunchResult {
@@ -31,35 +27,18 @@ export interface LaunchResult {
   txHash: Hex;
 }
 
-interface TokenMetadataInput {
+const encodeMetadata = (params: {
   description?: string;
-  image?: string;
-  websiteUrl?: string | null;
-  twitterUrl?: string | null;
-  discordUrl?: string | null;
-  telegramUrl?: string | null;
-}
-
-const encodeMetadata = (
-  input: TokenMetadataInput,
-): {
+  websiteUrl?: string;
+}): {
   description: string;
   website: string;
   image: string;
 } => {
-  const description =
-    (input.description || '') +
-    '\n\n' +
-    JSON.stringify([
-      input.twitterUrl,
-      input.discordUrl,
-      input.telegramUrl,
-    ]);
-
   return {
-    description: description,
-    website: input.websiteUrl || '',
-    image: input.image || '',
+    description: params.description || '',
+    website: params.websiteUrl || '',
+    image: '',
   };
 };
 
@@ -100,11 +79,7 @@ export const useLaunch = () => {
         symbol: params.symbol,
         metadata: encodeMetadata({
           description: params.description,
-          image: params.image,
           websiteUrl: params.websiteUrl,
-          twitterUrl: params.twitterUrl,
-          discordUrl: params.discordUrl,
-          telegramUrl: params.telegramUrl,
         }),
       };
 

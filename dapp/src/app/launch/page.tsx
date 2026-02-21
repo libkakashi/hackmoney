@@ -14,6 +14,13 @@ const STEPS = [
   {num: '02', label: 'deploy'},
 ] as const;
 
+function deriveSymbol(name: string): string {
+  return name
+    .replace(/[^a-zA-Z0-9]/g, '')
+    .toUpperCase()
+    .slice(0, 10);
+}
+
 export default function LaunchPage() {
   const router = useRouter();
   const {isConnected} = useConnection();
@@ -22,16 +29,19 @@ export default function LaunchPage() {
   const [mode, setMode] = useState<LaunchMode>('now');
   const [scheduledTime, setScheduledTime] = useState<string>('');
   const [form, setForm] = useState<FormData>({
-    name: '',
-    symbol: '',
-    description: '',
-    image: '',
-    imageCid: '',
-    website: '',
-    twitter: '',
-    discord: '',
-    telegram: '',
+    repoFullName: '',
+    repoName: '',
+    repoOwner: '',
+    repoOwnerAvatar: '',
+    repoDescription: '',
+    repoUrl: '',
+    repoStars: 0,
+    repoLanguage: '',
+    selectionType: 'repo',
   });
+
+  const tokenName = form.repoName;
+  const tokenSymbol = deriveSymbol(form.repoName);
 
   const {mineSalt, saltResult, isMining, miningProgress} = useMineSalt();
 
@@ -40,10 +50,10 @@ export default function LaunchPage() {
 
   // Mine salt when moving to deploy step
   useEffect(() => {
-    if (step === 2 && !saltResult && !isMining) {
+    if (step === 2 && !saltResult && !isMining && tokenName && tokenSymbol) {
       void mineSalt({
-        name: form.name,
-        symbol: form.symbol,
+        name: tokenName,
+        symbol: tokenSymbol,
         scheduledTime:
           mode === 'scheduled' ? new Date(scheduledTime) : undefined,
       });
@@ -53,8 +63,8 @@ export default function LaunchPage() {
     saltResult,
     isMining,
     mineSalt,
-    form.name,
-    form.symbol,
+    tokenName,
+    tokenSymbol,
     mode,
     scheduledTime,
   ]);
@@ -71,16 +81,12 @@ export default function LaunchPage() {
 
     try {
       await launch({
-        name: form.name,
-        symbol: form.symbol,
+        name: tokenName,
+        symbol: tokenSymbol,
         salt: saltResult.salt,
         startBlock: saltResult.startBlock,
-        description: form.description || undefined,
-        image: form.image || undefined,
-        websiteUrl: form.website || undefined,
-        twitterUrl: form.twitter || undefined,
-        discordUrl: form.discord || undefined,
-        telegramUrl: form.telegram || undefined,
+        description: form.repoDescription || undefined,
+        websiteUrl: form.repoUrl || undefined,
       });
     } catch (error) {
       console.error('Launch failed:', error);
@@ -155,6 +161,8 @@ export default function LaunchPage() {
         {step === 2 && (
           <DeployStep
             form={form}
+            tokenName={tokenName}
+            tokenSymbol={tokenSymbol}
             isConnected={isConnected}
             isDeploying={isDeploying}
             saltReady={!!saltResult}

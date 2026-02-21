@@ -11,6 +11,9 @@ export interface SessionData {
   address?: Address;
   chainId?: number;
   isLoggedIn: boolean;
+  githubAccessToken?: string;
+  githubUsername?: string;
+  githubAvatarUrl?: string;
 }
 
 if (!env.sessionSecret) {

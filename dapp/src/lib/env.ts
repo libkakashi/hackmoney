@@ -26,6 +26,8 @@ const envSchema = z.object({
   databaseUrl: z.string().optional(),
   pinataJwt: z.string().optional(),
   pinataGateway: z.string().optional(),
+  githubClientId: z.string().optional(),
+  githubClientSecret: z.string().optional(),
 });
 
 export const env = envSchema.parse({
@@ -41,4 +43,6 @@ export const env = envSchema.parse({
   databaseUrl: process.env.DATABASE_URL,
   pinataJwt: process.env.PINATA_JWT,
   pinataGateway: process.env.NEXT_PUBLIC_PINATA_GATEWAY,
+  githubClientId: process.env.GITHUB_CLIENT_ID,
+  githubClientSecret: process.env.GITHUB_CLIENT_SECRET,
 });
