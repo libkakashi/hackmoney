@@ -119,8 +119,8 @@ function RepoDropdown({
           open
             ? 'border-green bg-green/5'
             : selected
-              ? 'border-green/40'
-              : 'border-border hover:border-dim'
+              ? 'border-green/30'
+              : 'border-border hover:border-foreground/20'
         }`}
       >
         {selected ? (
@@ -262,8 +262,8 @@ function OrgDropdown({
           open
             ? 'border-purple bg-purple/5'
             : selected
-              ? 'border-purple/40'
-              : 'border-border hover:border-dim'
+              ? 'border-purple/30'
+              : 'border-border hover:border-foreground/20'
         }`}
       >
         {selected ? (
@@ -415,7 +415,7 @@ export default function LaunchPage() {
     }
   };
 
-  // ── Not signed in ──────────────────────────────────────────────────
+  // ── Loading ──────────────────────────────────────────────────────────
 
   if (ghLoading) {
     return (
@@ -430,30 +430,34 @@ export default function LaunchPage() {
     );
   }
 
+  // ── Not signed in ────────────────────────────────────────────────────
+
   if (!ghConnected) {
     return (
-      <div className="min-h-screen py-12">
+      <div className="min-h-screen py-16">
         <Container size="sm">
-          <div className="text-center mb-10">
-            <h1 className="text-2xl mb-2">
-              <span className="text-green">&gt;</span> register project
-            </h1>
-            <p className="text-dim text-sm">
+          <div className="mb-10">
+            <div className="text-dim text-xs tracking-wider mb-6">
+              ~/nyx <span className="text-green">$</span> nyx register
+            </div>
+            <h1 className="text-2xl font-bold mb-2">register project</h1>
+            <p className="text-muted-foreground text-sm">
               pick a project, configure, and go live.
             </p>
           </div>
-          <div className="border border-border p-8 text-center space-y-4">
-            <GitHubIcon className="h-12 w-12 mx-auto text-dim" />
+
+          <div className="border border-border p-10 text-center space-y-5">
+            <GitHubIcon className="h-10 w-10 mx-auto text-muted-foreground" />
             <div>
-              <h2 className="text-lg mb-1">connect your github</h2>
-              <p className="text-dim text-sm">
+              <h2 className="text-base font-bold mb-1">connect your github</h2>
+              <p className="text-muted-foreground text-sm">
                 sign in to pick a repository or organization
               </p>
             </div>
             <Button
               onClick={signIn}
               size="lg"
-              className="h-12 gap-2"
+              className="h-11 gap-2"
               showPrefix
             >
               <GitHubIcon className="h-4 w-4" />
@@ -465,46 +469,57 @@ export default function LaunchPage() {
     );
   }
 
-  // ── Main form ──────────────────────────────────────────────────────
+  // ── Main form ────────────────────────────────────────────────────────
 
   return (
-    <div className="min-h-screen py-12">
+    <div className="min-h-screen py-16">
       <Container size="sm">
-        <div className="space-y-8">
-          {/* GitHub user */}
-          <div className="flex items-center justify-between">
+        {/* Header */}
+        <div className="mb-10">
+          <div className="text-dim text-xs tracking-wider mb-6">
+            ~/nyx <span className="text-green">$</span> nyx register
+          </div>
+          <h1 className="text-2xl font-bold mb-2">register project</h1>
+          <p className="text-muted-foreground text-sm">
+            pick a project, configure, and go live.
+          </p>
+        </div>
+
+        <div className="space-y-10">
+          {/* GitHub user bar */}
+          <div className="flex items-center justify-between py-3 border-b border-border">
             <div className="flex items-center gap-3">
               {avatarUrl && (
                 <img
                   src={avatarUrl}
                   alt={username || ''}
-                  className="w-8 h-8 rounded-full border border-border"
+                  className="w-7 h-7 rounded-full border border-border"
                 />
               )}
               <div className="text-sm">
                 <span className="text-dim">signed in as </span>
-                <span className="text-green">{username}</span>
+                <span className="text-green font-medium">{username}</span>
               </div>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={disconnect}
-              className="text-dim hover:text-red"
+              className="text-dim hover:text-red text-xs"
             >
               disconnect
             </Button>
           </div>
 
-          {/* Project selection */}
+          {/* Step 01 — Project selection */}
           <div>
-            <div className="text-sm mb-4">
-              <span className="text-dim">01</span> <span>pick project</span>
+            <div className="flex items-baseline gap-3 mb-5">
+              <span className="text-green text-xs font-bold">01</span>
+              <span className="text-sm font-medium">pick project</span>
             </div>
-            <div className="border-b border-border mb-4" />
 
             {/* Tabs */}
-            <div className="flex gap-6 mb-4">
+            <div className="flex gap-1 mb-4">
               <button
                 onClick={() => {
                   if (tab !== 'repos') {
@@ -512,10 +527,10 @@ export default function LaunchPage() {
                     clearForm();
                   }
                 }}
-                className={`text-sm transition-colors ${
+                className={`px-3 py-1.5 text-xs transition-colors border ${
                   tab === 'repos'
-                    ? 'text-green'
-                    : 'text-dim hover:text-foreground'
+                    ? 'text-green border-green/30 bg-green/5'
+                    : 'text-dim border-transparent hover:text-foreground'
                 }`}
               >
                 repository
@@ -527,10 +542,10 @@ export default function LaunchPage() {
                     clearForm();
                   }
                 }}
-                className={`text-sm transition-colors ${
+                className={`px-3 py-1.5 text-xs transition-colors border ${
                   tab === 'orgs'
-                    ? 'text-purple'
-                    : 'text-dim hover:text-foreground'
+                    ? 'text-purple border-purple/30 bg-purple/5'
+                    : 'text-dim border-transparent hover:text-foreground'
                 }`}
               >
                 organization
@@ -562,8 +577,8 @@ export default function LaunchPage() {
 
             {/* Project card — shows after selection */}
             {hasSelection && (
-              <div className="flex gap-5 items-start mt-6">
-                <div className="w-20 h-20 border border-border shrink-0 overflow-hidden">
+              <div className="flex gap-5 items-start mt-6 p-4 border border-border bg-card/30">
+                <div className="w-16 h-16 border border-border shrink-0 overflow-hidden">
                   <img
                     src={form.repoOwnerAvatar}
                     alt={form.repoOwner}
@@ -577,22 +592,24 @@ export default function LaunchPage() {
                     ) : (
                       <GitBranch className="h-3.5 w-3.5 text-green shrink-0" />
                     )}
-                    <span className="text-sm">{form.repoFullName}</span>
-                    <span className="text-xs text-dim">
-                      ({form.selectionType})
+                    <span className="text-sm font-medium">
+                      {form.repoFullName}
+                    </span>
+                    <span className="text-[10px] text-dim">
+                      {form.selectionType}
                     </span>
                   </div>
                   {form.repoDescription && (
-                    <p className="text-dim text-sm leading-relaxed">
+                    <p className="text-muted-foreground text-sm leading-relaxed mb-3">
                       {form.repoDescription}
                     </p>
                   )}
-                  <div className="flex flex-wrap gap-2 mt-3">
+                  <div className="flex flex-wrap gap-2">
                     <a
                       href={form.repoUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-xs text-dim hover:text-foreground hover:border-green transition-colors"
+                      className="flex items-center gap-1.5 px-2.5 py-1 border border-border text-xs text-dim hover:text-foreground hover:border-green/40 transition-colors"
                     >
                       <GitHubIcon className="h-3 w-3 shrink-0" />
                       github
@@ -614,61 +631,66 @@ export default function LaunchPage() {
             )}
           </div>
 
-          {/* Token details */}
+          {/* Step 02 — Token details */}
           <div>
-            <div className="text-sm mb-4">
-              <span className="text-dim">02</span> <span>token details</span>
+            <div className="flex items-baseline gap-3 mb-5">
+              <span className="text-green text-xs font-bold">02</span>
+              <span className="text-sm font-medium">token details</span>
             </div>
-            <div className="border-b border-border mb-4" />
 
             <div className="grid grid-cols-2 gap-3">
-              <div className="px-4 py-3 border border-border">
+              <div className="px-4 py-3 border border-border bg-card/30">
                 <div className="text-dim text-xs mb-1">total supply</div>
-                <div className="text-sm">{TOTAL_SUPPLY.toLocaleString()}</div>
+                <div className="text-sm font-medium">
+                  {TOTAL_SUPPLY.toLocaleString()}
+                </div>
               </div>
-              <div className="px-4 py-3 border border-border">
+              <div className="px-4 py-3 border border-border bg-card/30">
                 <div className="text-dim text-xs mb-1">starting price</div>
-                <div className="text-sm text-green">${FLOOR_PRICE}</div>
+                <div className="text-sm font-medium text-green">
+                  ${FLOOR_PRICE}
+                </div>
               </div>
             </div>
 
-            <p className="text-xs text-dim mt-4 px-1">
+            <p className="text-xs text-muted-foreground mt-3">
               a token is automatically created for your project with these
               parameters — trading starts immediately.
             </p>
           </div>
 
-          {/* Progress */}
-          {isDeploying && (
-            <div className="text-green text-sm flex items-center gap-2">
-              <Loader />
-              registering project...
-            </div>
-          )}
-
           {/* Deploy */}
-          <Button
-            onClick={handleDeploy}
-            disabled={!hasSelection || !walletConnected || isDeploying}
-            size="lg"
-            className="w-full h-12"
-            showPrefix={!isDeploying}
-          >
-            {isDeploying ? (
-              <>
-                <Loader type="dots" />
-                deploying...
-              </>
-            ) : (
-              'register project'
+          <div className="pt-2">
+            {isDeploying && (
+              <div className="text-green text-sm flex items-center gap-2 mb-4">
+                <Loader />
+                registering project...
+              </div>
             )}
-          </Button>
 
-          {!walletConnected && (
-            <p className="text-center text-dim text-xs">
-              connect wallet to register
-            </p>
-          )}
+            <Button
+              onClick={handleDeploy}
+              disabled={!hasSelection || !walletConnected || isDeploying}
+              size="lg"
+              className="w-full h-12"
+              showPrefix={!isDeploying}
+            >
+              {isDeploying ? (
+                <>
+                  <Loader type="dots" />
+                  deploying...
+                </>
+              ) : (
+                'register project'
+              )}
+            </Button>
+
+            {!walletConnected && (
+              <p className="text-center text-dim text-xs mt-3">
+                connect wallet to register
+              </p>
+            )}
+          </div>
         </div>
       </Container>
     </div>
