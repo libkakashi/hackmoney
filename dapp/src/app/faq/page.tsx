@@ -100,13 +100,12 @@ The clearing price can go higher based on demand, but never lower. This gives ea
 const creatorFAQs = [
   {
     q: 'how do i launch a token?',
-    a: `Go to /launch, fill in your project name, symbol, description, and social links. Sign one transaction. That's it.
+    a: `Go to /launch, pick a GitHub repository or organization, and sign one transaction. That's it.
 
 Every launch follows the same rules:
 • 1,000,000 total supply
-• 30-minute fair launch window
-• $0.10 minimum price
-• 10% distributed to supporters → 90% paired with raised funds for instant liquidity
+• $0.10 starting price
+• Single-sided liquidity on Uniswap V4 — trading starts immediately
 
 You can launch immediately or schedule for later.`,
     tag: 'guide',

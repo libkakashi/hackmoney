@@ -65,7 +65,6 @@ function ToolResultCard({result}: {result: unknown}) {
             address: string;
             name: string;
             symbol: string;
-            description?: string;
           },
           i: number,
         ) => (
@@ -79,11 +78,6 @@ function ToolResultCard({result}: {result: unknown}) {
               <span className="font-bold">{token.symbol}</span>
               <span className="text-dim truncate">{token.name}</span>
             </div>
-            {token.description && (
-              <div className="text-dim mt-0.5 line-clamp-1">
-                {token.description}
-              </div>
-            )}
           </Link>
         ),
       )}
@@ -252,8 +246,6 @@ function TimerReplyButton({
 /* ── Main Floating Agent ────────────────────────────────────────────────── */
 export function FloatingAgent() {
   const {
-    placeBid,
-    claimTokens,
     getBalances,
     previewSwap,
     approveIfNeeded,
@@ -301,16 +293,6 @@ export function FloatingAgent() {
 
       if (toolName === 'getBalances') {
         const result = await getBalances(input.tokenAddress);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
-        return;
-      }
-      if (toolName === 'placeBid') {
-        const result = await placeBid(input.auctionAddress, input.amount);
-        void addToolOutput({tool: toolName, toolCallId, output: result});
-        return;
-      }
-      if (toolName === 'claimTokens') {
-        const result = await claimTokens(input.auctionAddress);
         void addToolOutput({tool: toolName, toolCallId, output: result});
         return;
       }
@@ -596,8 +578,8 @@ export function FloatingAgent() {
                         &gt; ramen
                       </div>
                       <div className="text-foreground/80  leading-relaxed">
-                        hey. i can place bids, execute trades, and answer
-                        anything about the platform. <br /> <br />
+                        hey. i can help you discover tokens, execute trades, and
+                        answer anything about the platform. <br /> <br />
                         P.S. you can move this window around or resize it by
                         clicking and dragging the edges.
                       </div>
@@ -630,19 +612,17 @@ export function FloatingAgent() {
                 {/* Initial suggestions */}
                 {messages.length === 0 && (
                   <div className="flex flex-wrap gap-1.5 mb-2">
-                    {['place a bid', 'show live tokens', 'swap tokens'].map(
-                      s => (
-                        <Button
-                          key={s}
-                          variant="outline"
-                          size="xs"
-                          className="text-dim hover:text-green hover:border-green "
-                          onClick={() => void sendMessage({text: s})}
-                        >
-                          {s}
-                        </Button>
-                      ),
-                    )}
+                    {['show tokens', 'swap tokens', 'check prices'].map(s => (
+                      <Button
+                        key={s}
+                        variant="outline"
+                        size="xs"
+                        className="text-dim hover:text-green hover:border-green "
+                        onClick={() => void sendMessage({text: s})}
+                      >
+                        {s}
+                      </Button>
+                    ))}
                   </div>
                 )}
                 {/* Quick reply suggestions */}

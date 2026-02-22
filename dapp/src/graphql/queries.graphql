@@ -6,23 +6,9 @@ query GetTokens($limit: Int!, $offset: Int!) {
   ) {
     id
     address
-    strategy
-    auction
     creator
     name
     symbol
-    description
-    website
-    twitterUrl
-    discordUrl
-    telegramUrl
-
-    image
-    auctionStartBlock
-    auctionEndBlock
-    auctionClaimBlock
-    poolMigrationBlock
-    salt
     createdAt
     createdAtBlock
     txHash
@@ -79,23 +65,9 @@ query FilterTokens(
   ) {
     id
     address
-    strategy
-    auction
     creator
     name
     symbol
-    description
-    website
-    twitterUrl
-    discordUrl
-    telegramUrl
-
-    image
-    auctionStartBlock
-    auctionEndBlock
-    auctionClaimBlock
-    poolMigrationBlock
-    salt
     createdAt
     createdAtBlock
     txHash
@@ -106,23 +78,9 @@ query GetTokenByAddress($token: String!) {
   Launchpad_TokenLaunched(where: {address: {_eq: $token}}) {
     id
     address
-    strategy
-    auction
     creator
     name
     symbol
-    description
-    website
-    twitterUrl
-    discordUrl
-    telegramUrl
-
-    image
-    auctionStartBlock
-    auctionEndBlock
-    auctionClaimBlock
-    poolMigrationBlock
-    salt
     createdAt
     createdAtBlock
     txHash

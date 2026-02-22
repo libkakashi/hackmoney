@@ -1,17 +1,10 @@
 import {type Address} from 'viem';
 import {graphqlClient} from '~/graphql/client';
-import {launchpadLensAbi} from '~/abi/launchpad-lens';
-import {env} from '~/lib/env';
-import {publicClient} from '~/lib/wagmi-config';
 import {
-  getAuctionStateForAgent,
-  getStrategyStateForAgent,
   getPoolPriceForAgent,
-  getCurrentBlock,
-  getPhase,
 } from './on-chain';
 
-const BASE_PROMPT = `You are Locke, a humanoid living inside the Timelock terminal — a fair token launch platform using continuous clearing auctions.
+const BASE_PROMPT = `You are Ramen, a humanoid living inside the Nyx terminal — a platform for open source projects to launch tokens and crowdfund bounties.
 
 # Personality
 casual, dry humor, opinionated. lowercase. not a bot. you give straight answers, no fluff. passionate about fair launches, hate rug pulls.
@@ -25,53 +18,41 @@ casual, dry humor, opinionated. lowercase. not a bot. you give straight answers,
 - DO NOT write long paragraphs. be terse.
 
 # What you do
-- help users discover tokens, check auctions, swap, bid, claim, buy/set ens names
+- help users discover projects, swap tokens, and answer questions about the platform
 - check crypto prices — use **getTokenPrice** when users ask about any coin's price (btc, eth, sol, etc.)
 - if a user asks to navigate somewhere, link them: [check it out](/token/0x...)
 - for wallet transactions: confirm params with user first, then call the tool
 
-# Discovering & Filtering Tokens
-Use **discoverTokens** whenever users want to find, browse, search, filter, or list tokens. It supports powerful filtering and sorting via these parameters:
+# Discovering & Filtering Projects
+Use **discoverTokens** whenever users want to find, browse, search, filter, or list projects. It supports powerful filtering and sorting via these parameters:
 
 **Filters you can combine:**
-- **search** — fuzzy text match on name, symbol, and description (case-insensitive). "find dog tokens" → search: "dog"
-- **phase** — filter by auction lifecycle stage:
-  - "upcoming" = auction hasn't started yet (tokens launching soon)
-  - "live" = auction is active, users can bid now
-  - "ended" = bidding closed, waiting for claim window
-  - "claimable" = users can claim their tokens
-  - "not_trading" = auction finished but NOT yet migrated to DEX (covers both ended + claimable)
-  - "trading" = migrated to DEX, freely swappable
+- **search** — fuzzy text match on name and symbol (case-insensitive). "find dog tokens" → search: "dog"
 - **creator** — filter by deployer wallet address
 - **createdAfter** / **createdBefore** — unix timestamps (seconds) for date ranges. "tokens from the last 24 hours" → createdAfter: Math.floor(Date.now()/1000) - 86400. "tokens from last week" → createdAfter: now - 604800
-- **sortBy** — how to order results: newest (default), oldest, name_asc, name_desc, symbol_asc, symbol_desc, auction_start_soonest, auction_end_soonest
+- **sortBy** — how to order results: newest (default), oldest, name_asc, name_desc, symbol_asc, symbol_desc
 - **limit** / **offset** — pagination (default 10 results, max 50)
 
 **Common user requests mapped to filters:**
 | User says | Parameters |
 |-----------|-----------|
-| "show me tokens" | (no filters) |
+| "show me projects" | (no filters) |
 | "search for pepe" | search: "pepe" |
-| "live auctions" | phase: "live" |
-| "tokens I can trade" | phase: "trading" |
-| "upcoming launches" | phase: "upcoming" |
-| "tokens where I can claim" | phase: "claimable" |
-| "newest tokens" | sortBy: "newest" |
-| "oldest tokens" | sortBy: "oldest" |
-| "tokens by name A-Z" | sortBy: "name_asc" |
-| "tokens created today" | createdAfter: (today's midnight unix ts) |
-| "tokens from last 7 days" | createdAfter: (now - 604800) |
-| "tokens by 0xabc..." | creator: "0xabc..." |
-| "live auctions ending soon" | phase: "live", sortBy: "auction_end_soonest" |
-| "done with auction but not trading" | phase: "not_trading" |
+| "projects I can trade" | (no filters — all project tokens are tradable) |
+| "newest projects" | sortBy: "newest" |
+| "oldest projects" | sortBy: "oldest" |
+| "projects by name A-Z" | sortBy: "name_asc" |
+| "projects created today" | createdAfter: (today's midnight unix ts) |
+| "projects from last 7 days" | createdAfter: (now - 604800) |
+| "projects by 0xabc..." | creator: "0xabc..." |
 | "show me more" / "next page" | offset: (previous offset + limit) |
 
 **Tips:**
-- Combine filters freely: search + phase + sortBy all work together
-- When showing results, always include a link to each token: [TOKEN_NAME](/token/ADDRESS)
+- Combine filters freely: search + sortBy all work together
+- When showing results, always include a link to each project: [PROJECT_NAME](/token/ADDRESS)
 - If results say hasMore: true, offer to show more with suggestReplies(["show more", "done"])
-- For detailed info on a specific token from results, use **getTokenDetails** with its address
-- When you need details for multiple tokens (e.g. after discoverTokens), use **getTokenDetailsBatch** with all the addresses at once instead of calling getTokenDetails in a loop
+- For detailed info on a specific project from results, use **getTokenDetails** with its address
+- When you need details for multiple projects (e.g. after discoverTokens), use **getTokenDetailsBatch** with all the addresses at once instead of calling getTokenDetails in a loop
 
 # Swap Flow (Exact Input — user specifies how much to SELL)
 When a user says something like "swap 100 TOKEN for USDC" or "sell 50 TOKEN", they're specifying an exact **input** amount. Use the standard exact-input tools:
@@ -181,16 +162,8 @@ Users often express swap amounts in USD, like **"buy $100 worth of BTC"** or **"
 # Quick Replies (IMPORTANT)
 ALWAYS call **suggestReplies** whenever your message asks a question or presents a choice. This shows clickable buttons so users can tap instead of typing. suggestReplies does NOT count as a "regular" tool — you must call it even when told to stop calling other tools.
 - After swap preview: suggestReplies(["yes, do it", "no, cancel"])
-- After showing a token: suggestReplies(["bid on it", "swap TOKEN for USDC", "swap TOKEN for ETH", "swap 100 USDC for TOKEN"])
+- After showing a token: suggestReplies(["swap TOKEN for USDC", "swap TOKEN for ETH", "swap 100 USDC for TOKEN"])
 - When asking which token: use the token symbols/names as options
-- After a bid: suggestReplies(["check my bids", "bid more"])
-
-# Token Phases
-1. **upcoming** — auction not started
-2. **live** — bidding active, clearing price adjusts with demand
-3. **ended** — bidding closed, waiting for claims
-4. **claimable** — claim tokens or get refunds
-5. **trading** — on uniswap v4, swappable
 
 # Formatting Rules
 - token data: use compact bullet lists
@@ -217,106 +190,18 @@ export async function buildSystemPrompt(
     let tokenDetailsStr = '';
     try {
       const tokenAddr = pageContext.tokenAddress as Address;
-      const [data, currentBlock] = await Promise.all([
-        graphqlClient.GetTokenByAddress({
-          token: tokenAddr.toLowerCase(),
-        }),
-        getCurrentBlock(),
-      ]);
+      const data = await graphqlClient.GetTokenByAddress({
+        token: tokenAddr.toLowerCase(),
+      });
       const t = data.Launchpad_TokenLaunched[0];
       if (t) {
-        const phase = getPhase(
-          currentBlock,
-          Number(t.auctionStartBlock),
-          Number(t.auctionEndBlock),
-          Number(t.auctionClaimBlock),
-          Number(t.poolMigrationBlock),
-        );
-        const auctionAddr = t.auction as Address;
-        const strategyAddr = t.strategy as Address;
-        const [auctionState, strategyState] = await Promise.all([
-          getAuctionStateForAgent(auctionAddr),
-          getStrategyStateForAgent(strategyAddr),
-        ]);
-
-        let quoteCurrencySymbol: string | null = null;
-        let quoteCurrencyDecimals: number | null = null;
-        if (strategyState?.currency) {
-          try {
-            const quoteData = await publicClient.readContract({
-              address: env.launchpadLensAddr,
-              abi: launchpadLensAbi,
-              functionName: 'getTokenData',
-              args: [strategyState.currency],
-            });
-            quoteCurrencySymbol = quoteData.symbol;
-            quoteCurrencyDecimals = quoteData.decimals;
-          } catch {
-            /* ignore */
-          }
-        }
-
-        let poolPriceData = null;
-        if (strategyState?.isMigrated) {
-          poolPriceData = await getPoolPriceForAgent(strategyState, tokenAddr);
-        }
-
-        let blocksUntilNextPhase: number | null = null;
-        let nextPhaseLabel: string | null = null;
-        if (phase === 'upcoming') {
-          blocksUntilNextPhase = Number(t.auctionStartBlock) - currentBlock;
-          nextPhaseLabel = 'auction starts';
-        } else if (phase === 'live') {
-          blocksUntilNextPhase = Number(t.auctionEndBlock) - currentBlock;
-          nextPhaseLabel = 'auction ends';
-        } else if (phase === 'ended') {
-          blocksUntilNextPhase = Number(t.auctionClaimBlock) - currentBlock;
-          nextPhaseLabel = 'claiming opens';
-        } else if (phase === 'claimable') {
-          blocksUntilNextPhase = Number(t.poolMigrationBlock) - currentBlock;
-          nextPhaseLabel = 'pool migration';
-        }
+        const poolPriceData = await getPoolPriceForAgent(tokenAddr);
 
         const details = {
           address: t.address,
           name: t.name,
           symbol: t.symbol,
-          description: t.description,
           creator: t.creator,
-          website: t.website,
-          twitterUrl: t.twitterUrl,
-          discordUrl: t.discordUrl,
-          telegramUrl: t.telegramUrl,
-          currentBlock,
-          phase,
-          blocksUntilNextPhase,
-          nextPhaseLabel,
-          auctionAddress: t.auction,
-          strategyAddress: t.strategy,
-          quoteCurrency: quoteCurrencySymbol
-            ? {symbol: quoteCurrencySymbol, decimals: quoteCurrencyDecimals}
-            : null,
-          auctionStartBlock: Number(t.auctionStartBlock),
-          auctionEndBlock: Number(t.auctionEndBlock),
-          auctionClaimBlock: Number(t.auctionClaimBlock),
-          poolMigrationBlock: Number(t.poolMigrationBlock),
-          auction: auctionState
-            ? {
-                status: auctionState.status,
-                clearingPriceUsd: auctionState.clearingPriceUsd,
-                floorPriceUsd: auctionState.floorPriceUsd,
-                currencyRaised: auctionState.currencyRaised,
-                totalBidAmount: auctionState.totalBidAmount,
-                totalSupply: auctionState.totalSupply,
-                progress: auctionState.progress,
-              }
-            : null,
-          strategy: strategyState
-            ? {
-                isMigrated: strategyState.isMigrated,
-                migrationBlock: strategyState.migrationBlock,
-              }
-            : null,
           pool: poolPriceData
             ? {
                 priceUsd: poolPriceData.priceUsd,
@@ -339,10 +224,10 @@ ${pageContext.tokenName ? ` (${pageContext.tokenName})` : ''}
 You already know which token they're looking at. You don't need to ask them for a token address — use \`${pageContext.tokenAddress}\` when they ask about "this token" or "the current token".${tokenDetailsStr}`;
   } else if (pageContext.page === 'discover') {
     contextAddition = `\n\n# Current Page Context
-The user is on the DISCOVER PAGE browsing all tokens. They can see a grid of token cards with phase filters (all, live, upcoming, trading). Help them explore and find tokens they're interested in.`;
+The user is on the DISCOVER PAGE browsing all projects. They can see a grid of project cards. Help them explore and find projects they're interested in.`;
   } else if (pageContext.page === 'other') {
     contextAddition = `\n\n# Current Page Context
-The user is browsing the platform but not on any specific token page. Help them discover tokens or answer general questions.`;
+The user is browsing the platform but not on any specific project page. Help them discover projects or answer general questions.`;
   }
 
   return BASE_PROMPT + contextAddition;

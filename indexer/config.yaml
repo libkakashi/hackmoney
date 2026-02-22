@@ -14,7 +14,7 @@ networks:
           - 0x63e39e1b03a72B721D6398D67A646705B33979eD
         handler: src/EventHandlers.ts
         events:
-          - event: TokenLaunched(address indexed token, address indexed strategy, address indexed auction, address creator, string name, string symbol, string description, string website, string image, uint64 auctionStartBlock, uint64 auctionEndBlock, uint64 auctionClaimBlock, uint64 poolMigrationBlock, bytes32 salt)
+          - event: TokenLaunched(address indexed token, address indexed creator, string name, string symbol)
       - name: Token
         handler: src/EventHandlers.ts
         events:

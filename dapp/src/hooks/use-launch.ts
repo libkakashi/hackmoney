@@ -14,33 +14,12 @@ import {launchpadAbi} from '~/abi/launchpad';
 export interface LaunchParams {
   name: string;
   symbol: string;
-  salt: Hex;
-  startBlock: bigint;
-  description?: string;
-  websiteUrl?: string;
 }
 
 export interface LaunchResult {
   token: Address;
-  strategy: Address;
-  auction: Address;
   txHash: Hex;
 }
-
-const encodeMetadata = (params: {
-  description?: string;
-  websiteUrl?: string;
-}): {
-  description: string;
-  website: string;
-  image: string;
-} => {
-  return {
-    description: params.description || '',
-    website: params.websiteUrl || '',
-    image: '',
-  };
-};
 
 export const useLaunch = () => {
   const publicClient = usePublicClient();
@@ -74,44 +53,27 @@ export const useLaunch = () => {
     try {
       setIsSimulating(true);
 
-      const tokenParams = {
-        name: params.name,
-        symbol: params.symbol,
-        metadata: encodeMetadata({
-          description: params.description,
-          websiteUrl: params.websiteUrl,
-        }),
-      };
-
-      // Simulate to get return values
       const simulateResult = await publicClient.simulateContract({
         address: env.launchpadAddr,
         abi: launchpadAbi,
         functionName: 'launch',
-        args: [tokenParams, params.startBlock, params.salt],
+        args: [params.name, params.symbol],
         account: creator,
       });
 
-      const [token, strategy, auction] = simulateResult.result as [
-        Address,
-        Address,
-        Address,
-      ];
+      const token = simulateResult.result as Address;
 
       setIsSimulating(false);
 
-      // Submit the launch transaction
       const txHashResult = await writeContract({
         address: env.launchpadAddr,
         abi: launchpadAbi,
         functionName: 'launch',
-        args: [tokenParams, params.startBlock, params.salt],
+        args: [params.name, params.symbol],
       });
 
       setLaunchResult({
         token,
-        strategy,
-        auction,
         txHash: txHashResult,
       });
     } catch (error) {

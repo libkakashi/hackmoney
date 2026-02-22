@@ -33,10 +33,9 @@ import {
   getQuoteExactInputMultiHop,
   getQuoteExactOutputMultiHop,
 } from '~/hooks/swap/use-quote';
-import {useSubmitBidImperative} from '~/hooks/cca/use-submit-bid-imperative';
-import {useClaimTokensImperative} from '~/hooks/cca/use-claim-tokens-imperative';
 import {env} from '~/lib/env';
 import {launchpadLensAbi} from '~/abi/launchpad-lens';
+import {launchpadAbi} from '~/abi/launchpad';
 const DEFAULT_SLIPPAGE_BPS = 100n; // 1%
 const DEFAULT_DEADLINE_MINUTES = 20;
 
@@ -56,43 +55,6 @@ export function useAgentTools() {
     swapExactOutGeneric,
   } = useSwap();
 
-  // CCA hooks (imperative)
-  const submitBidMutation = useSubmitBidImperative();
-  const claimTokensMutation = useClaimTokensImperative();
-
-  const placeBid = useCallback(
-    async (auctionAddress: string, amountStr: string) => {
-      try {
-        const result = await submitBidMutation.mutateAsync({
-          auctionAddress,
-          amount: amountStr,
-        });
-        return {success: true, txHash: result.txHash, amount: result.amount};
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Transaction failed';
-        return {error: msg};
-      }
-    },
-    [submitBidMutation],
-  );
-
-  const claimTokens = useCallback(
-    async (auctionAddress: string) => {
-      try {
-        const result = await claimTokensMutation.mutateAsync(auctionAddress);
-        return {
-          success: true,
-          txHash: result.txHash,
-          bidsProcessed: result.bidsProcessed,
-        };
-      } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Transaction failed';
-        return {error: msg};
-      }
-    },
-    [claimTokensMutation],
-  );
-
   const getBalances = useCallback(
     async (tokenAddress: string) => {
       if (!publicClient || !userAddress) {
@@ -104,26 +66,24 @@ export function useAgentTools() {
       const tokenAddr = tokenAddress as Address;
 
       try {
-        const {graphqlClient} = await import('~/graphql/client');
-        const tokenQueryData = await graphqlClient.GetTokenByAddress({
-          token: tokenAddr.toLowerCase(),
+        const poolManager = await publicClient.readContract({
+          address: env.launchpadAddr,
+          abi: launchpadAbi,
+          functionName: 'POOL_MANAGER',
         });
-        const token = tokenQueryData.Launchpad_TokenLaunched[0];
-        if (!token) return {error: 'Token not found'};
 
-        const strategyAddr = token.strategy as Address;
-        const strategyState = await publicClient.readContract({
+        const poolInfo = await publicClient.readContract({
           address: env.launchpadLensAddr,
           abi: launchpadLensAbi,
-          functionName: 'getStrategyState',
-          args: [strategyAddr],
+          functionName: 'getPoolInfo',
+          args: [poolManager, tokenAddr, USDC_ADDRESS, 10000, 60],
         });
 
         const tokenIsToken0 =
-          strategyState.currency0.toLowerCase() === tokenAddr.toLowerCase();
+          poolInfo.currency0.toLowerCase() === tokenAddr.toLowerCase();
         const quoteAddr = tokenIsToken0
-          ? strategyState.currency1
-          : strategyState.currency0;
+          ? poolInfo.currency1
+          : poolInfo.currency0;
 
         const [tokenData, quoteData, tokenBalance, quoteBalance] =
           await Promise.all([
@@ -187,37 +147,35 @@ export function useAgentTools() {
       const isDirect = isDirectSwap(quoteToken);
       const sellingToken = buyToken === 'quote';
 
-      const {graphqlClient} = await import('~/graphql/client');
-      const tokenData = await graphqlClient.GetTokenByAddress({
-        token: tokenAddr.toLowerCase(),
+      const poolManager = await publicClient.readContract({
+        address: env.launchpadAddr,
+        abi: launchpadAbi,
+        functionName: 'POOL_MANAGER',
       });
-      const token = tokenData.Launchpad_TokenLaunched[0];
-      if (!token) throw new Error('Token not found');
 
-      const strategyAddr = token.strategy as Address;
-      const strategyState = await publicClient.readContract({
+      const poolInfo = await publicClient.readContract({
         address: env.launchpadLensAddr,
         abi: launchpadLensAbi,
-        functionName: 'getStrategyState',
-        args: [strategyAddr],
+        functionName: 'getPoolInfo',
+        args: [poolManager, tokenAddr, USDC_ADDRESS, 10000, 60],
       });
 
-      if (!strategyState.isMigrated) {
+      if (!poolInfo.isInitialized) {
         throw new Error(
-          'Pool not yet migrated to Uniswap V4. Swaps are not available yet.',
+          'Pool not yet initialized on Uniswap V4. Swaps are not available yet.',
         );
       }
 
       const poolKey = {
-        currency0: strategyState.currency0,
-        currency1: strategyState.currency1,
-        fee: strategyState.fee,
-        tickSpacing: strategyState.tickSpacing,
-        hooks: strategyState.hooks,
+        currency0: poolInfo.currency0,
+        currency1: poolInfo.currency1,
+        fee: poolInfo.fee,
+        tickSpacing: poolInfo.tickSpacing,
+        hooks: '0x0000000000000000000000000000000000000000' as Address,
       };
 
       const tokenIsToken0 =
-        strategyState.currency0.toLowerCase() === tokenAddr.toLowerCase();
+        poolInfo.currency0.toLowerCase() === tokenAddr.toLowerCase();
 
       // For single-hop (USDC), determine direction within the launchpad pool
       const zeroForOne = buyToken === 'token' ? !tokenIsToken0 : tokenIsToken0;
@@ -1475,8 +1433,6 @@ export function useAgentTools() {
   );
 
   return {
-    placeBid,
-    claimTokens,
     getBalances,
     previewSwap,
     approveIfNeeded,

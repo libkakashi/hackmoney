@@ -3,21 +3,11 @@
 import {useState, useEffect, useRef} from 'react';
 import {useRouter} from 'next/navigation';
 import {useConnection} from 'wagmi';
-import {
-  GitBranch,
-  Building2,
-  ChevronDown,
-  Star,
-  Search,
-  Zap,
-  Calendar,
-} from 'lucide-react';
+import {GitBranch, Building2, ChevronDown, Star, Search} from 'lucide-react';
 import {Container} from '~/components/layout/container';
 import {Button} from '~/components/ui/button';
-import {DateTimePicker} from '~/components/ui/date-time-picker';
 import {Loader} from '~/components/ui/loader';
 import {useLaunch} from '~/hooks/use-launch';
-import {useMineSalt} from '~/hooks/use-mine-salt';
 import {useGithubAuth} from '~/hooks/use-github-auth';
 import {useGithubRepos, type RepoSelection} from '~/hooks/use-github-repos';
 
@@ -35,13 +25,10 @@ interface FormData {
   selectionType: 'repo' | 'org';
 }
 
-type LaunchMode = 'now' | 'scheduled';
-
 // ── Constants ──────────────────────────────────────────────────────────
 
 const TOTAL_SUPPLY = 1_000_000;
 const FLOOR_PRICE = 0.1;
-const AUCTION_AMOUNT = 100_000;
 
 const EMPTY_FORM: FormData = {
   repoFullName: '',
@@ -369,55 +356,27 @@ export default function LaunchPage() {
   const {repos, orgs, isLoading: reposLoading} = useGithubRepos(ghConnected);
 
   const [tab, setTab] = useState<'repos' | 'orgs'>('repos');
-  const [mode, setMode] = useState<LaunchMode>('now');
-  const [scheduledTime, setScheduledTime] = useState<Date | undefined>();
   const [form, setForm] = useState<FormData>(EMPTY_FORM);
 
   const tokenName = form.repoName;
   const tokenSymbol = deriveSymbol(form.repoName);
   const hasSelection = !!form.repoFullName;
 
-  const {
-    mineSalt,
-    saltResult,
-    isMining,
-    miningProgress,
-    reset: resetSalt,
-  } = useMineSalt();
   const {launch, launchResult, isPending, isConfirming, isConfirmed} =
     useLaunch();
   const isDeploying = isPending || isConfirming;
 
-  // Mine salt once user clicks deploy
   const handleDeploy = async () => {
     if (!hasSelection) return;
-
-    // Mine salt if not ready
-    if (!saltResult && !isMining) {
-      await mineSalt({
+    try {
+      await launch({
         name: tokenName,
         symbol: tokenSymbol,
-        scheduledTime: mode === 'scheduled' ? scheduledTime : undefined,
       });
+    } catch (err) {
+      console.error('Launch failed:', err);
     }
   };
-
-  // When salt is ready, actually deploy
-  useEffect(() => {
-    if (saltResult && !isDeploying && !isConfirmed) {
-      void launch({
-        name: tokenName,
-        symbol: tokenSymbol,
-        salt: saltResult.salt,
-        startBlock: saltResult.startBlock,
-        description: form.repoDescription || undefined,
-        websiteUrl: form.repoUrl || undefined,
-      }).catch(err => {
-        console.error('Launch failed:', err);
-        resetSalt();
-      });
-    }
-  }, [saltResult]);
 
   // Redirect on confirmation
   useEffect(() => {
@@ -655,76 +614,10 @@ export default function LaunchPage() {
             )}
           </div>
 
-          {/* Launch timing */}
-          <div>
-            <div className="text-sm mb-4">
-              <span className="text-dim">02</span> <span>timing</span>
-            </div>
-            <div className="border-b border-border mb-4" />
-
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setMode('now')}
-                disabled={isDeploying}
-                className={`p-4 border text-left transition-colors ${
-                  mode === 'now'
-                    ? 'border-green bg-green/5'
-                    : 'border-border hover:border-dim'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Zap
-                    className={`h-4 w-4 ${mode === 'now' ? 'text-green' : 'text-dim'}`}
-                  />
-                  <span
-                    className={`text-sm ${mode === 'now' ? 'text-green' : ''}`}
-                  >
-                    go live now
-                  </span>
-                </div>
-                <p className="text-xs text-dim">
-                  register and start immediately
-                </p>
-              </button>
-              <button
-                onClick={() => setMode('scheduled')}
-                disabled={isDeploying}
-                className={`p-4 border text-left transition-colors ${
-                  mode === 'scheduled'
-                    ? 'border-purple bg-purple/5'
-                    : 'border-border hover:border-dim'
-                }`}
-              >
-                <div className="flex items-center gap-2 mb-1">
-                  <Calendar
-                    className={`h-4 w-4 ${mode === 'scheduled' ? 'text-purple' : 'text-dim'}`}
-                  />
-                  <span
-                    className={`text-sm ${mode === 'scheduled' ? 'text-purple' : ''}`}
-                  >
-                    schedule
-                  </span>
-                </div>
-                <p className="text-xs text-dim">pick a future start time</p>
-              </button>
-            </div>
-
-            {mode === 'scheduled' && (
-              <div className="mt-4">
-                <DateTimePicker
-                  value={scheduledTime}
-                  onChange={setScheduledTime}
-                  minDate={new Date()}
-                  placeholder="pick launch date & time"
-                />
-              </div>
-            )}
-          </div>
-
           {/* Token details */}
           <div>
             <div className="text-sm mb-4">
-              <span className="text-dim">03</span> <span>token details</span>
+              <span className="text-dim">02</span> <span>token details</span>
             </div>
             <div className="border-b border-border mb-4" />
 
@@ -737,34 +630,15 @@ export default function LaunchPage() {
                 <div className="text-dim text-xs mb-1">starting price</div>
                 <div className="text-sm text-green">${FLOOR_PRICE}</div>
               </div>
-              <div className="px-4 py-3 border border-border">
-                <div className="text-dim text-xs mb-1">auction amount</div>
-                <div className="text-sm">
-                  {AUCTION_AMOUNT.toLocaleString()}{' '}
-                  <span className="text-dim text-xs">
-                    ({((AUCTION_AMOUNT / TOTAL_SUPPLY) * 100).toFixed(0)}%)
-                  </span>
-                </div>
-              </div>
-              <div className="px-4 py-3 border border-border">
-                <div className="text-dim text-xs mb-1">auction duration</div>
-                <div className="text-sm">24 hours</div>
-              </div>
             </div>
 
             <p className="text-xs text-dim mt-4 px-1">
               a token is automatically created for your project with these
-              parameters — no configuration needed.
+              parameters — trading starts immediately.
             </p>
           </div>
 
           {/* Progress */}
-          {isMining && miningProgress && (
-            <div className="text-yellow text-sm flex items-center gap-2">
-              <Loader />
-              {miningProgress}
-            </div>
-          )}
           {isDeploying && (
             <div className="text-green text-sm flex items-center gap-2">
               <Loader />
@@ -775,29 +649,16 @@ export default function LaunchPage() {
           {/* Deploy */}
           <Button
             onClick={handleDeploy}
-            disabled={
-              !hasSelection ||
-              !walletConnected ||
-              isDeploying ||
-              isMining ||
-              (mode === 'scheduled' && !scheduledTime)
-            }
+            disabled={!hasSelection || !walletConnected || isDeploying}
             size="lg"
             className="w-full h-12"
-            showPrefix={!isDeploying && !isMining}
+            showPrefix={!isDeploying}
           >
             {isDeploying ? (
               <>
                 <Loader type="dots" />
                 deploying...
               </>
-            ) : isMining ? (
-              <>
-                <Loader type="dots" />
-                preparing...
-              </>
-            ) : mode === 'scheduled' ? (
-              'schedule registration'
             ) : (
               'register project'
             )}

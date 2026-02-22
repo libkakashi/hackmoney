@@ -1,104 +1,61 @@
 import {formatUnits, type Address} from 'viem';
 import {launchpadLensAbi} from '~/abi/launchpad-lens';
+import {launchpadAbi} from '~/abi/launchpad';
 import {env} from '~/lib/env';
 import {publicClient} from '~/lib/wagmi-config';
-import {priceQ96ToUsd} from '~/lib/cca/utils';
+import {USDC_ADDRESS} from '~/lib/pools';
 
-const STATUS_MAP = {
-  0: 'not_started',
-  1: 'active',
-  2: 'ended',
-  3: 'claimable',
-} as const;
+const POOL_FEE = 10000;
+const POOL_TICK_SPACING = 60;
+const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000' as Address;
 
-export async function getAuctionStateForAgent(auctionAddr: Address) {
+export async function getPoolInfoForAgent(tokenAddr: Address) {
   try {
-    const state = await publicClient.readContract({
-      address: env.launchpadLensAddr,
-      abi: launchpadLensAbi,
-      functionName: 'getAuctionState',
-      args: [auctionAddr],
+    const poolManager = await publicClient.readContract({
+      address: env.launchpadAddr,
+      abi: launchpadAbi,
+      functionName: 'POOL_MANAGER',
     });
 
-    const tokenDecimals = state.tokenDecimals;
-    const currencyDecimals = state.currencyDecimals;
+    const poolInfo = await publicClient.readContract({
+      address: env.launchpadLensAddr,
+      abi: launchpadLensAbi,
+      functionName: 'getPoolInfo',
+      args: [poolManager, tokenAddr, USDC_ADDRESS, POOL_FEE, POOL_TICK_SPACING],
+    });
 
     return {
-      status:
-        STATUS_MAP[state.status as keyof typeof STATUS_MAP] ?? 'not_started',
-      clearingPriceUsd: priceQ96ToUsd(
-        state.clearingPriceQ96,
-        currencyDecimals,
-        tokenDecimals,
-      ),
-      currencyRaised: formatUnits(state.currencyRaised, currencyDecimals),
-      totalBidAmount: formatUnits(state.totalBidAmount, currencyDecimals),
-      totalSupply: formatUnits(BigInt(state.totalSupply), tokenDecimals),
-      startBlock: Number(state.startBlock),
-      endBlock: Number(state.endBlock),
-      claimBlock: Number(state.claimBlock),
-      floorPriceUsd: priceQ96ToUsd(
-        state.floorPriceQ96,
-        currencyDecimals,
-        tokenDecimals,
-      ),
-      progress: state.progress,
-      tokenDecimals,
-      currencyDecimals,
+      isInitialized: poolInfo.isInitialized,
+      poolManager: poolManager as Address,
+      currency0: poolInfo.currency0,
+      currency1: poolInfo.currency1,
+      fee: poolInfo.fee,
+      tickSpacing: poolInfo.tickSpacing,
+      hooks: ZERO_ADDRESS,
     };
   } catch {
     return null;
   }
 }
 
-export async function getStrategyStateForAgent(strategyAddr: Address) {
+export async function getPoolPriceForAgent(tokenAddr: Address) {
   try {
-    const state = await publicClient.readContract({
-      address: env.launchpadLensAddr,
-      abi: launchpadLensAbi,
-      functionName: 'getStrategyState',
-      args: [strategyAddr],
-    });
+    const poolInfo = await getPoolInfoForAgent(tokenAddr);
+    if (!poolInfo || !poolInfo.isInitialized) return null;
 
-    return {
-      isMigrated: state.isMigrated,
-      migrationBlock: Number(state.migrationBlock),
-      poolManager: state.poolManager,
-      currency0: state.currency0,
-      currency1: state.currency1,
-      token: state.token,
-      currency: state.currency,
-      fee: state.fee,
-      tickSpacing: state.tickSpacing,
-      hooks: state.hooks,
-    };
-  } catch {
-    return null;
-  }
-}
-
-export async function getPoolPriceForAgent(
-  strategyState: NonNullable<
-    Awaited<ReturnType<typeof getStrategyStateForAgent>>
-  >,
-  tokenAddr: Address,
-) {
-  if (!strategyState.isMigrated) return null;
-
-  try {
     const poolKey = {
-      currency0: strategyState.currency0,
-      currency1: strategyState.currency1,
-      fee: strategyState.fee,
-      tickSpacing: strategyState.tickSpacing,
-      hooks: strategyState.hooks,
+      currency0: poolInfo.currency0,
+      currency1: poolInfo.currency1,
+      fee: poolInfo.fee,
+      tickSpacing: poolInfo.tickSpacing,
+      hooks: poolInfo.hooks,
     };
 
     const price = await publicClient.readContract({
       address: env.launchpadLensAddr,
       abi: launchpadLensAbi,
       functionName: 'getPoolPrice',
-      args: [strategyState.poolManager, poolKey],
+      args: [poolInfo.poolManager, poolKey],
     });
 
     const tokenData = await publicClient.readContract({
@@ -109,11 +66,11 @@ export async function getPoolPriceForAgent(
     });
 
     const tokenIsToken0 =
-      strategyState.currency0.toLowerCase() === tokenAddr.toLowerCase();
+      poolInfo.currency0.toLowerCase() === tokenAddr.toLowerCase();
 
     const quoteAddr = tokenIsToken0
-      ? strategyState.currency1
-      : strategyState.currency0;
+      ? poolInfo.currency1
+      : poolInfo.currency0;
     const quoteData = await publicClient.readContract({
       address: env.launchpadLensAddr,
       abi: launchpadLensAbi,
@@ -164,19 +121,4 @@ export async function getCurrentBlock(): Promise<number> {
   } catch {
     return 0;
   }
-}
-
-export function getPhase(
-  currentBlock: number,
-  startBlock: number,
-  endBlock: number,
-  claimBlock: number,
-  migrationBlock: number,
-): string {
-  if (currentBlock < startBlock) return 'upcoming';
-  if (currentBlock >= startBlock && currentBlock < endBlock) return 'live';
-  if (currentBlock >= endBlock && currentBlock < claimBlock) return 'ended';
-  if (currentBlock >= claimBlock && currentBlock < migrationBlock)
-    return 'claimable';
-  return 'trading';
 }

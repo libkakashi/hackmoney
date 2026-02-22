@@ -14,11 +14,9 @@ indexer/       Envio — real-time event indexing, GraphQL API
 
 ### Contracts
 
-The `Launchpad` factory contract handles the full lifecycle: deploying a UERC20 token, spinning up a CCA auction, and migrating proceeds into a Uniswap V4 pool via a `FullRangeLBPStrategy`. A companion `LaunchpadLens` provides read-only aggregated views of auction state, bids, pool prices, and strategy status.
+The `Launchpad` factory contract deploys an ERC20 token with single-sided Uniswap V4 liquidity in a single transaction. A companion `LaunchpadLens` provides read-only aggregated views of pool prices and token data.
 
-Key dependencies: Uniswap V4 (core + periphery), Liquidity Launcher, Continuous Clearing Auction, UERC20 Factory, OpenZeppelin.
-
-We've standardized launch parameters to provide a consistent, fair experience for open source projects and their communities.
+Key dependencies: Uniswap V4 (core + periphery), OpenZeppelin.
 
 ### Indexer
 
@@ -33,15 +31,14 @@ Envio-based indexer tracking `TokenLaunched` events and `Transfer` events for al
 - **AI Agent** — Vercel AI SDK + Claude for conversational interface
 - **Storage** — PostgreSQL with Kysely for type-safe SQL queries, Atlas for schema definitions, IPFS (Pinata) for decentralized storage
 
-The app ships with an AI agent ("Ramen") that can discover projects, participate in launches, execute multi-hop swaps, manage ENS names, and answer questions — all through a conversational interface.
+The app ships with an AI agent ("Ramen") that can discover projects, execute multi-hop swaps, and answer questions — all through a conversational interface.
 
 ## Design
 
 - **Terminal aesthetic** — monospace fonts, green/purple accents, `$` command prompts, `//` comment annotations. The whole UI feels like a terminal.
-- **Single-transaction launches** — token + launch + liquidity deploy in one tx. Perfect for open source projects without deep web3 expertise.
-- **Agent-first UX** — complex flows like multi-hop swaps and ENS registration are abstracted behind natural language. The agent handles approvals, routing, and execution.
-- **Automatic liquidity** — no manual LP provisioning. Liquidity is created automatically with instant token trading. Contributors and supporters get instant token liquidity.
-- **Fair distribution** — everyone gets equal access without being crowded out by whales, VCs, or bots.
+- **Single-transaction launches** — token + liquidity deploy in one tx. Perfect for open source projects without deep web3 expertise.
+- **Agent-first UX** — complex flows like multi-hop swaps are abstracted behind natural language. The agent handles approvals, routing, and execution.
+- **Automatic liquidity** — no manual LP provisioning. Single-sided liquidity is created automatically on Uniswap V4. Contributors and supporters get instant token tradability.
 
 ## Development
 

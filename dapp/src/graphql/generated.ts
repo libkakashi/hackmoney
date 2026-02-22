@@ -58,26 +58,13 @@ export type IntComparisonExp = {
 export type LaunchpadTokenLaunched = {
   __typename: 'Launchpad_TokenLaunched';
   address: Scalars['String']['output'];
-  auction: Scalars['String']['output'];
-  auctionClaimBlock: Scalars['numeric']['output'];
-  auctionEndBlock: Scalars['numeric']['output'];
-  auctionStartBlock: Scalars['numeric']['output'];
   createdAt: Scalars['Int']['output'];
   createdAtBlock: Scalars['numeric']['output'];
   creator: Scalars['String']['output'];
-  description: Scalars['String']['output'];
-  discordUrl?: Maybe<Scalars['String']['output']>;
   id: Scalars['String']['output'];
-  image: Scalars['String']['output'];
   name: Scalars['String']['output'];
-  poolMigrationBlock: Scalars['numeric']['output'];
-  salt: Scalars['String']['output'];
-  strategy: Scalars['String']['output'];
   symbol: Scalars['String']['output'];
-  telegramUrl?: Maybe<Scalars['String']['output']>;
-  twitterUrl?: Maybe<Scalars['String']['output']>;
   txHash: Scalars['String']['output'];
-  website?: Maybe<Scalars['String']['output']>;
 };
 
 /** Boolean expression to filter rows from the table "Launchpad_TokenLaunched". All fields are combined with a logical 'AND'. */
@@ -86,51 +73,25 @@ export type LaunchpadTokenLaunchedBoolExp = {
   _not?: InputMaybe<LaunchpadTokenLaunchedBoolExp>;
   _or?: InputMaybe<Array<LaunchpadTokenLaunchedBoolExp>>;
   address?: InputMaybe<StringComparisonExp>;
-  auction?: InputMaybe<StringComparisonExp>;
-  auctionClaimBlock?: InputMaybe<NumericComparisonExp>;
-  auctionEndBlock?: InputMaybe<NumericComparisonExp>;
-  auctionStartBlock?: InputMaybe<NumericComparisonExp>;
   createdAt?: InputMaybe<IntComparisonExp>;
   createdAtBlock?: InputMaybe<NumericComparisonExp>;
   creator?: InputMaybe<StringComparisonExp>;
-  description?: InputMaybe<StringComparisonExp>;
-  discordUrl?: InputMaybe<StringComparisonExp>;
   id?: InputMaybe<StringComparisonExp>;
-  image?: InputMaybe<StringComparisonExp>;
   name?: InputMaybe<StringComparisonExp>;
-  poolMigrationBlock?: InputMaybe<NumericComparisonExp>;
-  salt?: InputMaybe<StringComparisonExp>;
-  strategy?: InputMaybe<StringComparisonExp>;
   symbol?: InputMaybe<StringComparisonExp>;
-  telegramUrl?: InputMaybe<StringComparisonExp>;
-  twitterUrl?: InputMaybe<StringComparisonExp>;
   txHash?: InputMaybe<StringComparisonExp>;
-  website?: InputMaybe<StringComparisonExp>;
 };
 
 /** Ordering options when selecting data from "Launchpad_TokenLaunched". */
 export type LaunchpadTokenLaunchedOrderBy = {
   address?: InputMaybe<OrderBy>;
-  auction?: InputMaybe<OrderBy>;
-  auctionClaimBlock?: InputMaybe<OrderBy>;
-  auctionEndBlock?: InputMaybe<OrderBy>;
-  auctionStartBlock?: InputMaybe<OrderBy>;
   createdAt?: InputMaybe<OrderBy>;
   createdAtBlock?: InputMaybe<OrderBy>;
   creator?: InputMaybe<OrderBy>;
-  description?: InputMaybe<OrderBy>;
-  discordUrl?: InputMaybe<OrderBy>;
   id?: InputMaybe<OrderBy>;
-  image?: InputMaybe<OrderBy>;
   name?: InputMaybe<OrderBy>;
-  poolMigrationBlock?: InputMaybe<OrderBy>;
-  salt?: InputMaybe<OrderBy>;
-  strategy?: InputMaybe<OrderBy>;
   symbol?: InputMaybe<OrderBy>;
-  telegramUrl?: InputMaybe<OrderBy>;
-  twitterUrl?: InputMaybe<OrderBy>;
   txHash?: InputMaybe<OrderBy>;
-  website?: InputMaybe<OrderBy>;
 };
 
 /** select columns of table "Launchpad_TokenLaunched" */
@@ -138,13 +99,9 @@ export type LaunchpadTokenLaunchedSelectColumn =
   /** column name */
   | 'address'
   /** column name */
-  | 'auction'
   /** column name */
-  | 'auctionClaimBlock'
   /** column name */
-  | 'auctionEndBlock'
   /** column name */
-  | 'auctionStartBlock'
   /** column name */
   | 'createdAt'
   /** column name */
@@ -152,31 +109,22 @@ export type LaunchpadTokenLaunchedSelectColumn =
   /** column name */
   | 'creator'
   /** column name */
-  | 'description'
   /** column name */
-  | 'discordUrl'
   /** column name */
   | 'id'
   /** column name */
-  | 'image'
   /** column name */
   | 'name'
   /** column name */
-  | 'poolMigrationBlock'
   /** column name */
-  | 'salt'
   /** column name */
-  | 'strategy'
   /** column name */
   | 'symbol'
   /** column name */
-  | 'telegramUrl'
   /** column name */
-  | 'twitterUrl'
   /** column name */
   | 'txHash'
   /** column name */
-  | 'website';
 
 /** Streaming cursor of the table "Launchpad_TokenLaunched" */
 export type LaunchpadTokenLaunchedStreamCursorInput = {
@@ -189,26 +137,13 @@ export type LaunchpadTokenLaunchedStreamCursorInput = {
 /** Initial value of the column from where the streaming should start */
 export type LaunchpadTokenLaunchedStreamCursorValueInput = {
   address?: InputMaybe<Scalars['String']['input']>;
-  auction?: InputMaybe<Scalars['String']['input']>;
-  auctionClaimBlock?: InputMaybe<Scalars['numeric']['input']>;
-  auctionEndBlock?: InputMaybe<Scalars['numeric']['input']>;
-  auctionStartBlock?: InputMaybe<Scalars['numeric']['input']>;
   createdAt?: InputMaybe<Scalars['Int']['input']>;
   createdAtBlock?: InputMaybe<Scalars['numeric']['input']>;
   creator?: InputMaybe<Scalars['String']['input']>;
-  description?: InputMaybe<Scalars['String']['input']>;
-  discordUrl?: InputMaybe<Scalars['String']['input']>;
   id?: InputMaybe<Scalars['String']['input']>;
-  image?: InputMaybe<Scalars['String']['input']>;
   name?: InputMaybe<Scalars['String']['input']>;
-  poolMigrationBlock?: InputMaybe<Scalars['numeric']['input']>;
-  salt?: InputMaybe<Scalars['String']['input']>;
-  strategy?: InputMaybe<Scalars['String']['input']>;
   symbol?: InputMaybe<Scalars['String']['input']>;
-  telegramUrl?: InputMaybe<Scalars['String']['input']>;
-  twitterUrl?: InputMaybe<Scalars['String']['input']>;
   txHash?: InputMaybe<Scalars['String']['input']>;
-  website?: InputMaybe<Scalars['String']['input']>;
 };
 
 /** Boolean expression to compare columns of type "String". All fields are combined with logical 'AND'. */
@@ -1029,23 +964,10 @@ export type GetTokensQuery = {
     __typename: 'Launchpad_TokenLaunched';
     id: string;
     address: string;
-    strategy: string;
-    auction: string;
     creator: string;
     name: string;
     symbol: string;
-    description: string;
-    website?: string | null;
-    twitterUrl?: string | null;
-    discordUrl?: string | null;
-    telegramUrl?: string | null;
 
-    image: string;
-    auctionStartBlock: any;
-    auctionEndBlock: any;
-    auctionClaimBlock: any;
-    poolMigrationBlock: any;
-    salt: string;
     createdAt: number;
     createdAtBlock: any;
     txHash: string;
@@ -1109,23 +1031,10 @@ export type FilterTokensQuery = {
     __typename: 'Launchpad_TokenLaunched';
     id: string;
     address: string;
-    strategy: string;
-    auction: string;
     creator: string;
     name: string;
     symbol: string;
-    description: string;
-    website?: string | null;
-    twitterUrl?: string | null;
-    discordUrl?: string | null;
-    telegramUrl?: string | null;
 
-    image: string;
-    auctionStartBlock: any;
-    auctionEndBlock: any;
-    auctionClaimBlock: any;
-    poolMigrationBlock: any;
-    salt: string;
     createdAt: number;
     createdAtBlock: any;
     txHash: string;
@@ -1142,23 +1051,10 @@ export type GetTokenByAddressQuery = {
     __typename: 'Launchpad_TokenLaunched';
     id: string;
     address: string;
-    strategy: string;
-    auction: string;
     creator: string;
     name: string;
     symbol: string;
-    description: string;
-    website?: string | null;
-    twitterUrl?: string | null;
-    discordUrl?: string | null;
-    telegramUrl?: string | null;
 
-    image: string;
-    auctionStartBlock: any;
-    auctionEndBlock: any;
-    auctionClaimBlock: any;
-    poolMigrationBlock: any;
-    salt: string;
     createdAt: number;
     createdAtBlock: any;
     txHash: string;
@@ -1174,23 +1070,10 @@ export const GetTokensDocument = gql`
     ) {
       id
       address
-      strategy
-      auction
       creator
       name
       symbol
-      description
-      website
-      twitterUrl
-      discordUrl
-      telegramUrl
 
-      image
-      auctionStartBlock
-      auctionEndBlock
-      auctionClaimBlock
-      poolMigrationBlock
-      salt
       createdAt
       createdAtBlock
       txHash
@@ -1250,23 +1133,10 @@ export const FilterTokensDocument = gql`
     ) {
       id
       address
-      strategy
-      auction
       creator
       name
       symbol
-      description
-      website
-      twitterUrl
-      discordUrl
-      telegramUrl
 
-      image
-      auctionStartBlock
-      auctionEndBlock
-      auctionClaimBlock
-      poolMigrationBlock
-      salt
       createdAt
       createdAtBlock
       txHash
@@ -1278,23 +1148,10 @@ export const GetTokenByAddressDocument = gql`
     Launchpad_TokenLaunched(where: {address: {_eq: $token}}) {
       id
       address
-      strategy
-      auction
       creator
       name
       symbol
-      description
-      website
-      twitterUrl
-      discordUrl
-      telegramUrl
 
-      image
-      auctionStartBlock
-      auctionEndBlock
-      auctionClaimBlock
-      poolMigrationBlock
-      salt
       createdAt
       createdAtBlock
       txHash

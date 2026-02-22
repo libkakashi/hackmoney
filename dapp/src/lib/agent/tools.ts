@@ -6,15 +6,8 @@ import type {
   LaunchpadTokenLaunchedBoolExp,
   LaunchpadTokenLaunchedOrderBy,
 } from '~/graphql/generated';
-import {launchpadLensAbi} from '~/abi/launchpad-lens';
-import {env} from '~/lib/env';
-import {publicClient} from '~/lib/wagmi-config';
 import {
-  getAuctionStateForAgent,
-  getStrategyStateForAgent,
   getPoolPriceForAgent,
-  getCurrentBlock,
-  getPhase,
 } from './on-chain';
 
 /** Common coin ID aliases so users can say "btc" instead of "bitcoin" */
@@ -52,34 +45,24 @@ function resolveCoinId(query: string): string {
 }
 
 /**
- * Build a Hasura `where` clause from the agent's filter parameters.
- * Phase filtering uses block-number comparisons against the current block.
+ * Build a Hasura where clause from the agent's filter parameters.
  */
 function buildTokenWhere(
   params: {
     search?: string;
-    phase?:
-      | 'upcoming'
-      | 'live'
-      | 'ended'
-      | 'claimable'
-      | 'not_trading'
-      | 'trading';
     creator?: string;
     createdAfter?: number;
     createdBefore?: number;
   },
-  currentBlock: number,
 ): LaunchpadTokenLaunchedBoolExp {
   const conditions: LaunchpadTokenLaunchedBoolExp[] = [];
 
   if (params.search) {
-    const pattern = `%${params.search}%`;
+    const pattern = '%' + params.search + '%';
     conditions.push({
       _or: [
         {name: {_ilike: pattern}},
         {symbol: {_ilike: pattern}},
-        {description: {_ilike: pattern}},
       ],
     });
   }
@@ -93,35 +76,6 @@ function buildTokenWhere(
   }
   if (params.createdBefore) {
     conditions.push({createdAt: {_lte: params.createdBefore}});
-  }
-
-  // Phase filtering via block-number ranges
-  const block = String(currentBlock);
-  if (params.phase === 'upcoming') {
-    conditions.push({auctionStartBlock: {_gt: block}});
-  } else if (params.phase === 'live') {
-    conditions.push({
-      auctionStartBlock: {_lte: block},
-      auctionEndBlock: {_gt: block},
-    });
-  } else if (params.phase === 'ended') {
-    conditions.push({
-      auctionEndBlock: {_lte: block},
-      auctionClaimBlock: {_gt: block},
-    });
-  } else if (params.phase === 'claimable') {
-    conditions.push({
-      auctionClaimBlock: {_lte: block},
-      poolMigrationBlock: {_gt: block},
-    });
-  } else if (params.phase === 'not_trading') {
-    // Auction finished (endBlock passed) but not yet migrated to pool
-    conditions.push({
-      auctionEndBlock: {_lte: block},
-      poolMigrationBlock: {_gt: block},
-    });
-  } else if (params.phase === 'trading') {
-    conditions.push({poolMigrationBlock: {_lte: block}});
   }
 
   return conditions.length > 0 ? {_and: conditions} : {};
@@ -142,122 +96,28 @@ function buildTokenOrderBy(sortBy?: string): LaunchpadTokenLaunchedOrderBy[] {
       return [{symbol: 'asc'}];
     case 'symbol_desc':
       return [{symbol: 'desc'}];
-    case 'auction_start_soonest':
-      return [{auctionStartBlock: 'asc'}];
-    case 'auction_end_soonest':
-      return [{auctionEndBlock: 'asc'}];
     default:
       return [{createdAt: 'desc'}];
   }
 }
 
-/** Fetch full details for a single token (shared by getTokenDetails and getTokenDetailsBatch). */
+/** Fetch full details for a single token. */
 async function fetchTokenDetails(address: string) {
-  const [data, currentBlock] = await Promise.all([
-    graphqlClient.GetTokenByAddress({
-      token: address.toLowerCase(),
-    }),
-    getCurrentBlock(),
-  ]);
+  const data = await graphqlClient.GetTokenByAddress({
+    token: address.toLowerCase(),
+  });
 
   const t = data.Launchpad_TokenLaunched[0];
   if (!t) return {error: 'Token not found', address};
 
-  const phase = getPhase(
-    currentBlock,
-    Number(t.auctionStartBlock),
-    Number(t.auctionEndBlock),
-    Number(t.auctionClaimBlock),
-    Number(t.poolMigrationBlock),
-  );
-
-  const auctionAddr = t.auction as Address;
-  const strategyAddr = t.strategy as Address;
   const tokenAddr = t.address as Address;
-
-  const [auctionState, strategyState] = await Promise.all([
-    getAuctionStateForAgent(auctionAddr),
-    getStrategyStateForAgent(strategyAddr),
-  ]);
-
-  let quoteCurrency: {symbol: string; decimals: number} | null = null;
-  if (strategyState?.currency) {
-    try {
-      const quoteData = await publicClient.readContract({
-        address: env.launchpadLensAddr,
-        abi: launchpadLensAbi,
-        functionName: 'getTokenData',
-        args: [strategyState.currency],
-      });
-      quoteCurrency = {
-        symbol: quoteData.symbol,
-        decimals: quoteData.decimals,
-      };
-    } catch {
-      /* ignore */
-    }
-  }
-
-  let poolPriceData = null;
-  if (strategyState?.isMigrated) {
-    poolPriceData = await getPoolPriceForAgent(strategyState, tokenAddr);
-  }
-
-  let blocksUntilNextPhase: number | null = null;
-  let nextPhaseLabel: string | null = null;
-  if (phase === 'upcoming') {
-    blocksUntilNextPhase = Number(t.auctionStartBlock) - currentBlock;
-    nextPhaseLabel = 'auction starts';
-  } else if (phase === 'live') {
-    blocksUntilNextPhase = Number(t.auctionEndBlock) - currentBlock;
-    nextPhaseLabel = 'auction ends';
-  } else if (phase === 'ended') {
-    blocksUntilNextPhase = Number(t.auctionClaimBlock) - currentBlock;
-    nextPhaseLabel = 'claiming opens';
-  } else if (phase === 'claimable') {
-    blocksUntilNextPhase = Number(t.poolMigrationBlock) - currentBlock;
-    nextPhaseLabel = 'pool migration';
-  }
+  const poolPriceData = await getPoolPriceForAgent(tokenAddr);
 
   return {
     address: t.address,
     name: t.name,
     symbol: t.symbol,
-    description: t.description,
-    image: t.image,
     creator: t.creator,
-    website: t.website,
-    twitterUrl: t.twitterUrl,
-    discordUrl: t.discordUrl,
-    telegramUrl: t.telegramUrl,
-    currentBlock,
-    phase,
-    blocksUntilNextPhase,
-    nextPhaseLabel,
-    auctionAddress: t.auction,
-    strategyAddress: t.strategy,
-    quoteCurrency,
-    auctionStartBlock: Number(t.auctionStartBlock),
-    auctionEndBlock: Number(t.auctionEndBlock),
-    auctionClaimBlock: Number(t.auctionClaimBlock),
-    poolMigrationBlock: Number(t.poolMigrationBlock),
-    auction: auctionState
-      ? {
-          status: auctionState.status,
-          clearingPriceUsd: auctionState.clearingPriceUsd,
-          floorPriceUsd: auctionState.floorPriceUsd,
-          currencyRaised: auctionState.currencyRaised,
-          totalBidAmount: auctionState.totalBidAmount,
-          totalSupply: auctionState.totalSupply,
-          progress: auctionState.progress,
-        }
-      : null,
-    strategy: strategyState
-      ? {
-          isMigrated: strategyState.isMigrated,
-          migrationBlock: strategyState.migrationBlock,
-        }
-      : null,
     pool: poolPriceData
       ? {
           priceUsd: poolPriceData.priceUsd,
@@ -272,39 +132,13 @@ async function fetchTokenDetails(address: string) {
 /** Server-side tools — have execute handlers that run on the server */
 export const serverTools = {
   discoverTokens: tool({
-    description: `Search, filter, and sort tokens on the platform. This is the primary tool for finding tokens.
-
-Examples of what users might ask:
-- "show me tokens" → no filters
-- "find tokens with dog in the name" → search: "dog"
-- "which tokens are currently in auction?" → phase: "live"
-- "tokens launching soon" → phase: "upcoming"
-- "tokens I can trade right now" → phase: "trading"
-- "tokens where I can claim" → phase: "claimable"
-- "tokens created by 0xabc..." → creator: "0xabc..."
-- "newest tokens" → sortBy: "newest"
-- "tokens created in the last week" → createdAfter: (unix timestamp 7 days ago)
-- "show me live auctions sorted by name" → phase: "live", sortBy: "name_asc"
-- "tokens done with auction but not trading yet" → phase: "not_trading"`,
+    description: 'Search, filter, and sort projects on the platform. All project tokens are immediately tradable after launch.\n\nExamples:\n- "show me projects" → no filters\n- "find projects with dog in the name" → search: "dog"\n- "projects created by 0xabc..." → creator: "0xabc..."\n- "newest projects" → sortBy: "newest"',
     inputSchema: z.object({
       search: z
         .string()
         .optional()
         .describe(
-          'Search query — matches against token name, symbol, and description (case-insensitive)',
-        ),
-      phase: z
-        .enum([
-          'upcoming',
-          'live',
-          'ended',
-          'claimable',
-          'not_trading',
-          'trading',
-        ])
-        .optional()
-        .describe(
-          'Filter by auction phase. upcoming = not started, live = bidding active, ended = bidding closed, claimable = claim tokens, not_trading = auction finished but not migrated to DEX yet (ended + claimable), trading = on DEX',
+          'Search query — matches against token name and symbol (case-insensitive)',
         ),
       creator: z
         .string()
@@ -314,13 +148,13 @@ Examples of what users might ask:
         .number()
         .optional()
         .describe(
-          'Only tokens created after this unix timestamp (seconds). E.g. for "last 7 days" use now minus 604800',
+          'Only tokens created after this unix timestamp (seconds)',
         ),
       createdBefore: z
         .number()
         .optional()
         .describe(
-          'Only tokens created before this unix timestamp (seconds). Use with createdAfter for date ranges',
+          'Only tokens created before this unix timestamp (seconds)',
         ),
       sortBy: z
         .enum([
@@ -330,8 +164,6 @@ Examples of what users might ask:
           'name_desc',
           'symbol_asc',
           'symbol_desc',
-          'auction_start_soonest',
-          'auction_end_soonest',
         ])
         .optional()
         .default('newest')
@@ -349,7 +181,6 @@ Examples of what users might ask:
     }),
     execute: async ({
       search,
-      phase,
       creator,
       createdAfter,
       createdBefore,
@@ -358,11 +189,9 @@ Examples of what users might ask:
       offset,
     }) => {
       const effectiveLimit = Math.min(limit, 50);
-      const currentBlock = await getCurrentBlock();
 
       const where = buildTokenWhere(
-        {search, phase, creator, createdAfter, createdBefore},
-        currentBlock,
+        {search, creator, createdAfter, createdBefore},
       );
       const order_by = buildTokenOrderBy(sortBy);
 
@@ -377,17 +206,8 @@ Examples of what users might ask:
         address: t.address,
         name: t.name,
         symbol: t.symbol,
-        description: t.description,
-        image: t.image,
         creator: t.creator,
         createdAt: t.createdAt,
-        phase: getPhase(
-          currentBlock,
-          Number(t.auctionStartBlock),
-          Number(t.auctionEndBlock),
-          Number(t.auctionClaimBlock),
-          Number(t.poolMigrationBlock),
-        ),
       }));
 
       return {
@@ -395,10 +215,8 @@ Examples of what users might ask:
         count: tokens.length,
         offset,
         hasMore: tokens.length === effectiveLimit,
-        currentBlock,
         filters: {
           ...(search && {search}),
-          ...(phase && {phase}),
           ...(creator && {creator}),
           ...(createdAfter && {createdAfter}),
           ...(createdBefore && {createdBefore}),
@@ -410,7 +228,7 @@ Examples of what users might ask:
 
   getTokenDetails: tool({
     description:
-      'Get full details for a specific token including on-chain auction state, strategy/pool status, current price, and market cap. Use getTokenDetailsBatch when you need details for multiple tokens.',
+      'Get full details for a specific project including current pool price and market cap.',
     inputSchema: z.object({
       address: z.string().describe('The token contract address (0x...)'),
     }),
@@ -421,7 +239,7 @@ Examples of what users might ask:
 
   getTokenDetailsBatch: tool({
     description:
-      'Get full details for multiple tokens in one call. Returns an array of token details (same data as getTokenDetails). Use this instead of calling getTokenDetails multiple times — much faster.',
+      'Get full details for multiple projects in one call. Use this instead of calling getTokenDetails multiple times.',
     inputSchema: z.object({
       addresses: z
         .array(z.string())
@@ -441,7 +259,7 @@ Examples of what users might ask:
 
   getTokenPrice: tool({
     description:
-      'Get the current price of any cryptocurrency by name or ticker symbol (e.g. "btc", "ethereum", "sol"). Returns USD price, 24h change, market cap, and volume. Use this when users ask about crypto prices.',
+      'Get the current price of any cryptocurrency by name or ticker symbol (e.g. "btc", "ethereum", "sol"). Returns USD price, 24h change, market cap, and volume.',
     inputSchema: z.object({
       coin: z
         .string()
@@ -451,12 +269,12 @@ Examples of what users might ask:
     }),
     execute: async ({coin}) => {
       const coinId = resolveCoinId(coin);
-      const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(coinId)}&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true`;
+      const url = 'https://api.coingecko.com/api/v3/simple/price?ids=' + encodeURIComponent(coinId) + '&vs_currencies=usd&include_24hr_change=true&include_market_cap=true&include_24hr_vol=true';
 
       try {
         const res = await fetch(url);
         if (!res.ok) {
-          return {error: `CoinGecko API error: ${res.status}`};
+          return {error: 'CoinGecko API error: ' + res.status};
         }
         const data = (await res.json()) as Record<
           string,
@@ -470,14 +288,14 @@ Examples of what users might ask:
         const info = data[coinId];
         if (!info || info.usd === undefined) {
           return {
-            error: `Coin "${coin}" not found. Try using the full name (e.g. "bitcoin") or a common ticker (e.g. "btc").`,
+            error: 'Coin "' + coin + '" not found. Try using the full name (e.g. "bitcoin") or a common ticker (e.g. "btc").',
           };
         }
         return {
           coin: coinId,
           price: info.usd,
           change24h: info.usd_24h_change
-            ? `${info.usd_24h_change.toFixed(2)}%`
+            ? info.usd_24h_change.toFixed(2) + '%'
             : null,
           marketCap: info.usd_market_cap ?? null,
           volume24h: info.usd_24h_vol ?? null,
@@ -496,40 +314,15 @@ Examples of what users might ask:
 export const clientTools = {
   getBalances: tool({
     description:
-      "Get the connected wallet's token balances for a specific launched token and its quote currency. Use this when the user asks about their balance, or to show balances before/after actions.",
+      "Get the connected wallet's token balances for a specific launched token and its quote currency.",
     inputSchema: z.object({
       tokenAddress: z.string().describe('The launched token address (0x...)'),
     }),
   }),
 
-  placeBid: tool({
-    description:
-      'Place a bid in a token auction on behalf of the user. This will prompt their wallet for transaction signing. The amount is in the auction\'s quote currency (e.g. USDC, ETH — check the token details to know which). Only works when auction status is "active" (phase is "live"). Handles ERC20 approval and Permit2 allowance automatically.',
-    inputSchema: z.object({
-      auctionAddress: z
-        .string()
-        .describe('The auction contract address (0x...)'),
-      amount: z
-        .string()
-        .describe(
-          'Bid amount in the quote currency (e.g. "100" for 100 USDC, "0.1" for 0.1 ETH)',
-        ),
-    }),
-  }),
-
-  claimTokens: tool({
-    description:
-      'Claim tokens from a completed auction. Prompts the user\'s wallet to sign the claim transaction. Only works when auction phase is "claimable".',
-    inputSchema: z.object({
-      auctionAddress: z
-        .string()
-        .describe('The auction contract address (0x...)'),
-    }),
-  }),
-
   previewSwap: tool({
     description:
-      'Get a swap quote with before/after balances and price impact. ALWAYS call this first before any swap. Returns the quote, user balances, and whether token approval is needed. Only works when token is in "trading" phase. Supports multi-hop swaps through USDC for non-USDC quote tokens (ETH, USDT, WBTC, DAI).',
+      'Get a swap quote with before/after balances and price impact. ALWAYS call this first before any swap. Supports multi-hop swaps through USDC for non-USDC quote tokens (ETH, USDT, WBTC, DAI).',
     inputSchema: z.object({
       tokenAddress: z
         .string()
@@ -549,14 +342,14 @@ export const clientTools = {
         .optional()
         .default('USDC')
         .describe(
-          'Which quote currency to swap with. Defaults to USDC (single-hop). Non-USDC tokens route through USDC as a 2-hop swap.',
+          'Which quote currency to swap with. Defaults to USDC (single-hop).',
         ),
     }),
   }),
 
   approveIfNeeded: tool({
     description:
-      "Approve token spending for the swap router. Only call this if previewSwap indicated approval is needed (needsApproval: true). This prompts the user's wallet for an approval transaction.",
+      "Approve token spending for the swap router. Only call this if previewSwap indicated approval is needed.",
     inputSchema: z.object({
       tokenAddress: z
         .string()
@@ -579,7 +372,7 @@ export const clientTools = {
 
   executeSwapExactInput: tool({
     description:
-      "Execute the swap after preview and approval. Only call this AFTER previewSwap (and approveIfNeeded if needed). Prompts the user's wallet to sign the swap transaction. Supports multi-hop swaps through USDC for non-USDC quote tokens.",
+      "Execute the swap after preview and approval. Only call this AFTER previewSwap (and approveIfNeeded if needed).",
     inputSchema: z.object({
       tokenAddress: z
         .string()
@@ -602,7 +395,7 @@ export const clientTools = {
 
   previewSwapExactOutput: tool({
     description:
-      'Get a swap quote when the user specifies an exact OUTPUT amount they want to receive (e.g. "I want to receive exactly 0.001 WBTC"). Returns the estimated input amount needed, max input with slippage, balances, and whether approval is needed. Use this instead of previewSwap when the user specifies how much they want to receive rather than how much they want to sell.',
+      'Get a swap quote when the user specifies an exact OUTPUT amount they want to receive.',
     inputSchema: z.object({
       tokenAddress: z
         .string()
@@ -612,7 +405,7 @@ export const clientTools = {
       receiveAmount: z
         .string()
         .describe(
-          'Exact amount the user wants to receive (in human-readable units, e.g. "0.001")',
+          'Exact amount the user wants to receive (in human-readable units)',
         ),
       buyToken: z
         .enum(['token', 'quote'])
@@ -624,14 +417,14 @@ export const clientTools = {
         .optional()
         .default('USDC')
         .describe(
-          'Which quote currency to swap with. Defaults to USDC (single-hop). Non-USDC tokens route through USDC as a 2-hop swap.',
+          'Which quote currency to swap with.',
         ),
     }),
   }),
 
   executeSwapExactOutput: tool({
     description:
-      "Execute an exact output swap after previewSwapExactOutput and approval. Only call this AFTER previewSwapExactOutput (and approveIfNeeded if needed). Prompts the user's wallet to sign the swap transaction. The user will receive exactly the specified amount; the input amount may vary up to the max with slippage.",
+      "Execute an exact output swap after preview and approval.",
     inputSchema: z.object({
       tokenAddress: z
         .string()
@@ -658,7 +451,7 @@ export const clientTools = {
 
   previewGeneralSwap: tool({
     description:
-      'Preview a swap between two well-known tokens (USDC, ETH, USDT, WBTC, DAI) — no launched token needed. Use this when both sides of the swap are standard tokens (e.g. "swap 1 ETH for USDC", "swap BTC for DAI"). Returns quote, balances, route, and whether approval is needed.',
+      'Preview a swap between two well-known tokens (USDC, ETH, USDT, WBTC, DAI) — no launched token needed.',
     inputSchema: z.object({
       fromToken: z
         .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
@@ -674,7 +467,7 @@ export const clientTools = {
 
   approveGeneralSwap: tool({
     description:
-      'Approve token spending for a general swap. Only call if previewGeneralSwap indicated approval is needed. Not needed for selling ETH.',
+      'Approve token spending for a general swap. Only call if previewGeneralSwap indicated approval is needed.',
     inputSchema: z.object({
       fromToken: z
         .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
@@ -685,7 +478,7 @@ export const clientTools = {
 
   executeGeneralSwap: tool({
     description:
-      'Execute a general swap after preview and approval. Only call AFTER previewGeneralSwap (and approveGeneralSwap if needed).',
+      'Execute a general swap after preview and approval.',
     inputSchema: z.object({
       fromToken: z
         .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
@@ -699,7 +492,7 @@ export const clientTools = {
 
   previewGeneralSwapExactOutput: tool({
     description:
-      'Preview a general swap where the user specifies an exact output amount (e.g. "I want exactly 100 USDC"). Use when both sides are standard tokens and the desired receive amount is known.',
+      'Preview a general swap where the user specifies an exact output amount.',
     inputSchema: z.object({
       fromToken: z
         .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
@@ -710,14 +503,14 @@ export const clientTools = {
       receiveAmount: z
         .string()
         .describe(
-          'Exact amount to receive (in human-readable units, e.g. "100")',
+          'Exact amount to receive (in human-readable units)',
         ),
     }),
   }),
 
   executeGeneralSwapExactOutput: tool({
     description:
-      'Execute a general exact-output swap after preview and approval. The user receives exactly the specified amount; the input may vary up to the max with slippage.',
+      'Execute a general exact-output swap after preview and approval.',
     inputSchema: z.object({
       fromToken: z
         .enum(['USDC', 'ETH', 'USDT', 'WBTC', 'DAI'])
@@ -733,7 +526,7 @@ export const clientTools = {
 
   suggestReplies: tool({
     description:
-      'Show 2-3 short clickable reply suggestions (max 4 words each) so the user can tap instead of typing. Use this whenever you ask the user a question or present a choice. Examples: after a swap preview use ["yes, do it", "no, cancel"]; after showing token info use ["bid on it", "show more"]; when asking which token use the token symbols as options. Each reply can be a plain string or an object with { text, timerSeconds } — use timerSeconds to show a countdown that disables the button until it expires (e.g. for the 60-second ENS commitment wait).',
+      'Show 2-3 short clickable reply suggestions so the user can tap instead of typing.',
     inputSchema: z.object({
       replies: z
         .array(
@@ -745,7 +538,7 @@ export const clientTools = {
                 .number()
                 .optional()
                 .describe(
-                  'If set, the button is disabled with a countdown timer for this many seconds before it becomes clickable.',
+                  'If set, the button is disabled with a countdown timer for this many seconds.',
                 ),
             }),
           ]),
@@ -753,7 +546,7 @@ export const clientTools = {
         .min(2)
         .max(3)
         .describe(
-          'Short reply options (max 4 words each) for the user to pick from. Use { text, timerSeconds } for replies that need a countdown.',
+          'Short reply options (max 4 words each) for the user to pick from.',
         ),
     }),
   }),

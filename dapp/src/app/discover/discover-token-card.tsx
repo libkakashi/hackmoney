@@ -1,8 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import {Address, formatEther} from 'viem';
-import {useAuctionState} from '~/hooks/cca/use-auction-state';
+import {Address} from 'viem';
 import {useTokenByAddress} from '~/hooks/use-tokens';
 
 const MEDAL_EMOJIS = [
@@ -49,20 +48,6 @@ function getRandomPriceData(seed: string): {price: number; change: number} {
 
 export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
   const {data: token} = useTokenByAddress(tokenAddr);
-  const {data: auctionData} = useAuctionState(token?.auction);
-
-  const status = auctionData?.status;
-  const isLive = status === 'active';
-  const isUpcoming = status === 'not_started';
-
-  const isGraduating = isLive || isUpcoming;
-  const isTrading = !isLive && !isUpcoming;
-
-  const progress = auctionData?.progress ?? 0;
-
-  const totalRaised = auctionData?.totalBidAmount
-    ? formatEther(auctionData.totalBidAmount)
-    : '0';
 
   if (!token) return <DiscoverTokenCardSkeleton />;
 
@@ -78,47 +63,18 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
               ${token.symbol}
             </span>
           </div>
-          {isLive && (
-            <div className="terminal-badge terminal-badge-live">
-              <span className="inline-block w-1.5 h-1.5 bg-green mr-1.5 pulse-soft" />
-              live
-            </div>
-          )}
-          {isUpcoming && (
-            <div className="terminal-badge terminal-badge-upcoming">
-              upcoming
-            </div>
-          )}
-          {status === 'ended' && !isTrading && (
-            <div className="terminal-badge terminal-badge-upcoming">ended</div>
-          )}
-          {status === 'claimable' && !isTrading && (
-            <div className="terminal-badge terminal-badge-upcoming">
-              claimable
-            </div>
-          )}
-          {isTrading && (
-            <div className="terminal-badge terminal-badge-completed">
-              trading
-            </div>
-          )}
+          <div className="terminal-badge terminal-badge-completed">
+            trading
+          </div>
         </div>
 
-        {/* Main content with large image */}
+        {/* Main content */}
         <div className="flex">
-          {/* Large square image */}
+          {/* Symbol square */}
           <div className="w-32 h-32 shrink-0 border-r border-border flex items-center justify-center bg-background terminal-image-hover">
-            {token.image ? (
-              <img
-                src={token.image}
-                alt={token.name}
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <span className="text-3xl font-bold text-purple/50">
-                {token.symbol.slice(0, 2)}
-              </span>
-            )}
+            <span className="text-3xl font-bold text-purple/50">
+              {token.symbol.slice(0, 2)}
+            </span>
           </div>
 
           {/* Content */}
@@ -138,13 +94,6 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
                 </span>
               ))}
             </div>
-
-            {/* Description */}
-            {token.description && (
-              <div className="text-xs text-dim truncate mb-2">
-                {token.description}
-              </div>
-            )}
 
             {/* Price - bottom aligned */}
             <div className="flex items-center gap-2 text-sm mt-auto">
@@ -169,42 +118,16 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
 
         {/* Bottom stats section */}
         <div className="px-3 pb-3 border-t border-border">
-          {/* Auction progress for graduating tokens */}
-          {isGraduating && (
-            <>
-              <div className="terminal-progress mb-2 -mx-1">
-                <div
-                  className={`terminal-progress-bar ${isUpcoming ? 'bg-purple!' : ''}`}
-                  style={{width: `${progress}%`}}
-                />
-              </div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-dim">
-                  {isUpcoming ? 'upcoming' : '123 bidders'}
-                </span>
-                <span>
-                  <span className="text-green tabular-nums">
-                    {parseFloat(totalRaised).toFixed(4)}
-                  </span>
-                  <span className="text-dim"> ETH</span>
-                </span>
-              </div>
-            </>
-          )}
-
-          {/* Placeholder stats for trading tokens */}
-          {isTrading && (
-            <div className="flex items-center justify-between text-xs pt-2">
-              <div>
-                <span className="text-dim">mcap </span>
-                <span className="tabular-nums">--</span>
-              </div>
-              <div>
-                <span className="text-dim">vol </span>
-                <span className="tabular-nums">--</span>
-              </div>
+          <div className="flex items-center justify-between text-xs pt-2">
+            <div>
+              <span className="text-dim">mcap </span>
+              <span className="tabular-nums">--</span>
             </div>
-          )}
+            <div>
+              <span className="text-dim">vol </span>
+              <span className="tabular-nums">--</span>
+            </div>
+          </div>
         </div>
       </div>
     </Link>

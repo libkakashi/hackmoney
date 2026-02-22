@@ -1,9 +1,6 @@
 import type {Address} from 'viem';
 import {useState} from 'react';
 import {formatUnits} from 'viem';
-import {Globe} from 'lucide-react';
-
-import {TwitterIcon, DiscordIcon, TelegramIcon} from '~/components/icons';
 import {Button} from '~/components/ui/button';
 import {Skeleton} from '~/components/ui/skeleton';
 import {useTokenByAddress} from '~/hooks/use-tokens';
@@ -13,7 +10,8 @@ import {usePoolKey} from '~/hooks/swap/use-pool-key';
 
 export const TokenMetadataCard = ({address}: {address?: Address}) => {
   const {data: token} = useTokenByAddress(address);
-  const {data: {poolKey} = {}} = usePoolKey(address);
+  const {data: poolKeyData} = usePoolKey(address);
+  const poolKey = poolKeyData?.poolKey;
   const {data: poolPrice} = usePoolPrice(address);
   const {data: tokenData} = useTokenData(address);
   const createdAt = token ? new Date(token.createdAt * 1000) : undefined;
@@ -102,22 +100,14 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
 
   return (
     <div className="border border-border bg-card p-4">
-      {/* Top Section: Large Image + Token Info & Links */}
+      {/* Top Section: Token Symbol + Info */}
       <div className="flex items-start gap-6">
-        {/* Large Token Image */}
+        {/* Token Symbol */}
         <div className="w-48 h-48 shrink-0 border border-border flex items-center justify-center text-5xl text-purple overflow-hidden">
-          {token.image ? (
-            <img
-              src={token.image}
-              alt={token.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            token.symbol.slice(0, 2)
-          )}
+          {token.symbol.slice(0, 2)}
         </div>
 
-        {/* Token Info & Links */}
+        {/* Token Info */}
         <div className="flex-1 min-w-0 flex flex-col h-48">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -148,74 +138,6 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
               [etherscan]
             </a>
           </div>
-
-          {/* Description */}
-          {token.description && (
-            <p className="text-sm text-dim mt-3 line-clamp-2">
-              {token.description}
-            </p>
-          )}
-
-          {/* Links */}
-          {(token.website ||
-            token.twitterUrl ||
-            token.discordUrl ||
-            token.telegramUrl) && (
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-auto mb-2">
-              {token.website && (
-                <a
-                  href={token.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-dim hover:text-green"
-                >
-                  <Globe className="w-4 h-4 shrink-0" />
-                  <span className="truncate">
-                    {token.website.replace(/^https?:\/\//, '')}
-                  </span>
-                </a>
-              )}
-              {token.twitterUrl && (
-                <a
-                  href={token.twitterUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-dim hover:text-green"
-                >
-                  <TwitterIcon className="w-4 h-4 shrink-0" />
-                  <span className="truncate">
-                    {token.twitterUrl.replace(/^https?:\/\//, '')}
-                  </span>
-                </a>
-              )}
-              {token.discordUrl && (
-                <a
-                  href={token.discordUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-dim hover:text-green"
-                >
-                  <DiscordIcon className="w-4 h-4 shrink-0" />
-                  <span className="truncate">
-                    {token.discordUrl.replace(/^https?:\/\//, '')}
-                  </span>
-                </a>
-              )}
-              {token.telegramUrl && (
-                <a
-                  href={token.telegramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2 text-sm text-dim hover:text-green"
-                >
-                  <TelegramIcon className="w-4 h-4 shrink-0" />
-                  <span className="truncate">
-                    {token.telegramUrl.replace(/^https?:\/\//, '')}
-                  </span>
-                </a>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
