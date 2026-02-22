@@ -709,8 +709,8 @@ export function FloatingAgent() {
               alt="Mascot"
               className="
                 w-full h-full object-contain pointer-events-none
-                drop-shadow-[0_0_2px_#6ee7a8]
-                group-hover:drop-shadow-[0_0_4px_#6ee7a8]
+                drop-shadow-[0_0_2px_#8fbc94]
+                group-hover:drop-shadow-[0_0_4px_#8fbc94]
                 transition-all duration-300
               "
             />
