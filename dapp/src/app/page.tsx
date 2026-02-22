@@ -141,7 +141,7 @@ export default function Home() {
             --incentive-models
           </div>
 
-          <h2 className="text-xl md:text-2xl font-bold mb-2">
+          <h2 className="text-xl md:text-2xl font-bold mb-4">
             Why token bounties work better
           </h2>
           <p className="text-dim text-sm mb-8 max-w-xl">
@@ -219,7 +219,7 @@ export default function Home() {
             ~/nyx <span className="text-green">$</span> nyx explain --verbose
           </div>
 
-          <h2 className="text-xl md:text-2xl font-bold mb-2">How it works</h2>
+          <h2 className="text-xl md:text-2xl font-bold mb-4">How it works</h2>
           <p className="text-dim text-sm mb-8 max-w-xl">
             three steps from registration to contributor rewards.
           </p>
@@ -275,7 +275,7 @@ export default function Home() {
             ~/nyx <span className="text-green">$</span> nyx ramen --on-chain
           </div>
 
-          <h2 className="text-xl md:text-2xl font-bold mb-2">Meet Ramen</h2>
+          <h2 className="text-xl md:text-2xl font-bold mb-4">Meet Ramen</h2>
           <p className="text-dim text-sm mb-8 max-w-xl">
             he can help you discover tokens, place bids, trade for you, or just
             answer your questions.
@@ -389,7 +389,7 @@ export default function Home() {
 
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-xl md:text-2xl font-bold mb-2">
+              <h2 className="text-xl md:text-2xl font-bold mb-4">
                 Live auctions
               </h2>
               <p className="text-dim text-sm max-w-xl">

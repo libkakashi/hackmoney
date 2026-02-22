@@ -63,9 +63,7 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
               ${token.symbol}
             </span>
           </div>
-          <div className="terminal-badge terminal-badge-completed">
-            trading
-          </div>
+          <div className="terminal-badge terminal-badge-completed">trading</div>
         </div>
 
         {/* Main content */}
