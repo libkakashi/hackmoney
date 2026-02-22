@@ -143,7 +143,7 @@ export default function Home() {
             {/* Right — mock cards */}
             <div className="space-y-4">
               {/* Mock issue */}
-              <div className="border border-border overflow-hidden">
+              <div className="border border-border overflow-hidden bg-card">
                 <div className="border-b border-border px-5 py-3.5 bg-card/50 flex items-center gap-2.5">
                   <CircleDot className="w-4 h-4 text-green" />
                   <span className="text-sm font-medium">
@@ -180,7 +180,7 @@ export default function Home() {
               </div>
 
               {/* Mock payout */}
-              <div className="border border-green/30 bg-green/[0.03] overflow-hidden">
+              <div className="border border-green/30 bg-green/[0.03] overflow-hidden bg-card">
                 <div className="border-b border-green/20 px-5 py-3.5 flex items-center gap-2.5">
                   <GitPullRequest className="w-4 h-4 text-purple" />
                   <span className="text-sm font-medium">
@@ -230,18 +230,18 @@ export default function Home() {
             token-based bounties align incentives and create sustainable value.
           </p>
 
-          <div className="overflow-x-auto border border-border">
+          <div className="overflow-x-auto border border-border bg-card/50">
             <table className="w-full text-sm min-w-225">
               <thead>
-                <tr className="border-b border-border bg-card/50">
+                <tr className="border-b border-border">
                   <th className="text-left p-4 font-medium text-dim"> </th>
-                  <th className="text-left p-4 font-medium text-dim whitespace-nowrap">
+                  <th className="text-left p-4 font-medium tracking-wide text-dim whitespace-nowrap border-l border-border">
                     Traditional Bounties
                   </th>
-                  <th className="text-left p-4 font-medium text-dim whitespace-nowrap">
+                  <th className="text-left p-4 font-medium tracking-wide text-dim whitespace-nowrap border-l border-border">
                     GitHub Sponsors
                   </th>
-                  <th className="text-left p-4 font-medium text-green bg-green/5 whitespace-nowrap">
+                  <th className="text-left p-4 font-medium tracking-wide text-green bg-green/5 whitespace-nowrap border-l border-border">
                     Nyx
                   </th>
                 </tr>
@@ -284,9 +284,15 @@ export default function Home() {
                     className="border-b border-border last:border-b-0"
                   >
                     <td className="p-4 font-medium">{row.label}</td>
-                    <td className="p-4 text-muted-foreground">{row.trad}</td>
-                    <td className="p-4 text-muted-foreground">{row.gh}</td>
-                    <td className="p-4 text-green bg-green/5">{row.nyx}</td>
+                    <td className="p-4 text-muted-foreground border-l border-border">
+                      {row.trad}
+                    </td>
+                    <td className="p-4 text-muted-foreground border-l border-border">
+                      {row.gh}
+                    </td>
+                    <td className="p-4 text-green bg-green/5 border-l border-border">
+                      {row.nyx}
+                    </td>
                   </tr>
                 ))}
               </tbody>

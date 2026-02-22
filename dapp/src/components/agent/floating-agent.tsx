@@ -697,9 +697,9 @@ export function FloatingAgent() {
         >
           <div
             className="
-              relative w-[240px] h-[240px]
+              relative w-60 h-60
               flex items-center justify-center select-none cursor-pointer
-              transition-transform duration-100 hover:scale-102 active:scale-98
+              transition-transform duration-50 hover:scale-101 active:scale-99
               -mb-10
             "
             title="Click to chat"
