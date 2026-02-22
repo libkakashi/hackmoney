@@ -23,11 +23,6 @@ interface GitHubOrg {
   description: string | null;
 }
 
-interface GitHubOrgMembership {
-  role: 'admin' | 'member';
-  state: string;
-}
-
 async function githubFetch<T>(path: string, token: string): Promise<T> {
   const res = await fetch(`https://api.github.com${path}`, {
     headers: {
@@ -81,62 +76,45 @@ export const githubRouter = router({
       });
     }
 
-    // Fetch public repos owned by the authenticated user
+    // Fetch public repos owned by the user (no repo scope needed)
     const repos = await githubFetch<GitHubRepo[]>(
-      '/user/repos?per_page=100&sort=updated&type=owner&visibility=public',
+      `/users/${username}/repos?per_page=100&sort=updated&type=owner`,
       token,
     );
 
-    return repos
-      .filter(r => r.owner.login.toLowerCase() === username.toLowerCase())
-      .map(r => ({
-        id: r.id,
-        fullName: r.full_name,
-        name: r.name,
-        description: r.description,
-        owner: r.owner.login,
-        ownerAvatar: r.owner.avatar_url,
-        ownerType: r.owner.type,
-        stars: r.stargazers_count,
-        language: r.language,
-        url: r.html_url,
-      }));
+    return repos.map(r => ({
+      id: r.id,
+      fullName: r.full_name,
+      name: r.name,
+      description: r.description,
+      owner: r.owner.login,
+      ownerAvatar: r.owner.avatar_url,
+      ownerType: r.owner.type,
+      stars: r.stargazers_count,
+      language: r.language,
+      url: r.html_url,
+    }));
   }),
 
   getOrgs: publicProcedure.query(async ({ctx}) => {
     const token = ctx.session?.githubAccessToken;
-    const username = ctx.session?.githubUsername;
-    if (!token || !username) {
+    if (!token) {
       throw new TRPCError({
         code: 'UNAUTHORIZED',
         message: 'Not connected to GitHub',
       });
     }
 
-    const orgs = await githubFetch<GitHubOrg[]>('/user/orgs', token);
-
-    // Check membership role for each org, only keep ones where user is owner
-    const withRoles = await Promise.all(
-      orgs.map(async o => {
-        try {
-          const membership = await githubFetch<GitHubOrgMembership>(
-            `/orgs/${o.login}/memberships/${username}`,
-            token,
-          );
-          return {org: o, role: membership.role};
-        } catch {
-          return {org: o, role: 'member' as const};
-        }
-      }),
+    const orgs = await githubFetch<GitHubOrg[]>(
+      '/user/orgs?per_page=100',
+      token,
     );
 
-    return withRoles
-      .filter(({role}) => role === 'admin')
-      .map(({org}) => ({
-        login: org.login,
-        avatarUrl: org.avatar_url,
-        description: org.description,
-      }));
+    return orgs.map(o => ({
+      login: o.login,
+      avatarUrl: o.avatar_url,
+      description: o.description,
+    }));
   }),
 
   disconnect: publicProcedure.mutation(async ({ctx}) => {

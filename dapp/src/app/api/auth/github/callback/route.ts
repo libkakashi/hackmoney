@@ -52,7 +52,10 @@ export async function GET(req: Request) {
 
   // Save to session
   const cookieStore = await cookies();
-  const session = await getIronSession<SessionData>(cookieStore, sessionOptions);
+  const session = await getIronSession<SessionData>(
+    cookieStore,
+    sessionOptions,
+  );
   session.githubAccessToken = tokenData.access_token;
   session.githubUsername = user.login;
   session.githubAvatarUrl = user.avatar_url;

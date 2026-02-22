@@ -139,7 +139,7 @@ export default function DiscoverPage() {
                 <h1 className="text-2xl font-bold">discover projects</h1>
               </div>
               <Button asChild>
-                <Link href="/launch">launch project</Link>
+                <Link href="/launch">create project</Link>
               </Button>
             </div>
 
@@ -275,12 +275,12 @@ export default function DiscoverPage() {
             <div className="border border-border bg-card p-12 text-center">
               {tokens.length === 0 ? (
                 <>
-                  <div className="text-dim mb-2">no projects launched yet</div>
+                  <div className="text-dim mb-2">no projects created yet</div>
                   <div className="text-dim text-sm mb-4">
-                    be the first to launch an open source project token
+                    be the first to register an open source project
                   </div>
                   <Button asChild>
-                    <Link href="/launch">launch project</Link>
+                    <Link href="/launch">create project</Link>
                   </Button>
                 </>
               ) : (

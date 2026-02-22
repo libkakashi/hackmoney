@@ -40,9 +40,9 @@ export default function Home() {
                 >
                   <span className="text-green">$</span>
                   <span className="group-hover:text-green transition-colors">
-                    nyx launch --project-token
+                    nyx register --project
                   </span>
-                  <span className="text-dim ml-auto">launch project →</span>
+                  <span className="text-dim ml-auto">register project →</span>
                 </Link>
 
                 <Link
@@ -69,7 +69,7 @@ export default function Home() {
               <div className="text-3xl font-bold text-green tabular-nums">
                 1,247
               </div>
-              <div className="text-dim text-sm mt-1">projects launched</div>
+              <div className="text-dim text-sm mt-1">projects registered</div>
             </div>
             <div className="py-8 text-center">
               <div className="text-3xl font-bold text-yellow tabular-nums">
@@ -221,7 +221,7 @@ export default function Home() {
 
           <h2 className="text-xl md:text-2xl font-bold mb-2">How it works</h2>
           <p className="text-dim text-sm mb-8 max-w-xl">
-            three steps from project launch to contributor rewards.
+            three steps from registration to contributor rewards.
           </p>
 
           <div className="border border-border bg-card p-6">
@@ -231,10 +231,10 @@ export default function Home() {
               <div className="flex gap-4">
                 <div className="text-green w-8 shrink-0">01.</div>
                 <div>
-                  <div className="font-bold mb-1">launch project token</div>
+                  <div className="font-bold mb-1">register your project</div>
                   <div className="text-dim text-sm">
-                    deploy a token in one transaction. set name, symbol, and
-                    description. no coding required.
+                    pick a repo or org. a token is created automatically in one
+                    transaction. no coding required.
                   </div>
                 </div>
               </div>
@@ -245,7 +245,7 @@ export default function Home() {
                   <div className="font-bold mb-1">initial distribution</div>
                   <div className="text-dim text-sm pr-16">
                     supporters and contributors participate in a 30-minute fair
-                    launch. everyone gets equal access. no whales, no VCs, no
+                    auction. everyone gets equal access. no whales, no VCs, no
                     bots.
                   </div>
                 </div>
@@ -535,11 +535,11 @@ export default function Home() {
             </div>
 
             <h2 className="text-3xl md:text-4xl font-bold mb-8">
-              ready to launch?
+              ready to get started?
             </h2>
             <p className="text-dim mb-10 max-w-lg">
-              create a fair token launch in under 30 seconds. no coding
-              required.
+              register your project in under 30 seconds. a token and fair
+              auction are created automatically.
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
@@ -548,7 +548,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2 px-6 py-3 border border-green text-green font-bold hover:bg-green/10 transition-colors"
               >
                 <span>$</span>
-                <span>nyx launch --new-token</span>
+                <span>nyx register --project</span>
               </Link>
 
               <Link
