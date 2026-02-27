@@ -99,32 +99,19 @@ export type LaunchpadTokenLaunchedSelectColumn =
   /** column name */
   | 'address'
   /** column name */
-  /** column name */
-  /** column name */
-  /** column name */
-  /** column name */
   | 'createdAt'
   /** column name */
   | 'createdAtBlock'
   /** column name */
   | 'creator'
   /** column name */
-  /** column name */
-  /** column name */
   | 'id'
-  /** column name */
   /** column name */
   | 'name'
   /** column name */
-  /** column name */
-  /** column name */
-  /** column name */
   | 'symbol'
   /** column name */
-  /** column name */
-  /** column name */
-  | 'txHash'
-  /** column name */
+  | 'txHash';
 
 /** Streaming cursor of the table "Launchpad_TokenLaunched" */
 export type LaunchpadTokenLaunchedStreamCursorInput = {
@@ -967,7 +954,6 @@ export type GetTokensQuery = {
     creator: string;
     name: string;
     symbol: string;
-
     createdAt: number;
     createdAtBlock: any;
     txHash: string;
@@ -1034,7 +1020,6 @@ export type FilterTokensQuery = {
     creator: string;
     name: string;
     symbol: string;
-
     createdAt: number;
     createdAtBlock: any;
     txHash: string;
@@ -1054,7 +1039,6 @@ export type GetTokenByAddressQuery = {
     creator: string;
     name: string;
     symbol: string;
-
     createdAt: number;
     createdAtBlock: any;
     txHash: string;
@@ -1073,7 +1057,6 @@ export const GetTokensDocument = gql`
       creator
       name
       symbol
-
       createdAt
       createdAtBlock
       txHash
@@ -1136,7 +1119,6 @@ export const FilterTokensDocument = gql`
       creator
       name
       symbol
-
       createdAt
       createdAtBlock
       txHash
@@ -1151,7 +1133,6 @@ export const GetTokenByAddressDocument = gql`
       creator
       name
       symbol
-
       createdAt
       createdAtBlock
       txHash

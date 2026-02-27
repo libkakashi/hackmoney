@@ -10,7 +10,7 @@ import {Sheet, SheetContent, SheetTrigger} from '~/components/ui/sheet';
 
 const NAV_LINKS = [
   {href: '/discover', label: 'discover'},
-  {href: '/launch', label: 'register'},
+  {href: '/launch', label: 'create'},
   {href: '/faq', label: 'faq'},
 ];
 
@@ -51,7 +51,7 @@ export function Navbar() {
               className={
                 pathname === link.href
                   ? 'text-green'
-                  : 'text-dim hover:text-foreground transition-colors'
+                  : 'hover:text-foreground transition-colors'
               }
             >
               {pathname === link.href && (

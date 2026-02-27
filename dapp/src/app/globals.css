@@ -64,7 +64,7 @@
 
   /* Deep charcoal */
   --background: #111315;
-  --foreground: #e2dfd8;
+  --foreground: #ffffff;
 
   --card: #191c1e;
   --card-foreground: #e2dfd8;
@@ -80,7 +80,7 @@
   --secondary-foreground: #e2dfd8;
 
   --muted: #282b2d;
-  --muted-foreground: #b0aaa3;
+  --muted-foreground: #f0faf3;
 
   /* Dusty mauve accent */
   --accent: #c9a0dc;

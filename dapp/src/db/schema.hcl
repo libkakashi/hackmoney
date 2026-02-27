@@ -100,3 +100,66 @@ table "post_votes" {
     expr = "value IN (-1, 1)"
   }
 }
+
+table "issue_bounties" {
+  schema = schema.public
+
+  column "id" {
+    type = uuid
+    default = sql("gen_random_uuid()")
+  }
+
+  column "token_address" {
+    type = varchar(42)
+    null = false
+  }
+
+  column "repo_owner" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "repo_name" {
+    type = varchar(255)
+    null = false
+  }
+
+  column "issue_number" {
+    type = integer
+    null = false
+  }
+
+  column "offerer_address" {
+    type = varchar(42)
+    null = false
+  }
+
+  column "amount" {
+    type = numeric(78, 0)
+    null = false
+  }
+
+  column "status" {
+    type = varchar(20)
+    default = "pledged"
+    null = false
+  }
+
+  column "created_at" {
+    type = timestamptz
+    default = sql("now()")
+    null = false
+  }
+
+  primary_key {
+    columns = [column.id]
+  }
+
+  index "idx_bounties_token_issue" {
+    columns = [column.token_address, column.issue_number]
+  }
+
+  index "idx_bounties_offerer" {
+    columns = [column.offerer_address]
+  }
+}

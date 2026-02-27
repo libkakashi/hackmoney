@@ -2,18 +2,16 @@
 
 import {useState} from 'react';
 import {formatUnits, type Address} from 'viem';
-import {TrendingUp, ArrowUpDown} from 'lucide-react';
+import {TrendingUp, GitFork} from 'lucide-react';
 import {Button} from '~/components/ui/button';
 import {cn} from '~/lib/utils';
-import {
-  useTokenHoldersByBalance,
-  useTokenHoldersByVolume,
-} from '~/hooks/use-tokens';
+import {useTokenByAddress, useTokenHoldersByBalance} from '~/hooks/use-tokens';
 import {usePoolPrice} from '~/hooks/use-pool-price';
 import {usePoolKey} from '~/hooks/swap/use-pool-key';
 import {useTokenData} from '~/hooks/tokens/use-token-data';
+import {trpc} from '~/lib/trpc';
 
-type SortMode = 'holders' | 'volume';
+type Tab = 'holders' | 'contributors';
 
 const formatAmount = (raw: string | number, decimals: number): string => {
   const n = Number(formatUnits(BigInt(raw), decimals));
@@ -38,76 +36,127 @@ const truncateAddress = (addr: string): string => {
   return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
 };
 
-// ── Leaderboard row ───────────────────────────────────────────────────────────
+// ── Holder row ────────────────────────────────────────────────────────────────
 
-const LeaderboardRow = ({
+const HolderRow = ({
   rank,
   wallet,
   balance,
-  totalSent,
-  totalReceived,
-  mode,
   decimals,
   priceUsd,
 }: {
   rank: number;
   wallet: string;
   balance: string;
-  totalSent: string;
-  totalReceived: string;
-  mode: SortMode;
   decimals: number;
   priceUsd: number | undefined;
-}) => {
-  const volume = BigInt(totalSent) + BigInt(totalReceived);
-
-  return (
-    <div className="flex items-center gap-2 py-2 px-2 border-b border-border last:border-b-0 text-sm">
-      <span
-        className={cn(
-          'w-5 text-center tabular-nums',
-          rank === 1 && 'text-yellow',
-          rank === 2 && 'text-dim',
-          rank === 3 && 'text-orange',
-          rank > 3 && 'text-dim',
-        )}
-      >
-        {rank}
+}) => (
+  <div className="flex items-center gap-2 py-2 px-2 border-b border-border last:border-b-0 text-sm">
+    <span
+      className={cn(
+        'w-5 text-center tabular-nums',
+        rank === 1 && 'text-yellow',
+        rank === 2 && 'text-dim',
+        rank === 3 && 'text-orange',
+        rank > 3 && 'text-dim',
+      )}
+    >
+      {rank}
+    </span>
+    <div className="flex-1 min-w-0">
+      <span className="text-green truncate" title={wallet}>
+        {truncateAddress(wallet)}
       </span>
-
-      <div className="flex-1 min-w-0">
-        <span className="text-green truncate" title={wallet}>
-          {truncateAddress(wallet)}
-        </span>
-      </div>
-
-      <div className="text-right shrink-0">
-        <div className="tabular-nums text-foreground">
-          {mode === 'holders'
-            ? formatAmount(balance, decimals)
-            : formatAmount(volume.toString(), decimals)}
-        </div>
-        {priceUsd !== undefined && (
-          <div className="tabular-nums text-dim">
-            {mode === 'holders'
-              ? formatUsd(balance, decimals, priceUsd)
-              : formatUsd(volume.toString(), decimals, priceUsd)}
-          </div>
-        )}
-      </div>
     </div>
-  );
-};
+    <div className="text-right shrink-0">
+      <div className="tabular-nums text-foreground">
+        {formatAmount(balance, decimals)}
+      </div>
+      {priceUsd !== undefined && (
+        <div className="tabular-nums text-dim">
+          {formatUsd(balance, decimals, priceUsd)}
+        </div>
+      )}
+    </div>
+  </div>
+);
+
+// ── Contributor row ───────────────────────────────────────────────────────────
+
+const ContributorRow = ({
+  rank,
+  login,
+  avatarUrl,
+  url,
+  contributions,
+}: {
+  rank: number;
+  login: string;
+  avatarUrl: string;
+  url: string;
+  contributions: number;
+}) => (
+  <div className="flex items-center gap-2 py-2 px-2 border-b border-border last:border-b-0 text-sm">
+    <span
+      className={cn(
+        'w-5 text-center tabular-nums',
+        rank === 1 && 'text-yellow',
+        rank === 2 && 'text-dim',
+        rank === 3 && 'text-orange',
+        rank > 3 && 'text-dim',
+      )}
+    >
+      {rank}
+    </span>
+    <img
+      src={avatarUrl}
+      alt={login}
+      className="w-5 h-5 border border-border shrink-0"
+    />
+    <div className="flex-1 min-w-0">
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-green truncate hover:text-foreground transition-colors"
+        title={login}
+      >
+        {login}
+      </a>
+    </div>
+    <div className="text-right shrink-0 tabular-nums">
+      <span className="text-foreground">{contributions.toLocaleString()}</span>
+      <span className="text-dim ml-1">commits</span>
+    </div>
+  </div>
+);
 
 // ── Main leaderboard component ────────────────────────────────────────────────
 
 export const TokenLeaderboard = ({tokenAddress}: {tokenAddress?: Address}) => {
-  const [sortMode, setSortMode] = useState<SortMode>('holders');
+  const [tab, setTab] = useState<Tab>('holders');
 
-  const {data: holdersByBalance, isLoading: loadingBalance} =
+  const {data: token} = useTokenByAddress(tokenAddress);
+
+  const {data: holdersByBalance, isLoading: loadingHolders} =
     useTokenHoldersByBalance(tokenAddress);
-  const {data: holdersByVolume, isLoading: loadingVolume} =
-    useTokenHoldersByVolume(tokenAddress);
+
+  // resolve repo from token name
+  const {data: searchResults} = trpc.github.searchRepos.useQuery(
+    {query: token?.name ?? ''},
+    {enabled: !!token?.name, staleTime: 10 * 60 * 1000, retry: false},
+  );
+  const repoMatch = searchResults?.[0];
+
+  const {data: contributors, isLoading: loadingContributors} =
+    trpc.github.getContributors.useQuery(
+      {owner: repoMatch?.owner ?? '', repo: repoMatch?.name ?? ''},
+      {
+        enabled: !!repoMatch?.owner && !!repoMatch?.name,
+        staleTime: 5 * 60 * 1000,
+        retry: false,
+      },
+    );
 
   const {data: poolPrice} = usePoolPrice(tokenAddress);
   const {data: {poolKey} = {}} = usePoolKey(tokenAddress);
@@ -138,20 +187,17 @@ export const TokenLeaderboard = ({tokenAddress}: {tokenAddress?: Address}) => {
       : undefined;
 
   const decimals = tokenData?.decimals ?? 18;
-  const holders = sortMode === 'holders' ? holdersByBalance : holdersByVolume;
-  const isLoading = sortMode === 'holders' ? loadingBalance : loadingVolume;
+  const isLoading = tab === 'holders' ? loadingHolders : loadingContributors;
 
   return (
     <div className="space-y-3 text-sm h-120 flex flex-col">
-      {/* Sort tabs */}
+      {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-border pb-2">
         <Button
           variant="ghost"
-          onClick={() => setSortMode('holders')}
+          onClick={() => setTab('holders')}
           className={cn(
-            sortMode === 'holders'
-              ? 'text-green'
-              : 'text-dim hover:text-foreground',
+            tab === 'holders' ? 'text-green' : 'text-dim hover:text-foreground',
           )}
         >
           <TrendingUp className="size-3" />
@@ -159,15 +205,15 @@ export const TokenLeaderboard = ({tokenAddress}: {tokenAddress?: Address}) => {
         </Button>
         <Button
           variant="ghost"
-          onClick={() => setSortMode('volume')}
+          onClick={() => setTab('contributors')}
           className={cn(
-            sortMode === 'volume'
+            tab === 'contributors'
               ? 'text-green'
               : 'text-dim hover:text-foreground',
           )}
         >
-          <ArrowUpDown className="size-3" />
-          top_volume
+          <GitFork className="size-3" />
+          top_contributors
         </Button>
       </div>
 
@@ -175,29 +221,52 @@ export const TokenLeaderboard = ({tokenAddress}: {tokenAddress?: Address}) => {
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
           <div className="text-dim text-center py-4">loading...</div>
-        ) : holders && holders.length > 0 ? (
-          holders.map((holder, i) => (
-            <LeaderboardRow
-              key={holder.id}
+        ) : tab === 'holders' ? (
+          holdersByBalance && holdersByBalance.length > 0 ? (
+            holdersByBalance.map((holder, i) => (
+              <HolderRow
+                key={holder.id}
+                rank={i + 1}
+                wallet={holder.wallet}
+                balance={holder.balance}
+                decimals={decimals}
+                priceUsd={priceUsd}
+              />
+            ))
+          ) : (
+            <div className="text-dim text-center py-4">
+              // no holder data yet
+            </div>
+          )
+        ) : contributors && contributors.length > 0 ? (
+          contributors.map((c, i) => (
+            <ContributorRow
+              key={c.login}
               rank={i + 1}
-              wallet={holder.wallet}
-              balance={holder.balance}
-              totalSent={holder.totalSent}
-              totalReceived={holder.totalReceived}
-              mode={sortMode}
-              decimals={decimals}
-              priceUsd={priceUsd}
+              login={c.login}
+              avatarUrl={c.avatarUrl}
+              url={c.url}
+              contributions={c.contributions}
             />
           ))
         ) : (
-          <div className="text-dim text-center py-4">// no holder data yet</div>
+          <div className="text-dim text-center py-4">
+            {repoMatch
+              ? '// no contributor data yet'
+              : '// no linked repository'}
+          </div>
         )}
       </div>
 
       {/* Footer */}
-      {holders && holders.length > 0 && (
+      {tab === 'holders' && holdersByBalance && holdersByBalance.length > 0 && (
         <div className="text-dim text-center py-1 text-xs">
-          // {holders.length} entries
+          // {holdersByBalance.length} entries
+        </div>
+      )}
+      {tab === 'contributors' && contributors && contributors.length > 0 && (
+        <div className="text-dim text-center py-1 text-xs">
+          // {contributors.length} contributors
         </div>
       )}
     </div>

@@ -3,12 +3,11 @@
  * Please do not edit it manually.
  */
 
-import type {ColumnType} from 'kysely';
+import type { ColumnType } from "kysely";
 
-export type Generated<T> =
-  T extends ColumnType<infer S, infer I, infer U>
-    ? ColumnType<S, I | undefined, U>
-    : ColumnType<T, T | undefined, T>;
+export type Generated<T> = T extends ColumnType<infer S, infer I, infer U>
+  ? ColumnType<S, I | undefined, U>
+  : ColumnType<T, T | undefined, T>;
 
 export type Timestamp = ColumnType<Date, Date | string, Date | string>;
 
@@ -31,7 +30,20 @@ export interface PostVotes {
   voter_address: string;
 }
 
+export interface IssueBounties {
+  amount: string;
+  created_at: Generated<Timestamp>;
+  id: Generated<string>;
+  issue_number: number;
+  offerer_address: string;
+  repo_name: string;
+  repo_owner: string;
+  status: Generated<string>;
+  token_address: string;
+}
+
 export interface DB {
+  issue_bounties: IssueBounties;
   post_votes: PostVotes;
   posts: Posts;
 }

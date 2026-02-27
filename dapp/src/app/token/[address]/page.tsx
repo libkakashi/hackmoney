@@ -1,8 +1,10 @@
 'use client';
 
+import {useState} from 'react';
 import {formatUnits, type Address} from 'viem';
 import {useParams} from 'next/navigation';
 import Link from 'next/link';
+import {CircleDot, MessageSquare} from 'lucide-react';
 import {useConnection} from 'wagmi';
 
 import {Container} from '~/components/layout/container';
@@ -11,13 +13,18 @@ import {SwapPanel} from '~/components/swap/swap-panel';
 import {TokenMetadataCard} from './token-metadata-card';
 import {TokenDiscussion} from '~/components/discussion/token-discussion';
 import {TokenLeaderboard} from '~/components/discussion/token-leaderboard';
+import {IssuesList} from '~/components/issues/issues-list';
+import {cn} from '~/lib/utils';
 
 import {useTokenByAddress} from '~/hooks/use-tokens';
 import {useTokenBalance} from '~/hooks/tokens/use-token-balance';
 
+type Tab = 'issues' | 'discussion';
+
 export default function TokenPage() {
   const params = useParams();
   const address = params.address as Address;
+  const [tab, setTab] = useState<Tab>('issues');
 
   const {data: token, isLoading, error} = useTokenByAddress(address);
   const {address: userAddress} = useConnection();
@@ -101,12 +108,39 @@ export default function TokenPage() {
           </div>
         </div>
 
-        {/* Discussion + Leaderboard */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-8">
-          <div className="lg:col-span-2 border border-border bg-card p-4 flex flex-col min-h-100">
-            <TokenDiscussion tokenAddress={address} />
+        {/* Issues/Discussion + Leaderboard */}
+        <div className="grid grid-cols-1 lg:grid-cols-6 gap-6 mt-8">
+          <div className="lg:col-span-4 border border-border bg-card">
+            <div className="flex items-center gap-1 px-4 pt-3 pb-2 border-b border-border">
+              <Button
+                variant="ghost"
+                onClick={() => setTab('issues')}
+                className={cn(
+                  tab === 'issues' ? 'text-green' : 'text-dim hover:text-foreground',
+                )}
+              >
+                <CircleDot className="size-3" />
+                issues
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setTab('discussion')}
+                className={cn(
+                  tab === 'discussion' ? 'text-green' : 'text-dim hover:text-foreground',
+                )}
+              >
+                <MessageSquare className="size-3" />
+                discussion
+              </Button>
+            </div>
+
+            <div className="p-4">
+              {tab === 'issues' && <IssuesList tokenAddress={address} />}
+              {tab === 'discussion' && <TokenDiscussion tokenAddress={address} />}
+            </div>
           </div>
-          <div className="lg:col-span-1 border border-border bg-card p-4 h-fit">
+
+          <div className="lg:col-span-2 border border-border bg-card p-4 h-fit">
             <TokenLeaderboard tokenAddress={address} />
           </div>
         </div>
