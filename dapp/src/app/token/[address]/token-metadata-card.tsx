@@ -10,11 +10,23 @@ import {useRepoMetadata} from '~/hooks/use-repo-metadata';
 import {Skeleton} from '~/components/ui/skeleton';
 
 const LANG_COLORS: Record<string, string> = {
-  TypeScript: '#3178c6', JavaScript: '#f1e05a', Python: '#3572A5',
-  Rust: '#dea584', Go: '#00ADD8', Solidity: '#AA6746', Java: '#b07219',
-  'C++': '#f34b7d', C: '#555555', Ruby: '#701516', Swift: '#F05138',
-  Kotlin: '#A97BFF', Shell: '#89e051', HTML: '#e34c26', CSS: '#563d7c',
-  Dart: '#00B4AB', Move: '#4a137a',
+  TypeScript: '#3178c6',
+  JavaScript: '#f1e05a',
+  Python: '#3572A5',
+  Rust: '#dea584',
+  Go: '#00ADD8',
+  Solidity: '#AA6746',
+  Java: '#b07219',
+  'C++': '#f34b7d',
+  C: '#555555',
+  Ruby: '#701516',
+  Swift: '#F05138',
+  Kotlin: '#A97BFF',
+  Shell: '#89e051',
+  HTML: '#e34c26',
+  CSS: '#563d7c',
+  Dart: '#00B4AB',
+  Move: '#4a137a',
 };
 
 const timeAgo = (dateStr: string): string => {
@@ -82,7 +94,9 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
 
   const price =
     normalizedPriceE18 && quoteDecimals && tokenDecimals
-      ? Number(formatUnits(normalizedPriceE18, 18 + quoteDecimals - tokenDecimals))
+      ? Number(
+          formatUnits(normalizedPriceE18, 18 + quoteDecimals - tokenDecimals),
+        )
       : undefined;
 
   const marketCap =
@@ -93,8 +107,12 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
     {enabled: !!token?.name, staleTime: 10 * 60 * 1000, retry: false},
   );
   const repoMatch = searchResults?.[0];
-  const {details: repo, contributors, languages, lastCommitDate} =
-    useRepoMetadata(repoMatch?.owner, repoMatch?.name);
+  const {
+    details: repo,
+    contributors,
+    languages,
+    lastCommitDate,
+  } = useRepoMetadata(repoMatch?.owner, repoMatch?.name);
 
   if (!address || !token) {
     return (
@@ -144,7 +162,9 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
                 className="hover:text-green transition-colors block truncate min-w-0"
               >
                 <span className="text-2xl font-semibold">
-                  <span className="text-muted-foreground font-normal">{repo.owner}/</span>
+                  <span className="text-muted-foreground font-normal">
+                    {repo.owner}/
+                  </span>
                   {repo.name}
                 </span>
               </a>
@@ -196,20 +216,22 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
           {/* stats row */}
           <div className="flex items-center gap-6 text-sm">
             <span>
-              <span className="text-yellow tabular-nums">{repo.stars.toLocaleString()}</span>
+              <span className="text-yellow tabular-nums">
+                {repo.stars.toLocaleString()}
+              </span>
               <span className="text-muted-foreground ml-1.5">stars</span>
             </span>
             <span>
-              <span className="tabular-nums">{repo.forks.toLocaleString()}</span>
+              <span className="tabular-nums">
+                {repo.forks.toLocaleString()}
+              </span>
               <span className="text-muted-foreground ml-1.5">forks</span>
             </span>
             <span>
               <span className="tabular-nums">{repo.openIssues}</span>
               <span className="text-muted-foreground ml-1.5">issues</span>
             </span>
-            {repo.license && (
-              <span className="text-dim">{repo.license}</span>
-            )}
+            {repo.license && <span className="text-dim">{repo.license}</span>}
             {lastCommitDate && (
               <span className="text-dim">
                 updated {timeAgo(lastCommitDate)}
@@ -236,16 +258,24 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
                   </div>
                   <div className="flex gap-3">
                     {languages.slice(0, 3).map(lang => (
-                      <span key={lang.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <span
+                        key={lang.name}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground"
+                      >
                         <span
                           className="w-2 h-2 inline-block"
-                          style={{backgroundColor: LANG_COLORS[lang.name] ?? '#8b8b8b'}}
+                          style={{
+                            backgroundColor:
+                              LANG_COLORS[lang.name] ?? '#8b8b8b',
+                          }}
                         />
                         {lang.name}
                       </span>
                     ))}
                     {languages.length > 3 && (
-                      <span className="text-xs text-dim/40">+{languages.length - 3}</span>
+                      <span className="text-xs text-dim/40">
+                        +{languages.length - 3}
+                      </span>
                     )}
                   </div>
                 </div>

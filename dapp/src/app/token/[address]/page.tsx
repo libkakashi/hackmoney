@@ -94,7 +94,9 @@ export default function TokenPage() {
             {/* User Balance */}
             {userAddress && (
               <div className="border border-border bg-card py-3 px-4 flex justify-between items-center">
-                <div className="text-sm text-muted-foreground">your_balance</div>
+                <div className="text-sm text-muted-foreground">
+                  your_balance
+                </div>
                 <div className="tabular-nums text-sm font-medium">
                   <span className="text-green">
                     {userBalance && token
@@ -118,7 +120,9 @@ export default function TokenPage() {
                 variant="ghost"
                 onClick={() => setTab('issues')}
                 className={cn(
-                  tab === 'issues' ? 'text-green' : 'text-muted-foreground hover:text-foreground',
+                  tab === 'issues'
+                    ? 'text-green'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <CircleDot className="size-3" />
@@ -128,7 +132,9 @@ export default function TokenPage() {
                 variant="ghost"
                 onClick={() => setTab('discussion')}
                 className={cn(
-                  tab === 'discussion' ? 'text-green' : 'text-muted-foreground hover:text-foreground',
+                  tab === 'discussion'
+                    ? 'text-green'
+                    : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <MessageSquare className="size-3" />
@@ -138,7 +144,9 @@ export default function TokenPage() {
 
             <div className="p-4">
               {tab === 'issues' && <IssuesList tokenAddress={address} />}
-              {tab === 'discussion' && <TokenDiscussion tokenAddress={address} />}
+              {tab === 'discussion' && (
+                <TokenDiscussion tokenAddress={address} />
+              )}
             </div>
           </div>
 
