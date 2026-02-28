@@ -59,12 +59,15 @@ contract Launchpad is ReentrancyGuardTransient {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Uniswap V4 PositionManager
+    /// 0xbd216513d74c8cf14cf4747e6aaa6420ff64ee9e
     IPositionManager public immutable POSITION_MANAGER;
 
     /// @notice Uniswap V4 PoolManager
+    /// 0x000000000004444c5dc75cB358380D2e3dE08A90
     IPoolManager public immutable POOL_MANAGER;
 
     /// @notice Quote currency for pools (e.g., USDC)
+    /// 0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48
     address public immutable CURRENCY;
 
     /*//////////////////////////////////////////////////////////////

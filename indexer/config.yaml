@@ -5,13 +5,13 @@ field_selection:
     - hash
 networks:
   - id: 69
-    start_block: 24412635
+    start_block: 24572720
     rpc_config:
       url: https://minanet-fork-production.up.railway.app
     contracts:
       - name: Launchpad
         address:
-          - 0x63e39e1b03a72B721D6398D67A646705B33979eD
+          - 0xcEd87d14DE7c73683350e3717069563d3325E786
         handler: src/EventHandlers.ts
         events:
           - event: TokenLaunched(address indexed token, address indexed creator, string name, string symbol)
