@@ -24,30 +24,30 @@ export function Footer() {
               <span className="text-green">~</span>
               <span className="font-bold">nyx</span>
             </Link>
-            <p className="text-dim text-sm">
+            <p className="text-muted-foreground text-sm">
               crowdfund bounties. back projects early.
             </p>
           </div>
 
           {/* Protocol */}
           <div>
-            <div className="text-dim text-xs mb-4">protocol</div>
+            <div className="text-purple text-xs mb-4">protocol</div>
             <div className="space-y-2 text-sm">
               <Link
                 href="/discover"
-                className="block text-dim hover:text-foreground"
+                className="block text-muted-foreground hover:text-foreground"
               >
                 discover
               </Link>
               <Link
                 href="/launch"
-                className="block text-dim hover:text-foreground"
+                className="block text-muted-foreground hover:text-foreground"
               >
                 launch
               </Link>
               <Link
                 href="/docs"
-                className="block text-dim hover:text-foreground"
+                className="block text-muted-foreground hover:text-foreground"
               >
                 faq
               </Link>
@@ -56,17 +56,17 @@ export function Footer() {
 
           {/* Resources */}
           <div>
-            <div className="text-dim text-xs mb-4">resources</div>
+            <div className="text-purple text-xs mb-4">resources</div>
             <div className="space-y-2 text-sm">
               <Link
                 href="/docs/guide"
-                className="block text-dim hover:text-foreground"
+                className="block text-muted-foreground hover:text-foreground"
               >
                 uniswap v4
               </Link>
               <Link
                 href="/docs/faq"
-                className="block text-dim hover:text-foreground"
+                className="block text-muted-foreground hover:text-foreground"
               >
                 uniswap cca
               </Link>
@@ -75,13 +75,13 @@ export function Footer() {
 
           {/* Social */}
           <div>
-            <div className="text-dim text-xs mb-4">social</div>
+            <div className="text-purple text-xs mb-4">social</div>
             <div className="space-y-2 text-sm">
               <a
                 href="https://twitter.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block text-dim hover:text-foreground"
+                className="block text-muted-foreground hover:text-foreground"
               >
                 twitter
               </a>
@@ -89,7 +89,7 @@ export function Footer() {
                 href="https://discord.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block text-dim hover:text-foreground"
+                className="block text-muted-foreground hover:text-foreground"
               >
                 discord
               </a>
@@ -97,7 +97,7 @@ export function Footer() {
                 href="https://github.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block text-dim hover:text-foreground"
+                className="block text-muted-foreground hover:text-foreground"
               >
                 github
               </a>
@@ -105,7 +105,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-dim">
+        <div className="mt-12 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
           <div>{new Date().getFullYear()} nyx</div>
           <div className="flex gap-6">
             <Link href="/terms" className="hover:text-foreground">

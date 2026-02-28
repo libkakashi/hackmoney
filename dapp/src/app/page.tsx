@@ -53,7 +53,7 @@ export default function Home() {
               <div className="text-2xl md:text-3xl font-bold text-green tabular-nums">
                 1,247
               </div>
-              <div className="text-dim text-xs mt-1.5 tracking-wide">
+              <div className="text-muted-foreground text-xs mt-1.5 tracking-wide">
                 repos connected
               </div>
             </div>
@@ -61,7 +61,7 @@ export default function Home() {
               <div className="text-2xl md:text-3xl font-bold text-yellow tabular-nums">
                 $42.5M
               </div>
-              <div className="text-dim text-xs mt-1.5 tracking-wide">
+              <div className="text-muted-foreground text-xs mt-1.5 tracking-wide">
                 bounties distributed
               </div>
             </div>
@@ -69,7 +69,7 @@ export default function Home() {
               <div className="text-2xl md:text-3xl font-bold text-purple tabular-nums">
                 12,800
               </div>
-              <div className="text-dim text-xs mt-1.5 tracking-wide">
+              <div className="text-muted-foreground text-xs mt-1.5 tracking-wide">
                 issues funded
               </div>
             </div>
@@ -77,7 +77,7 @@ export default function Home() {
               <div className="text-2xl md:text-3xl font-bold tabular-nums">
                 89,421
               </div>
-              <div className="text-dim text-xs mt-1.5 tracking-wide">
+              <div className="text-muted-foreground text-xs mt-1.5 tracking-wide">
                 contributors
               </div>
             </div>
@@ -234,11 +234,11 @@ export default function Home() {
             <table className="w-full text-sm min-w-225">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left p-4 font-medium text-dim"> </th>
-                  <th className="text-left p-4 font-medium tracking-wide text-dim whitespace-nowrap border-l border-border">
+                  <th className="text-left p-4 font-medium text-muted-foreground"> </th>
+                  <th className="text-left p-4 font-medium tracking-wide text-muted-foreground whitespace-nowrap border-l border-border">
                     Traditional Bounties
                   </th>
-                  <th className="text-left p-4 font-medium tracking-wide text-dim whitespace-nowrap border-l border-border">
+                  <th className="text-left p-4 font-medium tracking-wide text-muted-foreground whitespace-nowrap border-l border-border">
                     GitHub Sponsors
                   </th>
                   <th className="text-left p-4 font-medium tracking-wide text-green bg-green/5 whitespace-nowrap border-l border-border">

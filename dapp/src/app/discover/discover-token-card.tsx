@@ -118,11 +118,11 @@ export const DiscoverTokenCard = ({tokenAddr}: {tokenAddr?: Address}) => {
         <div className="px-3 pb-3 border-t border-border">
           <div className="flex items-center justify-between text-xs pt-2">
             <div>
-              <span className="text-dim">mcap </span>
+              <span className="text-muted-foreground">mcap </span>
               <span className="tabular-nums">--</span>
             </div>
             <div>
-              <span className="text-dim">vol </span>
+              <span className="text-muted-foreground">vol </span>
               <span className="tabular-nums">--</span>
             </div>
           </div>

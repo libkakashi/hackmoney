@@ -120,7 +120,7 @@ export default function DiscoverPage() {
           </div>
 
           {/* Results count */}
-          <div className="text-dim text-sm mb-4">
+          <div className="text-muted-foreground text-sm mb-4">
             {filteredTokens.length} projects
             {filters.search && (
               <Button

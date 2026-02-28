@@ -100,7 +100,7 @@ export const BountySection = ({
         {totalPledged !== undefined && totalPledged > 0 && (
           <span className="text-sm text-yellow tabular-nums">
             {totalPledged.toLocaleString(undefined, {maximumFractionDigits: 2})}{' '}
-            <span className="text-dim">{token?.symbol ?? 'tokens'}</span>
+            <span className="text-muted-foreground">{token?.symbol ?? 'tokens'}</span>
           </span>
         )}
       </div>
@@ -125,7 +125,7 @@ export const BountySection = ({
                       undefined,
                       {maximumFractionDigits: 2},
                     )}{' '}
-                    <span className="text-dim">{token?.symbol ?? 'tokens'}</span>
+                    <span className="text-muted-foreground">{token?.symbol ?? 'tokens'}</span>
                   </span>
                   <span className="text-xs text-dim">{timeAgo(b.createdAt)}</span>
                 </div>
@@ -151,7 +151,7 @@ export const BountySection = ({
                 onChange={e => setAmount(e.target.value)}
                 className="flex-1 text-sm"
               />
-              <span className="text-sm text-dim shrink-0">
+              <span className="text-sm text-muted-foreground shrink-0">
                 {token?.symbol ?? 'tokens'}
               </span>
               <Button

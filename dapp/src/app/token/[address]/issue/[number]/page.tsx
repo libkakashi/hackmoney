@@ -90,7 +90,7 @@ export default function IssuePage() {
             {/* back link */}
             <Link
               href={`/token/${address}`}
-              className="flex items-center gap-1.5 text-sm text-dim hover:text-foreground transition-colors w-fit"
+              className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit"
             >
               <ArrowLeft className="w-3 h-3" />
               back to {token?.symbol ?? 'token'}
@@ -160,7 +160,7 @@ export default function IssuePage() {
               {/* body */}
               {issue.body && (
                 <div className="px-5 pb-5 border-t border-border pt-4">
-                  <pre className="whitespace-pre-wrap text-sm text-dim leading-relaxed font-[inherit]">
+                  <pre className="whitespace-pre-wrap text-sm text-muted-foreground leading-relaxed font-[inherit]">
                     {issue.body}
                   </pre>
                 </div>
@@ -195,7 +195,7 @@ export default function IssuePage() {
             {/* assignees */}
             {issue.assignees.length > 0 && (
               <div className="border border-border bg-card p-4">
-                <div className="text-sm text-dim mb-2">assignees</div>
+                <div className="text-sm text-muted-foreground mb-2">assignees</div>
                 <div className="space-y-2">
                   {issue.assignees.map(a => (
                     <div key={a.login} className="flex items-center gap-2 text-sm">

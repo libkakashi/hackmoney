@@ -237,7 +237,7 @@ export default function FAQPage() {
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm transition-colors border-r border-border ${
                   tab === 'general'
                     ? 'bg-yellow/10 text-yellow'
-                    : 'text-dim hover:text-foreground hover:bg-card'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-card'
                 }`}
               >
                 <HelpCircle className="size-4" />
@@ -251,7 +251,7 @@ export default function FAQPage() {
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm transition-colors border-r border-border ${
                   tab === 'traders'
                     ? 'bg-green/10 text-green'
-                    : 'text-dim hover:text-foreground hover:bg-card'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-card'
                 }`}
               >
                 <Users className="size-4" />
@@ -265,7 +265,7 @@ export default function FAQPage() {
                 className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 text-sm transition-colors ${
                   tab === 'creators'
                     ? 'bg-purple/10 text-purple'
-                    : 'text-dim hover:text-foreground hover:bg-card'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-card'
                 }`}
               >
                 <Rocket className="size-4" />

@@ -170,7 +170,7 @@ export const IssuesList = ({tokenAddress}: {tokenAddress: Address}) => {
             size="sm"
             disabled={page === 1}
             onClick={() => setPage(p => p - 1)}
-            className="text-dim hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
             <ChevronLeft className="w-3 h-3" />
             prev
@@ -181,7 +181,7 @@ export const IssuesList = ({tokenAddress}: {tokenAddress: Address}) => {
             size="sm"
             disabled={issues.length < 30}
             onClick={() => setPage(p => p + 1)}
-            className="text-dim hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground"
           >
             next
             <ChevronRight className="w-3 h-3" />

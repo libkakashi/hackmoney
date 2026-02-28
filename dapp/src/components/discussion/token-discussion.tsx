@@ -176,7 +176,7 @@ function CommentNode({
           <div className="flex items-center gap-2 text-xs mb-1 flex-wrap">
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="text-dim hover:text-foreground transition-colors"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               [{collapsed ? '+' : '\u2212'}]
             </button>
@@ -207,16 +207,16 @@ function CommentNode({
                 <div className="flex items-center gap-3 text-xs mb-1">
                   <button
                     onClick={handleReplyClick}
-                    className="text-dim hover:text-foreground transition-colors flex items-center gap-1"
+                    className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1"
                   >
                     <MessageSquare className="size-3" />
                     reply
                   </button>
-                  <button className="text-dim hover:text-foreground transition-colors flex items-center gap-1">
+                  <button className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1">
                     <Share2 className="size-3" />
                     share
                   </button>
-                  <button className="text-dim hover:text-foreground transition-colors">
+                  <button className="text-muted-foreground hover:text-foreground transition-colors">
                     <MoreHorizontal className="size-3" />
                   </button>
                 </div>
@@ -512,7 +512,7 @@ export function TokenDiscussion({tokenAddress}: {tokenAddress: string}) {
               className={cn(
                 sortMode === mode
                   ? 'text-green'
-                  : 'text-dim hover:text-foreground',
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {mode}

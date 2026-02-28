@@ -27,7 +27,7 @@ export function HelpSection() {
 
   return (
     <div className="mt-12 pt-8 border-t border-border">
-      <div className="text-sm mb-6 text-dim">
+      <div className="text-sm mb-6 text-muted-foreground">
         <span className="text-yellow">$</span> need more help?
       </div>
 
@@ -35,7 +35,7 @@ export function HelpSection() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left column - Contact form (2/3 width) */}
         <div className="md:col-span-2 border border-border">
-          <div className="flex items-center gap-2 border-b border-border text-sm text-dim px-4 py-3 bg-card">
+          <div className="flex items-center gap-2 border-b border-border text-sm text-muted-foreground px-4 py-3 bg-card">
             <MessageSquare className="size-4" />
             <span className="text-purple">submit</span>
             <span>:</span>
@@ -46,7 +46,7 @@ export function HelpSection() {
             <div className="space-y-4">
               {/* Email input */}
               <div>
-                <label className="flex items-center gap-2  text-dim mb-2">
+                <label className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Mail className="size-3" />
                   <span>email</span>
                 </label>
@@ -61,7 +61,7 @@ export function HelpSection() {
 
               {/* Message textarea */}
               <div>
-                <label className="flex items-center gap-2  text-dim mb-2">
+                <label className="flex items-center gap-2 text-muted-foreground mb-2">
                   <Terminal className="size-3" />
                   <span>message</span>
                 </label>
@@ -114,7 +114,7 @@ export function HelpSection() {
 
         {/* Right column - Social links (1/3 width) */}
         <div className="border border-border flex flex-col">
-          <div className="flex items-center gap-2 border-b border-border text-sm text-dim px-4 py-3 bg-card">
+          <div className="flex items-center gap-2 border-b border-border text-sm text-muted-foreground px-4 py-3 bg-card">
             <Users className="size-4" />
             <span className="text-purple">socials</span>
           </div>
@@ -127,7 +127,7 @@ export function HelpSection() {
               className="flex items-center justify-between hover:bg-purple/5 transition-colors group p-4 border-b border-border"
             >
               <div>
-                <div className=" text-dim">join</div>
+                <div className="text-muted-foreground">join</div>
                 <div className="text-purple group-hover:underline">discord</div>
               </div>
               <span className="text-purple">→</span>
@@ -140,7 +140,7 @@ export function HelpSection() {
               className="flex items-center justify-between hover:bg-green/5 transition-colors group p-4 border-b border-border"
             >
               <div>
-                <div className=" text-dim">follow</div>
+                <div className="text-muted-foreground">follow</div>
                 <div className="text-green group-hover:underline">twitter</div>
               </div>
               <span className="text-green">→</span>

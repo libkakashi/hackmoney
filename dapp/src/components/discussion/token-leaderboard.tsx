@@ -73,7 +73,7 @@ const HolderRow = ({
         {formatAmount(balance, decimals)}
       </div>
       {priceUsd !== undefined && (
-        <div className="tabular-nums text-dim">
+        <div className="tabular-nums text-muted-foreground">
           {formatUsd(balance, decimals, priceUsd)}
         </div>
       )}
@@ -197,7 +197,7 @@ export const TokenLeaderboard = ({tokenAddress}: {tokenAddress?: Address}) => {
           variant="ghost"
           onClick={() => setTab('holders')}
           className={cn(
-            tab === 'holders' ? 'text-green' : 'text-dim hover:text-foreground',
+            tab === 'holders' ? 'text-green' : 'text-muted-foreground hover:text-foreground',
           )}
         >
           <TrendingUp className="size-3" />
@@ -209,7 +209,7 @@ export const TokenLeaderboard = ({tokenAddress}: {tokenAddress?: Address}) => {
           className={cn(
             tab === 'contributors'
               ? 'text-green'
-              : 'text-dim hover:text-foreground',
+              : 'text-muted-foreground hover:text-foreground',
           )}
         >
           <GitFork className="size-3" />

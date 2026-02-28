@@ -505,7 +505,7 @@ export default function LaunchPage() {
               variant="ghost"
               size="sm"
               onClick={disconnect}
-              className="text-dim hover:text-red text-xs"
+              className="text-muted-foreground hover:text-red text-xs"
             >
               disconnect
             </Button>
@@ -530,7 +530,7 @@ export default function LaunchPage() {
                 className={`px-3 py-1.5 text-xs transition-colors border ${
                   tab === 'repos'
                     ? 'text-green border-green/30 bg-green/5'
-                    : 'text-dim border-transparent hover:text-foreground'
+                    : 'text-muted-foreground border-transparent hover:text-foreground'
                 }`}
               >
                 repository
@@ -545,7 +545,7 @@ export default function LaunchPage() {
                 className={`px-3 py-1.5 text-xs transition-colors border ${
                   tab === 'orgs'
                     ? 'text-purple border-purple/30 bg-purple/5'
-                    : 'text-dim border-transparent hover:text-foreground'
+                    : 'text-muted-foreground border-transparent hover:text-foreground'
                 }`}
               >
                 organization
@@ -640,13 +640,13 @@ export default function LaunchPage() {
 
             <div className="grid grid-cols-2 gap-3">
               <div className="px-4 py-3 border border-border bg-card/30">
-                <div className="text-dim text-xs mb-1">total supply</div>
+                <div className="text-muted-foreground text-xs mb-1">total supply</div>
                 <div className="text-sm font-medium">
                   {TOTAL_SUPPLY.toLocaleString()}
                 </div>
               </div>
               <div className="px-4 py-3 border border-border bg-card/30">
-                <div className="text-dim text-xs mb-1">starting price</div>
+                <div className="text-muted-foreground text-xs mb-1">starting price</div>
                 <div className="text-sm font-medium text-green">
                   ${FLOOR_PRICE}
                 </div>

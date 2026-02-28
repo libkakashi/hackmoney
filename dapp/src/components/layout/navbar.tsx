@@ -100,7 +100,7 @@ export function Navbar() {
                       href={link.href}
                       onClick={() => setMobileOpen(false)}
                       className={`block py-3 border-b border-border ${
-                        pathname === link.href ? 'text-green' : 'text-dim'
+                        pathname === link.href ? 'text-green' : 'text-muted-foreground'
                       }`}
                     >
                       {pathname === link.href && (
