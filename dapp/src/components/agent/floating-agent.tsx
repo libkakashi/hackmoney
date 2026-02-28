@@ -719,7 +719,7 @@ export function FloatingAgent() {
               relative w-36 h-36 md:w-60 md:h-60
               flex items-center justify-center select-none cursor-pointer
               transition-transform duration-50 hover:scale-101 active:scale-99
-              -mt-6 md:-mt-0 -mb-4 md:-mb-10
+              -mt-6 md:mt-0 -mb-4 md:-mb-10
             "
             title="Click to chat"
           >
