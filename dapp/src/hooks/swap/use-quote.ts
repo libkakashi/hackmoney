@@ -1,6 +1,7 @@
 import {useMemo} from 'react';
 import type {Address, Hex, PublicClient} from 'viem';
-import {useSimulateContract} from 'wagmi';
+import {usePublicClient} from 'wagmi';
+import {useQuery} from '@tanstack/react-query';
 import {quoterAbi} from '~/abi/quoter';
 import {PoolKey} from '~/lib/utils';
 import {type QuoteToken, USDC_ADDRESS, isDirectSwap} from '~/lib/pools';
@@ -35,154 +36,6 @@ export type UseQuoteOptions = {
 type QuoteResult = {
   quotedAmount: bigint;
   gasEstimate: bigint;
-};
-
-const selectQuoteResult = (data: {
-  result: readonly [bigint, bigint];
-}): QuoteResult => ({
-  quotedAmount: data.result[0],
-  gasEstimate: data.result[1],
-});
-
-/**
- * Hook to get a quote for an exact input single-hop swap
- */
-export const useQuoteExactInputSingle = (
-  params: QuoteExactSingleParams | undefined,
-  options: UseQuoteOptions = {},
-) => {
-  const {enabled = true} = options;
-
-  return useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactInputSingle',
-    args: params ? [params] : undefined,
-    query: {
-      enabled: enabled && !!quoterAddr && !!params,
-      select: selectQuoteResult,
-    },
-  });
-};
-
-/**
- * Hook to get a quote for an exact output single-hop swap
- */
-export const useQuoteExactOutputSingle = (
-  params: QuoteExactSingleParams | undefined,
-  options: UseQuoteOptions = {},
-) => {
-  const {enabled = true} = options;
-
-  return useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactOutputSingle',
-    args: params ? [params] : undefined,
-    query: {
-      enabled: enabled && !!quoterAddr && !!params,
-      select: selectQuoteResult,
-    },
-  });
-};
-
-/**
- * Hook to get a quote for an exact input multi-hop swap
- */
-export const useQuoteExactInput = (
-  params: QuoteExactParams | undefined,
-  options: UseQuoteOptions = {},
-) => {
-  const {enabled = true} = options;
-
-  return useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactInput',
-    args: params ? [params] : undefined,
-    query: {
-      enabled: enabled && !!quoterAddr && !!params,
-      select: selectQuoteResult,
-    },
-  });
-};
-
-/**
- * Hook to get a quote for an exact output multi-hop swap
- */
-export const useQuoteExactOutput = (
-  params: QuoteExactParams | undefined,
-  options: UseQuoteOptions = {},
-) => {
-  const {enabled = true} = options;
-
-  return useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactOutput',
-    args: params ? [params] : undefined,
-    query: {
-      enabled: enabled && !!quoterAddr && !!params,
-      select: selectQuoteResult,
-    },
-  });
-};
-
-/**
- * Convenience hook for simple single-hop swaps
- * Automatically builds the params from common inputs
- */
-export const useQuote = (
-  poolKey: PoolKey | undefined,
-  {
-    exactAmount,
-    zeroForOne,
-    exactInput = true,
-    hookData = '0x' as Hex,
-    enabled = true,
-  }: {
-    exactAmount: bigint | undefined;
-    zeroForOne: boolean;
-    exactInput?: boolean;
-    hookData?: Hex;
-    enabled?: boolean;
-  },
-) => {
-  const params =
-    poolKey && exactAmount !== undefined
-      ? {
-          poolKey,
-          zeroForOne,
-          exactAmount,
-          hookData,
-        }
-      : undefined;
-
-  const isEnabled = enabled && !!quoterAddr && !!params;
-
-  const inputResult = useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactInputSingle',
-    args: params ? [params] : undefined,
-    query: {
-      enabled: isEnabled && exactInput,
-      select: selectQuoteResult,
-    },
-  });
-
-  const outputResult = useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactOutputSingle',
-    args: params ? [params] : undefined,
-    query: {
-      enabled: isEnabled && !exactInput,
-      select: selectQuoteResult,
-    },
-  });
-
-  return exactInput ? inputResult : outputResult;
 };
 
 // ── Imperative quote functions (for use outside React render) ────────────────
@@ -237,6 +90,24 @@ export async function getQuoteExactOutputMultiHop(
     args: [params],
   });
   return result.result[0];
+}
+
+// ── Direct quote via simulateContract (bypasses wagmi useSimulateContract hook) ──
+
+async function callQuoter(
+  publicClient: PublicClient,
+  functionName: 'quoteExactInputSingle' | 'quoteExactOutputSingle' | 'quoteExactInput' | 'quoteExactOutput',
+  args: [QuoteExactSingleParams] | [QuoteExactParams],
+): Promise<QuoteResult> {
+  const result = await publicClient.simulateContract({
+    address: quoterAddr,
+    abi: quoterAbi,
+    functionName,
+    args,
+  });
+
+  const [quotedAmount, gasEstimate] = result.result as readonly [bigint, bigint];
+  return {quotedAmount, gasEstimate};
 }
 
 // ── Multi-hop path building ─────────────────────────────────────────────────
@@ -351,11 +222,8 @@ function buildMultiHopQuoteParams({
 }
 
 /**
- * Multi-hop quote hook. For direct USDC swaps, falls back to single-hop.
- * For other quote tokens, builds a 2-hop path through USDC.
- *
- * @param sellingToken - true when the "sell" box contains the launchpad token
- * @param exactInput - true when user typed the sell amount, false for buy amount
+ * Multi-hop quote hook using direct eth_call (bypasses wagmi useSimulateContract).
+ * For direct USDC swaps, uses single-hop. For other quote tokens, builds a 2-hop path.
  */
 export const useMultiHopQuote = (
   poolKey: PoolKey | undefined,
@@ -375,25 +243,21 @@ export const useMultiHopQuote = (
     enabled?: boolean;
   },
 ) => {
+  const publicClient = usePublicClient();
   const isDirect = isDirectSwap(quoteToken);
 
-  // For direct USDC swaps, determine zeroForOne from the pool key
   const zeroForOne = useMemo(() => {
     if (!poolKey || !tokenAddr) return false;
     const tokenIsCurrency0 =
       poolKey.currency0.toLowerCase() === tokenAddr.toLowerCase();
-    // selling token: swap from token side. zeroForOne = tokenIsCurrency0
-    // buying token (selling USDC): swap from USDC side. zeroForOne = !tokenIsCurrency0
     return sellingToken ? tokenIsCurrency0 : !tokenIsCurrency0;
   }, [poolKey, tokenAddr, sellingToken]);
 
-  // Single-hop params (for USDC direct)
   const singleParams = useMemo((): QuoteExactSingleParams | undefined => {
     if (!isDirect || !poolKey || exactAmount === undefined) return undefined;
     return {poolKey, zeroForOne, exactAmount, hookData: '0x' as Hex};
   }, [isDirect, poolKey, zeroForOne, exactAmount]);
 
-  // Multi-hop params (for non-USDC tokens)
   const multiParams = useMemo((): QuoteExactParams | undefined => {
     if (isDirect || !poolKey || !tokenAddr || exactAmount === undefined)
       return undefined;
@@ -415,58 +279,48 @@ export const useMultiHopQuote = (
     exactInput,
   ]);
 
-  const isEnabled = enabled && exactAmount !== undefined && exactAmount > 0n;
+  const isEnabled =
+    enabled &&
+    !!publicClient &&
+    exactAmount !== undefined &&
+    exactAmount > 0n &&
+    ((isDirect && !!singleParams) || (!isDirect && !!multiParams));
 
-  // Single-hop: exact input
-  const singleInput = useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactInputSingle',
-    args: singleParams ? [singleParams] : undefined,
-    query: {
-      enabled: isEnabled && isDirect && exactInput && !!singleParams,
-      select: selectQuoteResult,
-    },
+  const functionName = isDirect
+    ? exactInput
+      ? 'quoteExactInputSingle'
+      : 'quoteExactOutputSingle'
+    : exactInput
+      ? 'quoteExactInput'
+      : 'quoteExactOutput';
+
+  const args = isDirect ? singleParams : multiParams;
+
+  return useQuery<QuoteResult>({
+    queryKey: [
+      'quoter',
+      functionName,
+      isDirect
+        ? singleParams
+          ? JSON.stringify(singleParams, (_, v) =>
+              typeof v === 'bigint' ? v.toString() : v,
+            )
+          : null
+        : multiParams
+          ? JSON.stringify(multiParams, (_, v) =>
+              typeof v === 'bigint' ? v.toString() : v,
+            )
+          : null,
+    ],
+    queryFn: () =>
+      callQuoter(
+        publicClient!,
+        functionName as Parameters<typeof callQuoter>[1],
+        [args!] as Parameters<typeof callQuoter>[2],
+      ),
+    enabled: isEnabled,
+    retry: false,
+    staleTime: 10_000,
+    refetchInterval: 15_000,
   });
-
-  // Single-hop: exact output
-  const singleOutput = useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactOutputSingle',
-    args: singleParams ? [singleParams] : undefined,
-    query: {
-      enabled: isEnabled && isDirect && !exactInput && !!singleParams,
-      select: selectQuoteResult,
-    },
-  });
-
-  // Multi-hop: exact input
-  const multiInput = useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactInput',
-    args: multiParams ? [multiParams] : undefined,
-    query: {
-      enabled: isEnabled && !isDirect && exactInput && !!multiParams,
-      select: selectQuoteResult,
-    },
-  });
-
-  // Multi-hop: exact output
-  const multiOutput = useSimulateContract({
-    address: quoterAddr,
-    abi: quoterAbi,
-    functionName: 'quoteExactOutput',
-    args: multiParams ? [multiParams] : undefined,
-    query: {
-      enabled: isEnabled && !isDirect && !exactInput && !!multiParams,
-      select: selectQuoteResult,
-    },
-  });
-
-  if (isDirect) {
-    return exactInput ? singleInput : singleOutput;
-  }
-  return exactInput ? multiInput : multiOutput;
 };
