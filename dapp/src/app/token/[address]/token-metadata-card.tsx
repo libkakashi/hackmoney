@@ -123,13 +123,13 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
   return (
     <div className="border border-border bg-card">
       {/* ── title bar ── */}
-      <div className="flex items-center gap-4 px-5 py-4 border-b border-border">
+      <div className="flex items-center gap-5 px-6 py-5 border-b border-border">
         {/* avatar */}
         {avatarUrl && (
           <img
             src={avatarUrl}
             alt={repo?.owner ?? token.name}
-            className="w-12 h-12 shrink-0 border border-border"
+            className="w-14 h-14 shrink-0 border border-border"
           />
         )}
 
@@ -144,7 +144,7 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
                 className="hover:text-green transition-colors block truncate min-w-0"
               >
                 <span className="text-2xl font-semibold">
-                  <span className="text-dim font-normal">{repo.owner}/</span>
+                  <span className="text-muted-foreground font-normal">{repo.owner}/</span>
                   {repo.name}
                 </span>
               </a>
@@ -172,12 +172,12 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
               </a>
             </div>
           </div>
-          <div className="flex items-center gap-3 text-sm text-dim mt-1">
-            <span>${token.symbol}</span>
+          <div className="flex items-center gap-3 text-sm text-muted-foreground mt-1.5">
+            <span className="text-green">${token.symbol}</span>
             <Copyable
               text={address}
               display={`${address.slice(0, 6)}...${address.slice(-4)}`}
-              className="text-dim"
+              className="text-muted-foreground"
             />
           </div>
         </div>
@@ -185,27 +185,27 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
 
       {/* ── repo metadata ── */}
       {repo && (
-        <div className="px-5 py-4 space-y-3">
+        <div className="px-6 py-5 space-y-4">
           {/* description */}
           {repo.description && (
-            <p className="text-sm text-dim leading-relaxed">
+            <p className="text-sm text-foreground/70 leading-relaxed">
               {repo.description}
             </p>
           )}
 
           {/* stats row */}
-          <div className="flex items-center gap-5 text-sm">
+          <div className="flex items-center gap-6 text-sm">
             <span>
               <span className="text-yellow tabular-nums">{repo.stars.toLocaleString()}</span>
-              <span className="text-dim ml-1.5">stars</span>
+              <span className="text-muted-foreground ml-1.5">stars</span>
             </span>
             <span>
               <span className="tabular-nums">{repo.forks.toLocaleString()}</span>
-              <span className="text-dim ml-1.5">forks</span>
+              <span className="text-muted-foreground ml-1.5">forks</span>
             </span>
             <span>
               <span className="tabular-nums">{repo.openIssues}</span>
-              <span className="text-dim ml-1.5">issues</span>
+              <span className="text-muted-foreground ml-1.5">issues</span>
             </span>
             {repo.license && (
               <span className="text-dim">{repo.license}</span>
@@ -236,7 +236,7 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
                   </div>
                   <div className="flex gap-3">
                     {languages.slice(0, 3).map(lang => (
-                      <span key={lang.name} className="flex items-center gap-1.5 text-xs text-dim">
+                      <span key={lang.name} className="flex items-center gap-1.5 text-xs text-muted-foreground">
                         <span
                           className="w-2 h-2 inline-block"
                           style={{backgroundColor: LANG_COLORS[lang.name] ?? '#8b8b8b'}}
@@ -284,7 +284,7 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
               {repo.topics.slice(0, 6).map(topic => (
                 <span
                   key={topic}
-                  className="text-xs px-2 py-0.5 border border-border text-dim hover:text-purple hover:border-purple/30 transition-colors"
+                  className="text-xs px-2 py-0.5 border border-border text-muted-foreground hover:text-purple hover:border-purple/30 transition-colors"
                 >
                   {topic}
                 </span>
@@ -296,22 +296,22 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
 
       {/* ── on-chain stats bar ── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-border border-t border-border">
-        <div className="bg-card px-4 py-3">
-          <div className="text-xs text-dim mb-0.5">price</div>
-          <div className="text-sm tabular-nums">
+        <div className="bg-card px-5 py-4">
+          <div className="text-xs text-muted-foreground mb-1">price</div>
+          <div className="text-sm tabular-nums text-green font-medium">
             {price !== undefined ? `$${price.toFixed(4)}` : '--'}
           </div>
         </div>
-        <div className="bg-card px-4 py-3">
-          <div className="text-xs text-dim mb-0.5">market_cap</div>
-          <div className="text-sm tabular-nums">
+        <div className="bg-card px-5 py-4">
+          <div className="text-xs text-muted-foreground mb-1">market_cap</div>
+          <div className="text-sm tabular-nums font-medium">
             {marketCap !== undefined
               ? `$${marketCap.toLocaleString(undefined, {maximumFractionDigits: 0})}`
               : '--'}
           </div>
         </div>
-        <div className="bg-card px-4 py-3">
-          <div className="text-xs text-dim mb-0.5">created</div>
+        <div className="bg-card px-5 py-4">
+          <div className="text-xs text-muted-foreground mb-1">created</div>
           <div className="text-sm tabular-nums">
             {createdAt
               ? createdAt.toLocaleDateString('en-US', {
@@ -322,12 +322,12 @@ export const TokenMetadataCard = ({address}: {address?: Address}) => {
               : '--'}
           </div>
         </div>
-        <div className="bg-card px-4 py-3">
-          <div className="text-xs text-dim mb-0.5">deployer</div>
+        <div className="bg-card px-5 py-4">
+          <div className="text-xs text-muted-foreground mb-1">deployer</div>
           <Copyable
             text={token.creator}
             display={`${token.creator.slice(0, 6)}...${token.creator.slice(-4)}`}
-            className="text-sm"
+            className="text-sm text-purple"
           />
         </div>
       </div>

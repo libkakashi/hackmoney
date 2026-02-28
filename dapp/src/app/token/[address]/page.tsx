@@ -93,13 +93,15 @@ export default function TokenPage() {
           <div className="lg:col-span-2 space-y-4">
             {/* User Balance */}
             {userAddress && (
-              <div className="border py-2 px-4 flex justify-between">
-                <div className="text-sm text-dim">your_balance</div>
-                <div className="tabular-nums text-sm">
-                  {userBalance && token
-                    ? Number(formatUnits(userBalance, 18)).toFixed(2)
-                    : '0.00'}{' '}
-                  <span className="text-dim">{token?.symbol}</span>
+              <div className="border border-border bg-card py-3 px-4 flex justify-between items-center">
+                <div className="text-sm text-muted-foreground">your_balance</div>
+                <div className="tabular-nums text-sm font-medium">
+                  <span className="text-green">
+                    {userBalance && token
+                      ? Number(formatUnits(userBalance, 18)).toFixed(2)
+                      : '0.00'}
+                  </span>{' '}
+                  <span className="text-muted-foreground">{token?.symbol}</span>
                 </div>
               </div>
             )}
@@ -116,7 +118,7 @@ export default function TokenPage() {
                 variant="ghost"
                 onClick={() => setTab('issues')}
                 className={cn(
-                  tab === 'issues' ? 'text-green' : 'text-dim hover:text-foreground',
+                  tab === 'issues' ? 'text-green' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <CircleDot className="size-3" />
@@ -126,7 +128,7 @@ export default function TokenPage() {
                 variant="ghost"
                 onClick={() => setTab('discussion')}
                 className={cn(
-                  tab === 'discussion' ? 'text-green' : 'text-dim hover:text-foreground',
+                  tab === 'discussion' ? 'text-green' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 <MessageSquare className="size-3" />
