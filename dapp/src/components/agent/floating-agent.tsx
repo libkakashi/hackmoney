@@ -263,8 +263,16 @@ export function FloatingAgent() {
 
   const nodeRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
+  const dragStartPos = useRef({x: 0, y: 0});
   const isResizing = useRef(false);
-  const [monitorSize, setMonitorSize] = useState({width: 400, height: 540});
+  const [monitorSize, setMonitorSize] = useState(() => ({
+    width:
+      typeof window !== 'undefined'
+        ? Math.min(400, window.innerWidth - 32)
+        : 400,
+    height:
+      typeof window !== 'undefined' && window.innerWidth < 768 ? 480 : 540,
+  }));
 
   const pageContextRef = useRef(pageContext);
   const prevPageRef = useRef<string | undefined>(undefined);
@@ -483,12 +491,17 @@ export function FloatingAgent() {
       nodeRef={nodeRef as React.RefObject<HTMLElement>}
       handle=".drag-handle"
       defaultPosition={{x: 0, y: 0}}
-      onStart={() => {
+      onStart={(_e, data) => {
         if (isResizing.current) return false;
         isDragging.current = false;
+        dragStartPos.current = {x: data.x, y: data.y};
       }}
-      onDrag={() => {
-        isDragging.current = true;
+      onDrag={(_e, data) => {
+        const dx = data.x - dragStartPos.current.x;
+        const dy = data.y - dragStartPos.current.y;
+        if (Math.abs(dx) + Math.abs(dy) > 5) {
+          isDragging.current = true;
+        }
       }}
       onStop={() => {
         // Reset after a tick so the click event fires before we clear the flag
@@ -499,11 +512,11 @@ export function FloatingAgent() {
     >
       <div
         ref={nodeRef}
-        className="text-sm fixed bottom-6 right-6 z-50 flex items-end"
+        className="text-sm fixed bottom-1 right-1 md:bottom-6 md:right-6 z-50 flex flex-col items-end md:flex-row md:items-end"
       >
         {/* ── CRT Monitor ─────────────────────────────────────────── */}
         {chatOpen && (
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center max-w-[calc(100vw-2rem)] md:max-w-none mr-3 md:mr-0">
             {/* Monitor body */}
             <Resizable
               size={monitorSize}
@@ -543,7 +556,7 @@ export function FloatingAgent() {
                 bottomRight: {cursor: 'se-resize'},
                 bottomLeft: {cursor: 'sw-resize'},
               }}
-              className="crt-bezel relative flex! flex-col!"
+              className="crt-bezel relative flex! flex-col! max-w-[calc(100vw-2rem)]!"
             >
               {/* Top bezel bar with title + power button */}
               <div className="drag-handle flex items-center justify-between px-3 py-1.5 bg-[#1a1720] border-b border-border cursor-grab active:cursor-grabbing">
@@ -685,8 +698,8 @@ export function FloatingAgent() {
             </Resizable>
 
             {/* Monitor stand */}
-            <div className="w-16 h-3 bg-[#1a1720] border-x border-b border-border" />
-            <div className="w-24 h-2 bg-[#1a1720] border-x border-b border-border" />
+            <div className="hidden md:block w-16 h-3 bg-[#1a1720] border-x border-b border-border" />
+            <div className="hidden md:block w-24 h-2 bg-[#1a1720] border-x border-b border-border" />
           </div>
         )}
 
@@ -694,13 +707,19 @@ export function FloatingAgent() {
         <div
           className="drag-handle group relative shrink-0 cursor-grab active:cursor-grabbing"
           onClick={handleMascotClick}
+          onTouchEnd={e => {
+            if (!isDragging.current) {
+              e.preventDefault();
+              handlePowerToggle();
+            }
+          }}
         >
           <div
             className="
-              relative w-60 h-60
+              relative w-36 h-36 md:w-60 md:h-60
               flex items-center justify-center select-none cursor-pointer
               transition-transform duration-50 hover:scale-101 active:scale-99
-              -mb-10
+              -mt-6 md:-mt-0 -mb-4 md:-mb-10
             "
             title="Click to chat"
           >
